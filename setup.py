@@ -9,7 +9,7 @@ PACKAGE_NAME = "openscm-runner"
 AUTHORS = [
     ("Marit Sandstad", "marit.sandstad@cicero.oslo.no"),
 ]
-URL = "https://github.com/ciceroOslo/cicero-scm"
+URL = "https://github.com/ciceroOslo/ciceroscm"
 
 DESCRIPTION = "Python version of the CICERO-SCM simple climate model"
 README = "README.rst"
@@ -74,7 +74,7 @@ PACKAGE_DIR = {"": SOURCE_DIR}
 
 # Get the long description from the README file
 with open(README, "r") as f:
-    README_LINES = ["cicero-scm", "==============", ""]
+    README_LINES = ["ciceroscm", "==============", ""]
     add_line = False
     for line in f:
         if line.strip() == ".. sec-begin-long-description":
@@ -88,7 +88,7 @@ if len(README_LINES) < 3:
     raise RuntimeError("Insufficient description given")
 
 
-class ciceroSCM(TestCommand):
+class ciceroscm(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
         self.test_args = []
@@ -101,7 +101,7 @@ class ciceroSCM(TestCommand):
 
 
 cmdclass = versioneer.get_cmdclass()
-cmdclass.update({"test": ciceroSCM})
+cmdclass.update({"test": ciceroscm})
 
 setup(
     name=PACKAGE_NAME,
