@@ -125,7 +125,7 @@ setup(
     keywords=["cicero-scm", "cicero", "python", "repo", "simple", "climate", "model"],
     packages=PACKAGES,
     package_dir=PACKAGE_DIR,
-    #package_data=PACKAGE_DATA,
+    # package_data=PACKAGE_DATA,
     include_package_data=True,
     install_requires=REQUIREMENTS,
     extras_require=REQUIREMENTS_EXTRAS,

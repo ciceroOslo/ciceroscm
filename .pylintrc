@@ -1,0 +1,26 @@
+[MASTER]
+ignore=_version.py
+load-plugins=
+    pylint.extensions.bad_builtin,
+    pylint.extensions.check_elif,
+    pylint.extensions.comparetozero,
+    pylint.extensions.docparams,
+    pylint.extensions.emptystring,
+    pylint.extensions.overlapping_exceptions,
+    pylint.extensions.redefined_variable_type
+
+[MESSAGES CONTROL]
+disable=
+    # handled by black
+    format,
+    import-error,
+    fixme
+
+[SIMILARITIES]
+min-similarity-lines=7
+ignore-comments=no
+ignore-docstrings=yes
+ignore-imports=yes
+
+[FORMAT]
+good-names=i,j,k,nt
