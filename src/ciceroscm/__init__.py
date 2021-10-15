@@ -1,4 +1,4 @@
-from ciceroscm import ciceroscm
+from .ciceroscm import CICEROSCM
 
 from . import _version
 

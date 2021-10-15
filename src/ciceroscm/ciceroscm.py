@@ -2,8 +2,77 @@
 CICEROSCM 
 """
 import logging
-
+import numpy as np
+import pandas as pd
+import os
 from .upwelling_diffusion_model import UpwellingDiffusionModel
+
+LOGGER = logging.getLogger(__name__)
+
+default_data_dir = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), "default_data"
+)
+
+
+def read_components(filename):
+    """
+    Reading in components to be considered
+    """
+    df_gas = pd.read_csv(filename, delim_whitespace=True, index_col=0)
+    df_gas.rename(
+        columns={"TAU1(YEARS)": "TAU1", "NATURAL_EMISSIONS": "NAT_EM"}, inplace=True
+    )
+    return df_gas
+
+
+def check_pamset(pamset):
+    """
+    Checking that parameterset has necessary values for run
+    Otherwise set to default values
+    """
+    required = {
+        "rlamdo": 16.0,
+        "akapa": 0.634,
+        "cpi": 0.4,
+        "W": 4.0,
+        "beto": 3.5,
+        "threstemp": 7.0,
+        "lambda": 0.540,
+        "mixed": 60.0,
+    }
+    for pam in required:
+        if pam not in pamset:
+            LOGGER.warning(
+                "Parameter {} not in pamset. Using default value {}".format(
+                    pam, required[pam]
+                )
+            )
+            pamset[pam] = required[pam]
+        elif not isinstace(pamset[pam], int) and not isinstace(pamset[pam], float):
+            LOGGER.warning(
+                "Parameter {} must be a number. Using default value {}".format(
+                    pam, required[pam]
+                )
+            )
+            pamset[pam] = required[pam]
+    return pamset
+
+
+def read_forc(forc_file):
+    """
+    Read in forcing from forc
+    """
+    components = False
+    with open(forc_file) as f:
+        first_line = f.readline()
+        if first_line[:4].lower() == "year":
+            components = True
+    if not components:
+        df_forc = np.loadtxt(forc_file)
+    else:
+        # Decide on formatting for this
+        df_forc = pd.read_csv(forc_file, index_col=0)
+    return df_forc
 
 
 class CICEROSCM:
@@ -17,11 +86,12 @@ class CICEROSCM:
         """
         self.nystart = 1750
         self.nyend = 2100
+        """
         self.idtm = 24
         self.scenstart = 1991
-        self.emstart = emstart
         self.scenend = self.nyend
         self.emend = self.nyend
+        self.nyears = self.nyend-self.nystart +1
         self.lamb = 0.8
         self.qbmb = 0.03
         self.qo3 = 0.34
@@ -29,16 +99,203 @@ class CICEROSCM:
         self.qindso2 = -0.8
         self.qbc = 0.22
         self.qoc = -0.05
+        """
+        # Dont need the above?
+        self.rf = None
+
+    def initialise_output_arrays(self, pamset):
+        """
+        Initialise dataframe to hold data for run
+        """
+        # Add test to check that nystart and nyend are numbers
+        if "nystart" in pamset:
+            self.nystart = int(pamset["nystart"])
+        if "nyend" in pamset:
+            self.nystart = int(pamset["nyend"])
+        self.ohc_700 = np.zeros(self.nyend - self.nystart + 1)
+        self.ohc_tot = np.zeros(self.nyend - self.nystart + 1)
+        self.rib = np.zeros(self.nyend - self.nystart + 1)
+        self.rib_n = np.zeros(self.nyend - self.nystart + 1)
+        self.rib_s = np.zeros(self.nyend - self.nystart + 1)
+        self.dT_glob = np.zeros(self.nyend - self.nystart + 1)
+        self.dT_NH = np.zeros(self.nyend - self.nystart + 1)
+        self.dT_SH = np.zeros(self.nyend - self.nystart + 1)
+        self.dT_glob_air = np.zeros(self.nyend - self.nystart + 1)
+        self.dT_glob_NH_air = np.zeros(self.nyend - self.nystart + 1)
+        self.dT_glob_SH_air = np.zeros(self.nyend - self.nystart + 1)
+        self.dT_glob_sea = np.zeros(self.nyend - self.nystart + 1)
+        self.dT_glob_NH_sea = np.zeros(self.nyend - self.nystart + 1)
+        self.dT_glob_SH_sea = np.zeros(self.nyend - self.nystart + 1)
+        self.dSL = np.zeros(self.nyend - self.nystart + 1)
+        self.dSL_ice = np.zeros(self.nyend - self.nystart + 1)
+        self.dSL_thermal = np.zeros(self.nyend - self.nystart + 1)
+
+    def read_data_on_year_row(self, volc_datafile):
+        """
+        Reading in data from file with no headers
+        and each year being a row. Typically the format for
+        volcano and solar data
+        """
+        indices = np.arange(self.nystart, self.nyend + 1)
+        nrows = len(indices)
+        print(nrows)
+        if self.nystart > 1750:
+            skiprows = self.nystart - 1750
+            df = pd.read_csv(
+                volc_datafile,
+                header=None,
+                skiprows=skiprows,
+                nrows=nrows,
+                delim_whitespace=True,
+            )
+        else:
+            df = pd.read_csv(
+                volc_datafile, header=None, nrows=nrows, delim_whitespace=True
+            )
+
+        df.set_axis(labels=indices, inplace=True)
+        return df
+
+    def forc_set(self, yr):
+        """
+        Reading the forcing for this year
+        """
+        row_index = yr - self.nystart
+        # Add support for other forcing formats
+        if isinstance(self.rf, np.ndarray):
+            print(self.rf_luc.iloc[row_index])
+            forc = self.rf[row_index] + self.rf_luc.iloc[row_index][0]
+        else:
+            forc = self.rf["total"][row_index]
+        forc = forc + self.rf_sun.iloc[row_index, 0]
+        return forc
+
+    def add_year_data_to_output(self, values, index):
+        """
+        Adding single year output to output arrays
+        """
+        self.ohc_700[index] = values["OHC700"]
+        self.ohc_tot[index] = values["OHCTOT"]
+        self.rib[index] = values["RIB"]
+        self.rib_n[index] = values["RIBN"]
+        self.rib_s[index] = values["RIBS"]
+        self.dT_glob[index] = values["dtemp"]
+        self.dT_NH[index] = values["dtempsh"]
+        self.dT_SH[index] = values["dtempnh"]
+        self.dT_glob_air[index] = values["dtemp_air"]
+        self.dT_glob_NH_air[index] = values["dtempnh_air"]
+        self.dT_glob_SH_air[index] = values["dtempsh_air"]
+        self.dT_glob_sea[index] = values["dtemp_sea"]
+        self.dT_glob_NH_sea[index] = values["dtempnh_sea"]
+        self.dT_glob_SH_sea[index] = values["dtempsh_sea"]
+        self.dSL[index] = values["deltsl"][0] + values["deltsl"][1]
+        self.dSL_ice[index] = values["deltsl"][1]
+        self.dSL_thermal[index] = values["deltsl"][0]
 
     def _run(self, pamset, cfg):
         """
         Run CICEROSCM
         """
-        pass
+        # Parameters as dict, possible make pamfilereading an option
+        self.df_gas = read_components(pamset["gaspamfile"])
+        pamset = check_pamset(pamset)
+        # Add omethng to adjust start and end of simulation
+        self.initialise_output_arrays(pamset)
+        # Setting up UDM
+        udm = UpwellingDiffusionModel(pamset)
 
-    def ocean_temperture(TS, TN, dz, sea_fracSH=0.81, sea_fracNH=0.61):
-        area_hemi = 2.55e14
-        rho = 1030.0
-        c = 3997 * 1.0e-22
+        # Reading in solar and volcanic forcing
+        if "sunvolc" in pamset and pamset["sunvolc"] == 1:
+            # Possibly change to allow for other files
+            # And for SH to differ from NH
+            rf_volc_n = self.read_data_on_year_row(
+                os.path.join(default_data_dir, "meanVOLCmnd_ipcc_NH.txt")
+            )
+            rf_volc_s = rf_volc_n
+            self.rf_sun = self.read_data_on_year_row(
+                os.path.join(default_data_dir, "solar_IPCC.txt")
+            )
+        # Add support for sending filename in pamset
+        else:
+            indices = np.arange(self.nystart, self.nyend + 1)
+            rf_volc_n = pd.DataFrame(
+                data=np.zeros((self.nyend - self.nystart + 1, 12)),
+                index=indices,
+                columns=range(12),
+            )
+            rf_volc_s = rf_volc_n
+            self.rf_sun = pd.DataFrame(
+                data={0: np.zeros(self.nyend - self.nystart + 1)}
+            )
 
-        oceantemp = (TN * dz * areaNH + TS * dz * areaSH) * rho * c
+        # Add support for sending filename in pamset
+        self.rf_luc = self.read_data_on_year_row(
+            os.path.join(default_data_dir, "IPCC_LUCalbedo.txt")
+        )
+
+        rf_run = False
+        if "forc_file" in cfg:
+            rf_run = True
+            if not os.path.exists(cfg["forc_file"]):
+                raise FileNotFoundError(
+                    "Forcing input file {} not found".format(cfg["forc_file"])
+                )
+            self.rf = read_forc(cfg["forc_file"])
+
+        for yr in range(self.nystart, self.nyend + 1):
+            if not rf_run:
+                raise NotImplementedError("Only Forcing runs supported so far")
+            forc = self.forc_set(yr)
+
+            values = udm.energy_budget(
+                forc,
+                forc,
+                rf_volc_n.iloc[yr - self.nystart, :],
+                rf_volc_s.iloc[yr - self.nystart, :],
+            )
+            self.add_year_data_to_output(values, yr - self.nystart)
+
+        self.write_data_to_file(pamset)
+
+    def write_data_to_file(self, pamset):
+        """
+        Writing results to files after run
+        """
+        if "output_prefix" in pamset:
+            # Make os independent?
+            outdir = os.path.join(os.getcwd(), pamset["output_prefix"])
+        else:
+            outdir = os.path.join(os.getcwd(), "output")
+
+        indices = np.arange(self.nystart, self.nyend + 1)
+        df_ohc = pd.DataFrame(
+            data={"Year": indices, "OHC700": self.ohc_700, "OHCTOT": self.ohc_tot}
+        )
+        df_rib = pd.DataFrame(
+            data={
+                "Year": indices,
+                "RIB_glob": self.rib,
+                "RIB_N": self.rib_n,
+                "RIB_S": self.rib_s,
+            }
+        )
+        df_temp = pd.DataFrame(
+            data={
+                "Year": indices,
+                "dT_glob": self.dT_glob,
+                "dT_NH": self.dT_NH,
+                "dT_SH": self.dT_SH,
+                "DT_glob_air": self.dT_glob_air,
+                "dT_NH_air": self.dT_glob_NH_air,
+                "dT_SH_air": self.dT_glob_SH_air,
+                "dT_glob_sea": self.dT_glob_sea,
+                "dT_NH_sea": self.dT_glob_NH_sea,
+                "dT_SHsea": self.dT_glob_SH_sea,
+                "dSL(m)": self.dSL,
+                "dSL_thermal(m)": self.dSL_thermal,
+                "dSL_ice(m)": self.dSL_ice,
+            }
+        )
+        df_ohc.to_csv(os.path.join(outdir, "output_ohc.csv"), sep="\t", index=False)
+        df_rib.to_csv(os.path.join(outdir, "output_rib.csv"), sep="\t", index=False)
+        df_temp.to_csv(os.path.join(outdir, "output_temp.csv"), sep="\t", index=False)
