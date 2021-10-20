@@ -78,7 +78,7 @@ class UpwellingDiffusionModel:
 
     def __init__(self, params):
         """
-        Intialising
+        Intialise
         """
         self.rlamdo = params["rlamdo"]
         self.rakapa = 1.0e-4 * params["akapa"]
@@ -90,7 +90,7 @@ class UpwellingDiffusionModel:
         self.foan = 0.61  # ocean fraction in the Nothern Hemisphere make changable?
         self.foas = 0.81  # ocean fraction in the Southern Hemisphere make changable?
         self.ebbeta = 0.0  # Make changable?
-        self.fnso = 0.735
+        self.fnso = 0.7531
         self.lm = 40
 
         # Setting up dz height difference between ocean layers
@@ -121,7 +121,7 @@ class UpwellingDiffusionModel:
             alfa[i] = -c[i] / tem
             bbeta[i] = (d[i] - a[i] * bbeta[i - 1]) / tem
         tem = a[self.lm - 1] * alfa[self.lm - 2] + b[self.lm - 1]
-        ans[self.lm - 1] = (d[self.lm - 1] - a[self.lm - 1] * bbeta[self.lm - 1]) / tem
+        ans[self.lm - 1] = (d[self.lm - 1] - a[self.lm - 1] * bbeta[self.lm - 2]) / tem
 
         for i in range(1, self.lm):
             j = self.lm - 1 - i
@@ -188,7 +188,7 @@ class UpwellingDiffusionModel:
 
     def setup_ebud2(self, temp1N, temp1S):
         """
-        Setting up coefficients and more for the two hemispheres 
+        Set up coefficients and more for the two hemispheres 
         to be redone every timestep
         """
 
@@ -230,7 +230,7 @@ class UpwellingDiffusionModel:
 
     def setup_ebud(self):
         """
-        Setting up energy budget before run
+        Set up energy budget before run
         """
         rho = 1.03
         htcpty = 0.955
@@ -283,7 +283,7 @@ class UpwellingDiffusionModel:
 
     def setup_sealevel_rise(self):
         """
-        Setting up variables to be used in sea level rise calculations
+        Set up variables to be used in sea level rise calculations
         """
         self.press = np.zeros(self.lm)
         self.tempunp = np.zeros(self.lm)
@@ -293,13 +293,16 @@ class UpwellingDiffusionModel:
         self.dens0[0] = _density(self.press[0], self.tempunp[0])
 
         for i in range(1, self.lm):
-            self.press[i] = (120.0 + 100.0 * (i - 2)) * 1.0e4  # Units=Pa
+            z = 120.0 + 100.0 * (i - 1)  # Skulle 120. = mixed?
+            self.press[i] = z * 1.0e4  # Units=Pa
             self.press[i] = self.press[i] * 1.0e-5  # Units=bar
-            z = 120.0 + 100.0 * (i - 1)
             self.tempunp[i] = 125.98 * z ** (-0.45952)
             self.dens0[i] = _density(self.press[i], self.tempunp[i])
 
-    def compute_sea_level_rise(self, templ, dtemp, dtempprev):
+    def compute_sea_level_rise(self, templ, dtemp):
+        """
+        Compute sea level rise associated with temperature change
+        """
         deltsl = np.zeros(2)
 
         # Sea level rise from temperature change
@@ -312,9 +315,9 @@ class UpwellingDiffusionModel:
         # Maybe outdated
         # Also why not use hemispheric temperature change?
         # Greenland
-        self.zgo = self.zgo + 1.5 * self.betag * (dtemp + dtempprev) / 2.0
+        self.zgo = self.zgo + 1.5 * self.betag * (dtemp + self.dtempprev) / 2.0
         # Antarctica
-        self.zao = self.zao + self.betaa * (dtemp + dtempprev) / 2.0
+        self.zao = self.zao + self.betaa * (dtemp + self.dtempprev) / 2.0
         # Small glaciers:
         aa = self.zso + self.z0 * self.betas * dtemp / self.ebtau
         bb = 1.0 + (1.0 + self.betas * dtemp) / self.ebtau
@@ -326,7 +329,7 @@ class UpwellingDiffusionModel:
 
     def energy_budget(self, FN, FS, FN_VOLC, FS_VOLC):
         """
-        Doing energy budget calculation for single year
+        Do energy budget calculation for single year
         """
         temp1n = 0.0
         temp1s = 0.0
@@ -351,8 +354,16 @@ class UpwellingDiffusionModel:
 
             self.setup_ebud2(temp1n, temp1s)
 
-            dqn = im * FN * dtyear + (1 - im * dtyear) * self.FNOLD + FN_VOLC[im]
-            dqs = im * FS * dtyear + (1 - im * dtyear) * self.FSOLD + FS_VOLC[im]
+            dqn = (
+                (im + 1) * FN * dtyear
+                + (1 - (im + 1) * dtyear) * self.FNOLD
+                + FN_VOLC[im]
+            )
+            dqs = (
+                (im + 1) * FS * dtyear
+                + (1 - (im + 1) * dtyear) * self.FSOLD
+                + FS_VOLC[im]
+            )
             dn[0] = (
                 self.dtrm1n * self.tn[0]
                 + self.dtrm2n * self.ts[0]
@@ -385,7 +396,7 @@ class UpwellingDiffusionModel:
                 + self.dtmsl3 * self.tn[self.lm - 1]
             )
 
-            # Where are these being initialised?
+            # Where are these being initialised? Ok, I think
             self.tn = self._band(self.acoeffn, self.bcoeffn, self.ccoeffn, dn)
             self.ts = self._band(self.acoeffs, self.bcoeffs, self.ccoeffs, ds)
 
@@ -428,6 +439,7 @@ class UpwellingDiffusionModel:
 
         dtemp = (tempn + temps) / 2.0  # Global temp chg)
 
+        deltsl = self.compute_sea_level_rise(templ, dtemp)
         # Updating previous values for next year
         self.FNOLD = FN
         self.FSOLD = FS
@@ -450,14 +462,14 @@ class UpwellingDiffusionModel:
             "RIBN": FN - self.rlamda * tempn,
             "RIBS": FS - self.rlamda * temps,
             "RIB": (FN + FS - self.rlamda * (tempn + temps)) / 2.0,
-            "deltsl": self.compute_sea_level_rise(templ, dtemp, self.dtempprev),
+            "deltsl": deltsl,
             "OHC700": ocean_res["OHC700"],
             "OHCTOT": ocean_res["OHCTOT"],
         }
 
     def compute_ocean_temperature(self):
         """
-        Computing the ocean temperature total and at 700 m depth
+        Compute the ocean temperature total and at 700 m depth
         """
         area_hemisphere = 2.55e14
 

@@ -2,9 +2,11 @@
 CICEROSCM 
 """
 import logging
+import os
+
 import numpy as np
 import pandas as pd
-import os
+
 from .upwelling_diffusion_model import UpwellingDiffusionModel
 
 LOGGER = logging.getLogger(__name__)
@@ -16,7 +18,7 @@ default_data_dir = os.path.join(
 
 def read_components(filename):
     """
-    Reading in components to be considered
+    Read in components to be considered
     """
     df_gas = pd.read_csv(filename, delim_whitespace=True, index_col=0)
     df_gas.rename(
@@ -27,7 +29,7 @@ def read_components(filename):
 
 def check_pamset(pamset):
     """
-    Checking that parameterset has necessary values for run
+    Check that parameterset has necessary values for run
     Otherwise set to default values
     """
     required = {
@@ -129,10 +131,11 @@ class CICEROSCM:
         self.dSL = np.zeros(self.nyend - self.nystart + 1)
         self.dSL_ice = np.zeros(self.nyend - self.nystart + 1)
         self.dSL_thermal = np.zeros(self.nyend - self.nystart + 1)
+        self.forcing = np.zeros(self.nyend - self.nystart + 1)
 
     def read_data_on_year_row(self, volc_datafile):
         """
-        Reading in data from file with no headers
+        Read in data from file with no headers
         and each year being a row. Typically the format for
         volcano and solar data
         """
@@ -158,21 +161,22 @@ class CICEROSCM:
 
     def forc_set(self, yr):
         """
-        Reading the forcing for this year
+        Read the forcing for this year
         """
         row_index = yr - self.nystart
         # Add support for other forcing formats
         if isinstance(self.rf, np.ndarray):
             print(self.rf_luc.iloc[row_index])
-            forc = self.rf[row_index] + self.rf_luc.iloc[row_index][0]
+            # Add luc albedo later
+            forc = self.rf[row_index]  # + self.rf_luc.iloc[row_index][0]
         else:
             forc = self.rf["total"][row_index]
         forc = forc + self.rf_sun.iloc[row_index, 0]
         return forc
 
-    def add_year_data_to_output(self, values, index):
+    def add_year_data_to_output(self, values, forc, index):
         """
-        Adding single year output to output arrays
+        Add single year output to output arrays
         """
         self.ohc_700[index] = values["OHC700"]
         self.ohc_tot[index] = values["OHCTOT"]
@@ -180,8 +184,8 @@ class CICEROSCM:
         self.rib_n[index] = values["RIBN"]
         self.rib_s[index] = values["RIBS"]
         self.dT_glob[index] = values["dtemp"]
-        self.dT_NH[index] = values["dtempsh"]
-        self.dT_SH[index] = values["dtempnh"]
+        self.dT_NH[index] = values["dtempnh"]
+        self.dT_SH[index] = values["dtempsh"]
         self.dT_glob_air[index] = values["dtemp_air"]
         self.dT_glob_NH_air[index] = values["dtempnh_air"]
         self.dT_glob_SH_air[index] = values["dtempsh_air"]
@@ -191,6 +195,7 @@ class CICEROSCM:
         self.dSL[index] = values["deltsl"][0] + values["deltsl"][1]
         self.dSL_ice[index] = values["deltsl"][1]
         self.dSL_thermal[index] = values["deltsl"][0]
+        self.forcing[index] = forc
 
     def _run(self, pamset, cfg):
         """
@@ -253,13 +258,13 @@ class CICEROSCM:
                 rf_volc_n.iloc[yr - self.nystart, :],
                 rf_volc_s.iloc[yr - self.nystart, :],
             )
-            self.add_year_data_to_output(values, yr - self.nystart)
+            self.add_year_data_to_output(values, forc, yr - self.nystart)
 
         self.write_data_to_file(pamset)
 
     def write_data_to_file(self, pamset):
         """
-        Writing results to files after run
+        Write results to files after run
         """
         if "output_prefix" in pamset:
             # Make os independent?
@@ -268,6 +273,7 @@ class CICEROSCM:
             outdir = os.path.join(os.getcwd(), "output")
 
         indices = np.arange(self.nystart, self.nyend + 1)
+        df_forc = pd.DataFrame(data={"Year": indices, "Total_forcing": self.forcing,})
         df_ohc = pd.DataFrame(
             data={"Year": indices, "OHC700": self.ohc_700, "OHCTOT": self.ohc_tot}
         )
@@ -296,6 +302,12 @@ class CICEROSCM:
                 "dSL_ice(m)": self.dSL_ice,
             }
         )
-        df_ohc.to_csv(os.path.join(outdir, "output_ohc.csv"), sep="\t", index=False)
-        df_rib.to_csv(os.path.join(outdir, "output_rib.csv"), sep="\t", index=False)
-        df_temp.to_csv(os.path.join(outdir, "output_temp.csv"), sep="\t", index=False)
+        df_forc.to_csv(os.path.join(outdir, "output_forc.txt"), sep="\t", index=False)
+        df_ohc.to_csv(os.path.join(outdir, "output_ohc.txt"), sep="\t", index=False)
+        df_rib.to_csv(os.path.join(outdir, "output_rib.txt"), sep="\t", index=False)
+        df_temp.to_csv(
+            os.path.join(outdir, "output_temp.txt"),
+            sep="\t",
+            index=False,
+            float_format="%.5e",
+        )

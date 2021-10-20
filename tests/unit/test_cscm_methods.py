@@ -1,7 +1,8 @@
-import pytest
 import os
+
 import numpy as np
 import pandas as pd
+import pytest
 
 from ciceroscm import ciceroscm
 
