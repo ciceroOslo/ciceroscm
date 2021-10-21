@@ -4,7 +4,6 @@ import shutil
 import pandas as pd
 import pandas.testing as pdt
 
-
 from ciceroscm import CICEROSCM
 
 

@@ -45,13 +45,13 @@ def check_pamset(pamset):
     for pam in required:
         if pam not in pamset:
             LOGGER.warning(
-                "Parameter %s not in pamset. Using default value %f",
+                "Parameter %s not in pamset. Using default value %f"%
                 (pam, required[pam]),
             )
             pamset[pam] = required[pam]
         elif not isinstace(pamset[pam], int) and not isinstace(pamset[pam], float):
             LOGGER.warning(
-                "Parameter %s must be a number. Using default value %f",
+                "Parameter %s must be a number. Using default value %f"%
                 (pam, required[pam]),
             )
             pamset[pam] = required[pam]
