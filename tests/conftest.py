@@ -1,8 +1,6 @@
 import os.path
 
-import pyam
 import pytest
-from scmdata import ScmRun
 
 from ciceroscm import CICEROSCM
 

@@ -1,5 +1,5 @@
 """
-CICEROSCM 
+CICEROSCM
 """
 import logging
 import os
@@ -45,16 +45,14 @@ def check_pamset(pamset):
     for pam in required:
         if pam not in pamset:
             LOGGER.warning(
-                "Parameter {} not in pamset. Using default value {}".format(
-                    pam, required[pam]
-                )
+                "Parameter %s not in pamset. Using default value %f",
+                (pam, required[pam]),
             )
             pamset[pam] = required[pam]
         elif not isinstace(pamset[pam], int) and not isinstace(pamset[pam], float):
             LOGGER.warning(
-                "Parameter {} must be a number. Using default value {}".format(
-                    pam, required[pam]
-                )
+                "Parameter %s must be a number. Using default value %f",
+                (pam, required[pam]),
             )
             pamset[pam] = required[pam]
     return pamset
@@ -65,8 +63,8 @@ def read_forc(forc_file):
     Read in forcing from forc
     """
     components = False
-    with open(forc_file) as f:
-        first_line = f.readline()
+    with open(forc_file, "r") as fread:
+        first_line = fread.readline()
         if first_line[:4].lower() == "year":
             components = True
     if not components:
@@ -84,7 +82,7 @@ class CICEROSCM:
 
     def __init__(self):
         """
-        Intialise CICEROSCM 
+        Intialise CICEROSCM
         """
         self.nystart = 1750
         self.nyend = 2100
@@ -113,7 +111,7 @@ class CICEROSCM:
         if "nystart" in pamset:
             self.nystart = int(pamset["nystart"])
         if "nyend" in pamset:
-            self.nystart = int(pamset["nyend"])
+            self.nyend = int(pamset["nyend"])
         self.ohc_700 = np.zeros(self.nyend - self.nystart + 1)
         self.ohc_tot = np.zeros(self.nyend - self.nystart + 1)
         self.rib = np.zeros(self.nyend - self.nystart + 1)
@@ -141,7 +139,6 @@ class CICEROSCM:
         """
         indices = np.arange(self.nystart, self.nyend + 1)
         nrows = len(indices)
-        print(nrows)
         if self.nystart > 1750:
             skiprows = self.nystart - 1750
             df = pd.read_csv(
@@ -166,7 +163,6 @@ class CICEROSCM:
         row_index = yr - self.nystart
         # Add support for other forcing formats
         if isinstance(self.rf, np.ndarray):
-            print(self.rf_luc.iloc[row_index])
             # Add luc albedo later
             forc = self.rf[row_index]  # + self.rf_luc.iloc[row_index][0]
         else:
@@ -291,7 +287,7 @@ class CICEROSCM:
                 "dT_glob": self.dT_glob,
                 "dT_NH": self.dT_NH,
                 "dT_SH": self.dT_SH,
-                "DT_glob_air": self.dT_glob_air,
+                "dT_glob_air": self.dT_glob_air,
                 "dT_NH_air": self.dT_glob_NH_air,
                 "dT_SH_air": self.dT_glob_SH_air,
                 "dT_glob_sea": self.dT_glob_sea,
@@ -302,9 +298,24 @@ class CICEROSCM:
                 "dSL_ice(m)": self.dSL_ice,
             }
         )
-        df_forc.to_csv(os.path.join(outdir, "output_forc.txt"), sep="\t", index=False)
-        df_ohc.to_csv(os.path.join(outdir, "output_ohc.txt"), sep="\t", index=False)
-        df_rib.to_csv(os.path.join(outdir, "output_rib.txt"), sep="\t", index=False)
+        df_forc.to_csv(
+            os.path.join(outdir, "output_forc.txt"),
+            sep="\t",
+            index=False,
+            float_format="%.5e",
+        )
+        df_ohc.to_csv(
+            os.path.join(outdir, "output_ohc.txt"),
+            sep="\t",
+            index=False,
+            float_format="%.5e",
+        )
+        df_rib.to_csv(
+            os.path.join(outdir, "output_rib.txt"),
+            sep="\t",
+            index=False,
+            float_format="%.5e",
+        )
         df_temp.to_csv(
             os.path.join(outdir, "output_temp.txt"),
             sep="\t",

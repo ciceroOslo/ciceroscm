@@ -1,3 +1,6 @@
+"""
+Init
+"""
 from . import _version
 from .ciceroscm import CICEROSCM
 

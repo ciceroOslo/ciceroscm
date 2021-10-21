@@ -1,3 +1,7 @@
+"""
+Energy budget upwelling diffusion model
+"""
+
 import numpy as np
 
 sek_day = 86400
@@ -111,7 +115,7 @@ class UpwellingDiffusionModel:
         """
         alfa = np.zeros(self.lm - 1)
         ans = np.zeros(self.lm)
-        bbeta = np.zeros(self.lm)
+        bbeta = np.zeros(self.lm - 1)
 
         alfa[0] = -b[0] / a[0]
         bbeta[0] = d[0] / a[0]
@@ -132,7 +136,7 @@ class UpwellingDiffusionModel:
     def get_gam_and_fro_factor_ns(self, nh):
         """
         Get correct cam and fro variables depending on
-        whether Northern or Southern hemispher is 
+        whether Northern or Southern hemispher is
         considered
         """
         blm = self.ebbeta / self.rlamdo
@@ -161,7 +165,7 @@ class UpwellingDiffusionModel:
         c = np.zeros(self.lm)
         rakapafac = 2 * self.rakapa * self.dt
 
-        b[0] = rakapafac / (
+        b[0] = -rakapafac / (
             self.dz[0] * (0.0 * self.dz[0] + self.dz[1])
         )  # Can the 0.*dz(0) term be dropped here?
         a[0] = 1.0 - b[0] + gam_fro_fac - wcfac / self.dz[0]
@@ -188,10 +192,9 @@ class UpwellingDiffusionModel:
 
     def setup_ebud2(self, temp1N, temp1S):
         """
-        Set up coefficients and more for the two hemispheres 
+        Set up coefficients and more for the two hemispheres
         to be redone every timestep
         """
-
         # Northern hemisphere:
         wcfac = (
             self.w
@@ -270,7 +273,7 @@ class UpwellingDiffusionModel:
         self.ts = np.zeros(self.lm)
 
         self.betag = 3.0e-4
-        self.betaa = 2.0e-4
+        self.betaa = -2.0e-4
 
         self.z0 = 0.5
         self.betas = 0.25
@@ -324,7 +327,6 @@ class UpwellingDiffusionModel:
         self.zso = aa / bb
 
         deltsl[1] = self.zgo + self.zao + self.zso
-
         return deltsl
 
     def energy_budget(self, FN, FS, FN_VOLC, FS_VOLC):
@@ -341,15 +343,11 @@ class UpwellingDiffusionModel:
         tempn_sea = 0.0
         temps_sea = 0.0
 
-        dfrcn = 0.0
-        dfrcs = 0.0
-        dfrcg = 0.0
         templ = np.zeros(self.lm)
 
         dtyear = 1.0 / self.ldtime
         dn = np.zeros(self.lm)
         ds = np.zeros(self.lm)
-        print(FN_VOLC)
         for im in range(self.ldtime):
 
             self.setup_ebud2(temp1n, temp1s)
@@ -396,12 +394,15 @@ class UpwellingDiffusionModel:
                 + self.dtmsl3 * self.tn[self.lm - 1]
             )
 
+            #
             # Where are these being initialised? Ok, I think
             self.tn = self._band(self.acoeffn, self.bcoeffn, self.ccoeffn, dn)
             self.ts = self._band(self.acoeffs, self.bcoeffs, self.ccoeffs, ds)
-
+            # print("self.aceoffn: %s self.bcoeffn: %s self.ccoeffn %s"%(self.acoeffn, self.bcoeffn, self.ccoeffn))
+            # print("self.aceoffs: %s self.bcoeffs: %s self.ccoeffs %s"%(self.acoeffs, self.bcoeffs, self.ccoeffs))
             temp1n = self.tn[0]
             temp1s = self.ts[0]
+            # print("temp1n: %.5e temp1s %.5e"%(temp1n, temp1s))
             for i in range(self.lm):
                 templ[i] = (
                     templ[i] + 0.5 * (self.tn[i] + self.ts[i]) / 12.0
@@ -427,9 +428,7 @@ class UpwellingDiffusionModel:
             # x1=1638.+float(years_since_start)+float(im-1)/12.
 
             tempn = tempn + tmpn / 12.0
-            dfrcn = dfrcn + dqn / 12.0
             temps = temps + tmps / 12.0
-            dfrcs = dfrcs + dqs / 12.0
 
             tempn_air = tempn_air + tempan / 12.0
             temps_air = temps_air + tempas / 12.0

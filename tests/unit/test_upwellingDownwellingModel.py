@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from ciceroscm import upwelling_diffusion_model
 
