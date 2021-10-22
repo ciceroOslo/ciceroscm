@@ -50,7 +50,7 @@ def test_ciceroscm_zero_run(test_data_dir):
 
 def test_ciceroscm_run(tmpdir, test_data_dir):
     cscm = CICEROSCM()
-    # outdir = os.path.join(os.getcwd(), "output")
+    outdir_save = os.path.join(os.getcwd(), "output")
     outdir = str(tmpdir)
     cscm._run(
         {
@@ -72,6 +72,16 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     )
 
     check_output(outdir, os.path.join(test_data_dir, "1pct_CO2_no_sunvolc"))
+
+    cscm._run(
+        {
+            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "output_prefix": outdir_save, "sunvolc": 1,"nyend": 2100,
+        },
+        {"forc_file": os.path.join(test_data_dir, "CO2_1pros.txt")},
+    )
+
+    check_output(outdir_save, os.path.join(test_data_dir, "1pct_CO2"))
     # check_output(outdir, os.path.join(test_data_dir,"1pct_CO2_no_sunvolc"))
 
 

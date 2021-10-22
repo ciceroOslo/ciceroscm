@@ -213,6 +213,10 @@ class CICEROSCM:
                 os.path.join(default_data_dir, "meanVOLCmnd_ipcc_NH.txt")
             )
             rf_volc_s = rf_volc_n
+            # Test, adjust for not including spin up. See Gregory et al.
+            # Se regneark.
+            rf_volc_n =rf_volc_n + 0.371457071
+            rf_volc_s = rf_volc_s + 0.353195076
             self.rf_sun = self.read_data_on_year_row(
                 os.path.join(default_data_dir, "solar_IPCC.txt")
             )
@@ -247,7 +251,6 @@ class CICEROSCM:
             if not rf_run:
                 raise NotImplementedError("Only Forcing runs supported so far")
             forc = self.forc_set(yr)
-
             values = udm.energy_budget(
                 forc,
                 forc,
