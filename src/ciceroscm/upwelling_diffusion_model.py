@@ -267,6 +267,7 @@ class UpwellingDiffusionModel:
         self.dtmnl1 = 1.0 - self.dtmnl3
         self.dtmsl3 = self.fnso * self.dtmnl3
         self.dtmsl1 = 1.0 - self.dtmsl3
+        self.setup_ebud2(0,0)
 
         # Intialising temperature values
         self.tn = np.zeros(self.lm)
@@ -348,9 +349,12 @@ class UpwellingDiffusionModel:
         dtyear = 1.0 / self.ldtime
         dn = np.zeros(self.lm)
         ds = np.zeros(self.lm)
+        
+            
         for im in range(self.ldtime):
 
-            self.setup_ebud2(temp1n, temp1s)
+            if self.threstemp != 0:
+                self.setup_ebud2(temp1n, temp1s)
 
             dqn = (
                 (im + 1) * FN * dtyear
@@ -446,7 +450,8 @@ class UpwellingDiffusionModel:
 
         # Getting Ocean temperature:
         ocean_res = self.compute_ocean_temperature()
-        
+        ribn = FN +np.sum(FN_VOLC)/self.ldtime - self.rlamda * tempn
+        ribs = FS +np.sum(FS_VOLC)/self.ldtime- self.rlamda * temps
         # Returning results_dict
         return {
             "dtemp": dtemp,
@@ -458,9 +463,9 @@ class UpwellingDiffusionModel:
             "dtemp_sea": (tempn_sea + temps_sea) / 2.0,
             "dtempnh_sea": tempn_sea,
             "dtempsh_sea": temps_sea,
-            "RIBN": FN - self.rlamda * tempn,
-            "RIBS": FS - self.rlamda * temps,
-            "RIB": (FN + FS - self.rlamda * (tempn + temps)) / 2.0,
+            "RIBN": ribn,
+            "RIBS": ribs,
+            "RIB": (ribn + ribs) / 2.0,
             "deltsl": deltsl,
             "OHC700": ocean_res["OHC700"],
             "OHCTOT": ocean_res["OHCTOT"],
