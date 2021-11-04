@@ -10,7 +10,7 @@ from ciceroscm import CICEROSCM
 def check_output(
     output_dir, expected_output_dir, update_expected_files=False, rtol=1e-2
 ):
-    files = ["output_temp.txt", "output_rib.txt", "output_temp.txt"]
+    files = ["output_temp.txt", "output_ohc.txt"]
 
     for filename in files:
         file_to_check = os.path.join(output_dir, filename)
@@ -52,6 +52,8 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     cscm = CICEROSCM()
     outdir_save = os.path.join(os.getcwd(), "output")
     outdir = str(tmpdir)
+    #One year forcing:
+    
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
@@ -60,9 +62,12 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
         },
         {"forc_file": os.path.join(test_data_dir, "test_forcing.txt")},
     )
-
+    
     check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
 
+
+    # 1pct CO2 without sunvolc
+    
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
@@ -70,9 +75,10 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
         },
         {"forc_file": os.path.join(test_data_dir, "CO2_1pros.txt")},
     )
-
+    
     check_output(outdir, os.path.join(test_data_dir, "1pct_CO2_no_sunvolc"))
 
+    #1 ppct CO2 with sunvolc
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),

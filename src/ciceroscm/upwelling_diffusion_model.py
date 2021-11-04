@@ -446,7 +446,7 @@ class UpwellingDiffusionModel:
 
         # Getting Ocean temperature:
         ocean_res = self.compute_ocean_temperature()
-
+        
         # Returning results_dict
         return {
             "dtemp": dtemp,
@@ -478,13 +478,14 @@ class UpwellingDiffusionModel:
             rho
             * constant
             * area_hemisphere
-            * (self.tn * self.dz * self.foan + self.ts * self.foas)
+            * self.dz
+            * (self.tn * self.foan + self.ts * self.foas)
         )
 
         # Finding the max layer down to 700m
         max_layer = int(7 - self.dz[0] // 100.0)
-        frac = (1 + self.dz[0] // 100.0) * 100 - self.dz[0]
-
+        frac = (1 + self.dz[0] // 100.0) - self.dz[0]/100.
+        
         return {
             "OHC700": np.sum(havtemp[:max_layer]) + frac * havtemp[max_layer],
             "OHCTOT": np.sum(havtemp[:]),

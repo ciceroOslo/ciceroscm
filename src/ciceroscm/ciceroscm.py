@@ -258,7 +258,7 @@ class CICEROSCM:
                 rf_volc_s.iloc[yr - self.nystart, :],
             )
             self.add_year_data_to_output(values, forc, yr - self.nystart)
-
+            
         self.write_data_to_file(pamset)
 
     def write_data_to_file(self, pamset):
