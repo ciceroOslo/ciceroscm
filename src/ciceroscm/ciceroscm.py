@@ -49,7 +49,7 @@ def check_pamset(pamset):
                 (pam, required[pam]),
             )
             pamset[pam] = required[pam]
-        elif not isinstace(pamset[pam], int) and not isinstace(pamset[pam], float):
+        elif not isinstance(pamset[pam], int) and not isinstance(pamset[pam], float):
             LOGGER.warning(
                 "Parameter %s must be a number. Using default value %f"%
                 (pam, required[pam]),
