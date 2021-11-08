@@ -196,12 +196,19 @@ class UpwellingDiffusionModel:
         to be redone every timestep
         """
         # Northern hemisphere:
-        wcfac = (
-            self.w
-            / (sek_day * day_year)
-            * (1 - 0.3 * temp1N / self.threstemp)
-            * self.dt
-        )
+        if self.threstemp == 0:
+            wcfac = (
+                self.w
+                / (sek_day * day_year)
+                * self.dt
+            )
+        else:
+            wcfac = (
+                self.w
+                / (sek_day * day_year)
+                * (1 - 0.3 * temp1N / self.threstemp)
+                * self.dt
+            )
         self.dtrm1n = (
             1.0
             - self.cpi * wcfac / self.dz[0]
@@ -213,12 +220,19 @@ class UpwellingDiffusionModel:
         )
 
         # Southern hemisphere:
-        wcfac = (
-            self.w
-            / (sek_day * day_year)
-            * (1 - 0.3 * temp1S / self.threstemp)
-            * self.dt
-        )
+        if self.threstemp == 0:
+            wcfac = (
+                self.w
+                / (sek_day * day_year)
+                * self.dt
+            )
+        else:
+            wcfac = (
+                self.w
+                / (sek_day * day_year)
+                * (1 - 0.3 * temp1S / self.threstemp)
+                * self.dt
+            )            
         self.dtrm1s = (
             1.0
             - self.cpi * wcfac / self.dz[0]
