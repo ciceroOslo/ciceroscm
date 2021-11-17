@@ -280,10 +280,9 @@ class CICEROSCM:
             ce_handler = ConcentrationsEmissionsHandler(pamset["gaspamfile"], cfg["concentrations_file"], cfg["emissions_file"], pamset)
             
         for yr in range(self.nystart, self.nyend + 1):
-            if conc_run:
+            if not rf_run:
+                ce_handler.emi2conc(yr)
                 forc, fn, fs = ce_handler.conc2forc(yr,self.rf_luc.loc[yr,0],self.rf_sun.loc[yr-self.nystart, 0]) 
-            elif not rf_run:
-                raise NotImplementedError("Only Forcing runs supported so far")
             else:
                 forc = self.forc_set(yr)
                 fs = forc
