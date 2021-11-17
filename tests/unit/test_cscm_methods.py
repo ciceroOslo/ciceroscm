@@ -6,21 +6,6 @@ import pandas as pd
 from ciceroscm import ciceroscm
 
 
-def test_read_components(test_data_dir):
-    df_gas = ciceroscm.read_components(os.path.join(test_data_dir, "gases_v1RCMIP.txt"))
-    print(df_gas.columns)
-    assert df_gas.columns.tolist() == [
-        "EM_UNIT",
-        "CONC_UNIT",
-        "BETA",
-        "ALPHA",
-        "TAU1",
-        "TAU2",
-        "TAU3",
-        "NAT_EM",
-    ]
-    assert len(df_gas.index) == 46
-
 
 def test_read_volc_sun(test_data_dir):
     cscm = ciceroscm.CICEROSCM()

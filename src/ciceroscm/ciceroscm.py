@@ -3,11 +3,13 @@ CICEROSCM
 """
 import logging
 import os
-
+import sys
 import numpy as np
 import pandas as pd
 
 from .upwelling_diffusion_model import UpwellingDiffusionModel
+from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,16 +17,6 @@ default_data_dir = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "default_data"
 )
 
-
-def read_components(filename):
-    """
-    Read in components to be considered
-    """
-    df_gas = pd.read_csv(filename, delim_whitespace=True, index_col=0)
-    df_gas.rename(
-        columns={"TAU1(YEARS)": "TAU1", "NATURAL_EMISSIONS": "NAT_EM"}, inplace=True
-    )
-    return df_gas
 
 
 def check_pamset(pamset):
@@ -41,6 +33,36 @@ def check_pamset(pamset):
         "threstemp": 7.0,
         "lambda": 0.540,
         "mixed": 60.0,
+    }
+    for pam in required:
+        if pam not in pamset:
+            LOGGER.warning(
+                "Parameter %s not in pamset. Using default value %f"%
+                (pam, required[pam]),
+            )
+            pamset[pam] = required[pam]
+        elif not isinstance(pamset[pam], int) and not isinstance(pamset[pam], float):
+            LOGGER.warning(
+                "Parameter %s must be a number. Using default value %f"%
+                (pam, required[pam]),
+            )
+            pamset[pam] = required[pam]
+    return pamset
+
+
+def check_pamset_nonforc_run(pamset):
+    """
+    Check that parameterset has necessary values for run
+    Otherwise set to default values
+    """
+    required = {
+        "lamb": 0.8,
+        "qbmb": 0.03,
+        "qo3": 0.34,
+        "qdirso2":-0.4,
+        "qindso2": -0.8,
+        "qbc": 0.22,
+        "qoc":-0.05
     }
     for pam in required:
         if pam not in pamset:
@@ -170,6 +192,7 @@ class CICEROSCM:
         forc = forc + self.rf_sun.iloc[row_index, 0]
         return forc
 
+        
     def add_year_data_to_output(self, values, forc, index):
         """
         Add single year output to output arrays
@@ -198,13 +221,13 @@ class CICEROSCM:
         Run CICEROSCM
         """
         # Parameters as dict, possible make pamfilereading an option
-        self.df_gas = read_components(pamset["gaspamfile"])
         pamset = check_pamset(pamset)
-        # Add omethng to adjust start and end of simulation
+        # Add something to adjust start and end of simulation
+        
         self.initialise_output_arrays(pamset)
         # Setting up UDM
         udm = UpwellingDiffusionModel(pamset)
-
+                
         # Reading in solar and volcanic forcing
         if "sunvolc" in pamset and pamset["sunvolc"] == 1:
             # Possibly change to allow for other files
@@ -239,6 +262,7 @@ class CICEROSCM:
         )
 
         rf_run = False
+        conc_run = False
         if "forc_file" in cfg:
             rf_run = True
             if not os.path.exists(cfg["forc_file"]):
@@ -246,14 +270,27 @@ class CICEROSCM:
                     "Forcing input file {} not found".format(cfg["forc_file"])
                 )
             self.rf = read_forc(cfg["forc_file"])
-
+        elif "concentrations_file" in cfg:
+            conc_run = True
+            if not os.path.exists(cfg["concentrations_file"]):
+                raise FileNotFoundError(
+                    "Concentration input file {} not found".format(cfg["concentrations_file"])
+                )
+            pamset = check_pamset_nonforc_run(pamset)
+            ce_handler = ConcentrationsEmissionsHandler(pamset["gaspamfile"], cfg["concentrations_file"], cfg["emissions_file"], pamset)
+            
         for yr in range(self.nystart, self.nyend + 1):
-            if not rf_run:
+            if conc_run:
+                forc, fn, fs = ce_handler.conc2forc(yr,self.rf_luc.loc[yr,0],self.rf_sun.loc[yr-self.nystart, 0]) 
+            elif not rf_run:
                 raise NotImplementedError("Only Forcing runs supported so far")
-            forc = self.forc_set(yr)
+            else:
+                forc = self.forc_set(yr)
+                fs = forc
+                fn = forc
             values = udm.energy_budget(
-                forc,
-                forc,
+                fn,
+                fs,
                 rf_volc_n.iloc[yr - self.nystart, :],
                 rf_volc_s.iloc[yr - self.nystart, :],
             )
