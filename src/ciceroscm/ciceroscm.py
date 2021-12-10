@@ -17,7 +17,34 @@ default_data_dir = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "default_data"
 )
 
-
+def check_inputfiles(cfg):
+    if not os.path.exists(cfg["concentrations_file"]):
+        raise FileNotFoundError(
+            "Concentration input file {} not found".format(cfg["concentrations_file"])
+        )
+    if not os.path.exists(cfg["emissions_file"]):
+        raise FileNotFoundError(
+            "Emission input file {} not found".format(cfg["emissions_file"])
+        )
+    if not "nat_ch4_file" in cfg:
+        LOGGER.warning(
+            "Did not find prescribed nat_ch4_file or none was given. Looking in standard path",
+        )
+        cfg["nat_ch4_file"] = os.path.join(os.getcwd(), "input_OTHER", "NATEMIS", "natemis_ch4.txt")
+    if not os.path.exists(cfg["nat_ch4_file"]):
+        raise FileNotFoundError(
+            "Natural emission input file {} not found".format(cfg["nat_ch4_file"])
+        )
+    if not "nat_n2o_file" in cfg:
+        LOGGER.warning(
+            "Did not find prescribed nat_n2o_file or none was given. Looking in standard path",
+        )
+        cfg["nat_n2o_file"] = os.path.join(os.getcwd(), "input_OTHER", "NATEMIS", "natemis_n2o.txt")
+    if not os.path.exists(cfg["nat_n2o_file"]):
+        raise FileNotFoundError(
+            "Natural emission input file {} not found".format(cfg["nat_n2o_file"])
+        ) 
+    return cfg
 
 def check_pamset(pamset):
     """
@@ -270,14 +297,16 @@ class CICEROSCM:
                     "Forcing input file {} not found".format(cfg["forc_file"])
                 )
             self.rf = read_forc(cfg["forc_file"])
-        elif "concentrations_file" in cfg:
+        elif "conc_run" in cfg and cfg["conc_run"]==True:
             conc_run = True
-            if not os.path.exists(cfg["concentrations_file"]):
-                raise FileNotFoundError(
-                    "Concentration input file {} not found".format(cfg["concentrations_file"])
-                )
+            cfg = check_inputfiles(cfg)
             pamset = check_pamset_nonforc_run(pamset)
-            ce_handler = ConcentrationsEmissionsHandler(pamset["gaspamfile"], cfg["concentrations_file"], cfg["emissions_file"], pamset, cfg["nat_ch4_file"], cfg["nat_n2o_file"])
+            ce_handler = ConcentrationsEmissionsHandler(pamset["gaspamfile"], cfg["concentrations_file"], cfg["emissions_file"], pamset, cfg["nat_ch4_file"], cfg["nat_n2o_file"], conc_run)
+        else:
+            cfg = check_inputfiles(cfg)
+            pamset = check_pamset_nonforc_run(pamset)
+            ce_handler = ConcentrationsEmissionsHandler(pamset["gaspamfile"], cfg["concentrations_file"], cfg["emissions_file"], pamset, cfg["nat_ch4_file"], cfg["nat_n2o_file"], conc_run)
+           
             
         for yr in range(self.nystart, self.nyend + 1):
             if not rf_run:
