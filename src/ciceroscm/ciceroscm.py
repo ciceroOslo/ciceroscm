@@ -277,12 +277,13 @@ class CICEROSCM:
                     "Concentration input file {} not found".format(cfg["concentrations_file"])
                 )
             pamset = check_pamset_nonforc_run(pamset)
-            ce_handler = ConcentrationsEmissionsHandler(pamset["gaspamfile"], cfg["concentrations_file"], cfg["emissions_file"], pamset)
+            ce_handler = ConcentrationsEmissionsHandler(pamset["gaspamfile"], cfg["concentrations_file"], cfg["emissions_file"], pamset, cfg["nat_ch4_file"], cfg["nat_n2o_file"])
             
         for yr in range(self.nystart, self.nyend + 1):
             if not rf_run:
                 ce_handler.emi2conc(yr)
                 forc, fn, fs = ce_handler.conc2forc(yr,self.rf_luc.loc[yr,0],self.rf_sun.loc[yr-self.nystart, 0]) 
+
             else:
                 forc = self.forc_set(yr)
                 fs = forc

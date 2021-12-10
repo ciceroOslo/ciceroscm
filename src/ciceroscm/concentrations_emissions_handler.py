@@ -12,13 +12,40 @@ def read_components(filename):
     )
     return df_gas
 
+def _rs_function(time):
+    """
+    Calculate pulse response function for mixed layer
+    time is the year index*idtm + i, i.e. the month number
+    """
+    if time < 2. :
+        rs = 0.12935 + 0.21898*np.exp(-time/0.034569) + 0.17003*np.exp(-time/0.26936) + 0.24071*np.exp(-time/0.96083) + 0.24093*np.exp(-time/4.9792)
+    else:
+        rs = 0.022936 + 0.24278*np.exp(-time/1.2679) + 0.13963*np.exp(-time/5.2528) + 0.089318*np.exp(-time/18.601) + 0.03782*np.exp(-time/68.736) + 0.035549*np.exp(-time/232.3)
+    return rs
+
+def _rb_function(time):
+    """
+    Calculate biotic decay function
+    time is the year index*idtm + i, i.e. the month number
+    """
+    rb = 0.70211*np.exp(-0.35*time) +13.4141E-3*np.exp(-time/20.) - 0.71846*np.exp(-55*time/120.) + 2.9323E-3*np.exp(-time/100.) 
+    return rb
+
+def read_natural_emissions(filename, component, startyear=1750, endyear=2500):
+    """
+    Reading in single column natural emissions file
+    """
+    df = pd.read_csv(filename, header = None, names=[component], index_col = 0)
+    df['year'] = np.arange(startyear, endyear+1)
+    df.set_index('year')
+    return df
 
 class ConcentrationsEmissionsHandler:
     """
     Class to handle concentrations
     and emissions input for ciceroscm
     """
-    def __init__(self, gaspam_file, conc_file, emis_file, pamset, conc_run = True, ref_year = 2010):
+    def __init__(self, gaspam_file, conc_file, emis_file, pamset, nat_ch4_file, nat_n2o_file,  conc_run = True, ref_year = 2010):
         self.conc_run = conc_run
         self.df_gas = read_components(gaspam_file)
         self.conc = {}
@@ -32,12 +59,18 @@ class ConcentrationsEmissionsHandler:
                 if tracer != "CO2.1":
                     self.conc[tracer] = []
                     self.forc[tracer] = []
-            self.forc["Total_forcing"] =[]
-                
+            self.forc["Total_forcing"] =[]                
             self.emis.rename(columns={"CO2":"CO2_FF", "CO2.1":"CO2_AFOLU"}, inplace=True)
+        self.nat_emis_ch4 = read_natural_emissions(nat_ch4_file, "CH4")
+        self.nat_emis_n2o = read_natural_emissions(nat_n2o_file, "N2O")
         self.ref_yr = ref_year
         self.pamset = pamset
         self.years = []
+        self.idtm = 12
+        self.yCO2 = 0.0
+        self.sCO2 = []
+        self.xCO2 = 278.
+        self.dfnpp = []
         
 
     def read_inputfile(self, input_file):
@@ -47,6 +80,20 @@ class ConcentrationsEmissionsHandler:
         df_input = pd.read_csv(input_file, delim_whitespace=True, index_col=0, skiprows=[1,2,3])
         print(df_input.describe())
         return df_input
+
+    
+
+    #trengs denne?
+    def setup_CO2(self):
+        """
+        Setting up CO2 things, not clear if needed
+        """
+        self.yCO2 = 0.0
+        self.sCO2[0] = 0.0
+        self.xCO2 = 278.
+        self.dfnpp[0] = 0.0
+       
+        
 
     def calculate_strat_quantities(self, yr_ix):
         """
@@ -212,8 +259,66 @@ class ConcentrationsEmissionsHandler:
             self.fill_one_row_conc(yr)
             return
         yr_ix = yr - self.years[0]
-        idtm = 12
-            
+
+        for tracer in df_gas.index:
+            #something something postscenario...?
+            if self.df_gas['CONC_UNIT'] == "-":
+                #Forcing calculated from emissions
+                continue
+            if tracer == "CO2":
+                co2em2conc(yr)
+                continue
+            if yr_ix > 0:
+                xc = self.conc[tracer][yr_ix -1]
+            else:
+                xc = self.conc_in[tracer][yr_ix]
+            """    
+            if tracer == "CH4":
+                # get natural emissions
+            if tracer == "N2O":
+                # get natural emissions              
+            """
+            q = 1.0/self.df_gas["TAU1"][tracer]
+            if tracer == "CH4":
+                self.df_gas['NAT_EM'][tracer] = self.nat_emis_ch4["CH4"][yr]
+                q = self.methane_em2conc(q,xc,yr_ix,lifetime_mode)
+            if tracer == "N2O":
+                self.df_gas['NAT_EM'][tracer] = self.nat_emis_n2o["N2O"][yr]
+
+            q = q/self.idtm
+            for i in range(self.idtm):
+                em = self.emis[tracer][yr_ix]
+                em = em + self.df_gas['NAT_EM'][tracer] #natural emissions, from gasspamfile
+                ach = xc
+                em = em/self.idtm
+                pc = em/self.df_gas["BETA"][tracer]
+                ach = pc/q + (ach-pc/q)*EXP(-q*1.0)
+                xc = ach
+            self.conc[tracer][yr_ix] = xc
+
+    def methane_lifetime(self,q,xc, yr_ix,lifetime_mode='TAR'):
+        """
+        Calculate methane concentrations from emissions
+        """
+        ch4_wigley_exp = -0.238
+        if lifetimeMode == 'TAR':
+            #1751 is reference conc in 2000
+            dlnOH =  -0.32*(np.log(xc) - np.log(1751.0)) + 0.0042 *(self.emis["NOx"][yr_ix]- self.emis["NOx",2000]) - 0.000105 * (self.emis["CO"][yr_ix]- self.emis["CO",2000]) - 0.000315 * (self.emis["NMVOC"][yr_ix]- self.emis["NMVOC",2000])
+            q = q * (dlnOH + 1)
+        elif lifetime_mode == 'CONSTANT':
+            q = 1.0/12.0
+        else:
+            q = q*(((xc/1700.))**(ch4_wigley_exp))
+
+        q = q + 1./self.df_gas["TAU2"]["CH4"] + 1./self.df_gas["TAU3"]["CH4"]
+        
+        return q
+        
+
+    def co2em2conc(self, yr_ix):
+        """
+        Calculate co2 concentrations from emissions
+        """  
         #Fertilisation factor
         beta_f = 0.287
 
@@ -224,13 +329,50 @@ class ConcentrationsEmissionsHandler:
         coeff = 1.0/(ocean_area*9.06)
 
         #TIMESTEP (YR)
-        dt = 1.0/idtm
+        dt = 1.0/self.idtm
 
         #Conversion factor ppm/kg --> umol*/m3
         c = 1.722E+17
 
         #USING MIXED LAYER DEPTH = 75 metres
         h = 75.0
+
+        cc1 = dt*a*coeff/(1 + dt*a*coeff/2.)
+        ss1 = 0.5*self.emis["CO2"]/2.123
+        #Monthloop:
+        q = q/self.idtm 
+        for i in range(self.idtm):
+            it = yr_ix*self.idtm + i
+            sumf = 0.0
+            #Net emissions, including biogenic fertilization effects
+            if it > 0:
+                self.dfnpp.append(60.*betaf*np.log(self.xCO2[it-1])/278.)
+            if it > 1:
+                for j in range(1,it):
+                    sumf = sumf + dfnpp[it]*_rb_function(it)
+            ffer = dfnpp[it] - dt*sumf
+            emCO2 = self.emis["CO2"][yr_ix] - ffer
+            emCO2 = emCO2 + self.df_gas['NAT_EM']["CO2"]
+            emCO2 = emCO2/2.123
+
+            if it == 0:
+                ss2 = ss1
+                sums = 0.
+            else:
+                ss2 = 0.5*emCO2/(a*coeff) - self.yCO2/(dt*a*coeff)
+                sums = sums + emCO2_prev/(a*coeff) - self.sCO2[it-1]
+            self.sCO2.append(cc1*(sums + ss1 + ss2))
+            emCO2_prev = emCO2
+            sumz = 0.
+            for j in range(it):
+                sumz = sumz + self.sCO2[j]*_rs_function(it-j)
+
+            zCO2 = c*coeff*dt/h*(sumz+0.5*self.sCO2[it])
+            self.yCO2 = 1.3021*zCO2 + 3.7929E-3*(zCO2**2) + 9.1193E-6*(ZCO2**3) + 1.488E-8*(zCO2**4) + 1.2425E-10*(zCO2**5)
+            self.xCO2 = self.SCO2[it] + self.yCO2 + 278.
+            
+        self.conc["CO2"][yr_ix] = self.xCO2
+            
 
     def fill_one_row_conc(self, yr):
         """
@@ -241,3 +383,4 @@ class ConcentrationsEmissionsHandler:
                 self.conc[tracer].append(self.conc_in[tracer][yr])
             else:
                 self.conc[tracer].append(0)       
+            
