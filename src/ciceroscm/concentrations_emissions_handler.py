@@ -193,7 +193,6 @@ class ConcentrationsEmissionsHandler:
                 q = (value - c0)*self.df_gas['ALPHA'][tracer] #+forc_pert
             elif tracer == "TROP_O3":
                 yr_emstart = self.pamset["emstart"] - self.years[0]
-                print(yr_emstart)
                 if self.conc_run or yr_ix <= yr_emstart:
                     # Uses change in CO2_FF emissions
                     q = (self.emis["CO2_FF"][yr]-self.emis["CO2_FF"][self.years[0]])/(self.emis["CO2_FF"][self.years[0]]-self.emis["CO2_FF"][self.years[0]])*self.pamset["qo3"]
@@ -397,27 +396,22 @@ class ConcentrationsEmissionsHandler:
         self.forc["Year"] = self.years
         df_forc = pd.DataFrame(data = self.forc, index=self.years)
         print(self.emis.head())
-        df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis = 1).drop(labels=np.arange(self.years[-1],self.emis.index[-1]), axis = 0)
+        print(np.arange(self.years[-1],self.emis.index[-1]))
+        df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis = 1).drop(labels=np.arange(self.years[-1]+1,self.emis.index[-1]+1), axis = 0)
+        df_emis["Year"] = self.years
         df_emis["CO2"] = self.emis["CO2_FF"] + self.emis["CO2_AFOLU"]
-        
-        #df_emis = pd.DataFrame(data ={"CO2":self.conc["CO2"][self.years[0]:end].values}, index=self.years)
+        cols = df_emis.columns.tolist()
+        cols = cols[-2:] + cols[:-2]
+        df_emis = df_emis[cols]
         self.conc["Year"] = self.years
         
         df_conc = pd.DataFrame(data =self.conc, index = self.years)
         cols = df_conc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_conc = df_conc[cols]
-        """
-        data_dict = {"emis":[df_emis, self.emis]}
-        for tracer in df_gas.index:
-            if tracer not in data_dict[data_type][1].columns:
-                if tracer == "CO2":
-                    continue
-                else:
-                    data_dict[data_type][0][tracer] = np.zeros(len(self.years))
-            else:
-                data_dict[data_type][0][tracer] = data_dict[data_type][1][tracer][self.years[0]:end]
-       """         
+        for tracer in self.df_gas.index:
+            if tracer not in df_emis.columns.tolist():
+                df_emis[tracer] = np.zeros(len(self.years))
             
         df_forc.to_csv(
             os.path.join(outdir, "output_forc_from_conc.txt"),
