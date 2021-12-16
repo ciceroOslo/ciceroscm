@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import os
 
 import sys
 
@@ -191,15 +192,20 @@ class ConcentrationsEmissionsHandler:
             elif tracer in self.df_gas.index and self.df_gas['ALPHA'][tracer] != 0:
                 q = (value - c0)*self.df_gas['ALPHA'][tracer] #+forc_pert
             elif tracer == "TROP_O3":
-                if self.conc_run or yr_ix == 0:
+                yr_emstart = self.pamset["emstart"] - self.years[0]
+                print(yr_emstart)
+                if self.conc_run or yr_ix <= yr_emstart:
                     # Uses change in CO2_FF emissions
                     q = (self.emis["CO2_FF"][yr]-self.emis["CO2_FF"][self.years[0]])/(self.emis["CO2_FF"][self.years[0]]-self.emis["CO2_FF"][self.years[0]])*self.pamset["qo3"]
                 else:
-                   
+                    #ALOG(1700.0))  !Concentration in 2010 &
+                    self.conc[tracer][yr] =  30.0 + 6.7 * (np.log(self.conc["CH4"][yr])-np.log(1832.0)) + 0.17 * (self.emis["NOx"][yr]-self.emis["NOx"][self.ref_yr]) + 0.0014 * (self.emis["CO"][yr]-self.emis["CO"][self.ref_yr]) + 0.0042 * (self.emis["NMVOC"][yr]-self.emis["NMVOC"][self.ref_yr])
                     #RBS101115     
                     #IF (yr_ix.LT.yr_2010) THEN ! Proportional to TROP_O3 build-up
                     # Rewritten a bit, place to check for differences...
-                    q1 = self.forc[tracer][0]
+                    q1 = self.forc[tracer][yr_emstart]
+                    value = self.conc[tracer][yr]
+                    c0 = self.conc[tracer][self.pamset["emstart"]]
                     q = q1 +(value-c0)/(30.0-c0)* (self.pamset["qo3"]-q1)
             elif tracer == "STRAT_O3":
                 sumcl, sumbr = self.calculate_strat_quantities(yr-3)
@@ -377,3 +383,59 @@ class ConcentrationsEmissionsHandler:
         """
         for tracer in self.conc:
             self.conc[tracer][yr] = 0
+
+
+    def write_output_to_files(self, pamset):
+        """
+        Write results to files after run
+        """
+        if "output_prefix" in pamset:
+            # Make os independent?
+            outdir = os.path.join(os.getcwd(), pamset["output_prefix"])
+        else:
+            outdir = os.path.join(os.getcwd(), "output")
+        self.forc["Year"] = self.years
+        df_forc = pd.DataFrame(data = self.forc, index=self.years)
+        print(self.emis.head())
+        df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis = 1).drop(labels=np.arange(self.years[-1],self.emis.index[-1]), axis = 0)
+        df_emis["CO2"] = self.emis["CO2_FF"] + self.emis["CO2_AFOLU"]
+        
+        #df_emis = pd.DataFrame(data ={"CO2":self.conc["CO2"][self.years[0]:end].values}, index=self.years)
+        self.conc["Year"] = self.years
+        
+        df_conc = pd.DataFrame(data =self.conc, index = self.years)
+        cols = df_conc.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        df_conc = df_conc[cols]
+        """
+        data_dict = {"emis":[df_emis, self.emis]}
+        for tracer in df_gas.index:
+            if tracer not in data_dict[data_type][1].columns:
+                if tracer == "CO2":
+                    continue
+                else:
+                    data_dict[data_type][0][tracer] = np.zeros(len(self.years))
+            else:
+                data_dict[data_type][0][tracer] = data_dict[data_type][1][tracer][self.years[0]:end]
+       """         
+            
+        df_forc.to_csv(
+            os.path.join(outdir, "output_forc_from_conc.txt"),
+            sep="\t",
+            index=False,
+            float_format="%.5e",
+        )
+        df_conc.to_csv(
+            os.path.join(outdir, "output_conc.txt"),
+            sep="\t",
+            index=False,
+            float_format="%.5e",
+        )
+        
+        df_emis.to_csv(
+            os.path.join(outdir, "output_em.txt"),
+            sep="\t",
+            index=False,
+            float_format="%.5e",
+        )
+        

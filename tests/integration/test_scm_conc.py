@@ -10,7 +10,7 @@ from ciceroscm import CICEROSCM
 def check_output(
     output_dir, expected_output_dir, update_expected_files=False, rtol=1e-2
 ):
-    files = ["output_temp.txt", "output_ohc.txt"]
+    files = ["output_em.txt", "output_conc.txt","output_temp.txt", "output_ohc.txt"]
 
     for filename in files:
         file_to_check = os.path.join(output_dir, filename)
@@ -38,13 +38,14 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir,
+            "output_prefix": outdir_save,
             "nyend": 2100,
         },
         {"concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"), "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"), "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"), "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt")},
     )
     
-    check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
+    check_output(outdir_save, os.path.join(test_data_dir, "ssp245_emis"))
+"""
 def test_ciceroscm_run_conc(tmpdir, test_data_dir):
     cscm = CICEROSCM()
     outdir_save = os.path.join(os.getcwd(), "output")
@@ -54,14 +55,14 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir,
+            "output_prefix": outdir_save,
             "nyend": 2100,
         },
         {"concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"), "conc_run":True, "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"), "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"), "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt")},
     )
     
     check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
-    """
+   
 
     # 1pct CO2 without sunvolc
     

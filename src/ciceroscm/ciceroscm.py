@@ -89,7 +89,7 @@ def check_pamset_nonforc_run(pamset):
         "qdirso2":-0.4,
         "qindso2": -0.8,
         "qbc": 0.22,
-        "qoc":-0.05
+        "qoc":-0.05,
     }
     for pam in required:
         if pam not in pamset:
@@ -135,6 +135,7 @@ class CICEROSCM:
         """
         self.nystart = 1750
         self.nyend = 2100
+        self.emstart = 1850
         """
         self.idtm = 24
         self.scenstart = 1991
@@ -161,6 +162,10 @@ class CICEROSCM:
             self.nystart = int(pamset["nystart"])
         if "nyend" in pamset:
             self.nyend = int(pamset["nyend"])
+        if "emstart" in pamset:
+            self.emstart = int(pamset["emstart"])
+        else:
+            pamset["emstart"] = self.emstart
         self.ohc_700 = np.zeros(self.nyend - self.nystart + 1)
         self.ohc_tot = np.zeros(self.nyend - self.nystart + 1)
         self.rib = np.zeros(self.nyend - self.nystart + 1)
@@ -324,10 +329,13 @@ class CICEROSCM:
                 rf_volc_s.iloc[yr - self.nystart, :],
             )
             self.add_year_data_to_output(values, forc, yr - self.nystart)
-            
-        self.write_data_to_file(pamset)
 
-    def write_data_to_file(self, pamset):
+        if not rf_run:
+            ce_handler.write_output_to_files(pamset)
+            
+        self.write_data_to_file(pamset, rf_run)
+
+    def write_data_to_file(self, pamset, rf_run=True):
         """
         Write results to files after run
         """
@@ -338,7 +346,6 @@ class CICEROSCM:
             outdir = os.path.join(os.getcwd(), "output")
 
         indices = np.arange(self.nystart, self.nyend + 1)
-        df_forc = pd.DataFrame(data={"Year": indices, "Total_forcing": self.forcing,})
         df_ohc = pd.DataFrame(
             data={"Year": indices, "OHC700": self.ohc_700, "OHCTOT": self.ohc_tot}
         )
@@ -367,12 +374,7 @@ class CICEROSCM:
                 "dSL_ice(m)": self.dSL_ice,
             }
         )
-        df_forc.to_csv(
-            os.path.join(outdir, "output_forc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
+
         df_ohc.to_csv(
             os.path.join(outdir, "output_ohc.txt"),
             sep="\t",
@@ -391,3 +393,11 @@ class CICEROSCM:
             index=False,
             float_format="%.5e",
         )
+        if rf_run:
+            df_forc = pd.DataFrame(data={"Year": indices, "Total_forcing": self.forcing,})
+            df_forc.to_csv(
+                os.path.join(outdir, "output_forc.txt"),
+                sep="\t",
+                index=False,
+                float_format="%.5e",
+            )
