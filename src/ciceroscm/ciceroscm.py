@@ -331,7 +331,7 @@ class CICEROSCM:
             self.add_year_data_to_output(values, forc, yr - self.nystart)
 
         if not rf_run:
-            ce_handler.write_output_to_files(pamset)
+            ce_handler.write_output_to_files(pamset, self.forcing)
             
         self.write_data_to_file(pamset, rf_run)
 

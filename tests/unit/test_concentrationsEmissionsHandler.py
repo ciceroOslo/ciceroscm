@@ -22,6 +22,6 @@ def test_read_components(test_data_dir):
 
 def test_rs_and_rb_functions():
     assert concentrations_emissions_handler._rs_function(0) == 1.0
-    assert concentrations_emissions_handler._rs_function(3.0) == 0.2719071489736581
+    assert concentrations_emissions_handler._rs_function(3.0) == 0.6114162527007166
     assert concentrations_emissions_handler._rb_function(0) == -3.599999999991197e-06
 

@@ -113,13 +113,13 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir_save, "sunvolc": 1,"nyend": 2100,
+            "output_prefix": outdir, "sunvolc": 1,"nyend": 2100,
             "threstemp": 0,
         },
         {"forc_file": os.path.join(test_data_dir, "CO2_1pros.txt")},
     )
 
-    check_output_subset(outdir_save, os.path.join(test_data_dir, "nr_test_1pct_CO2"))
+    check_output_subset(outdir, os.path.join(test_data_dir, "nr_test_1pct_CO2"))
     #Test NR-setup:
     
     
