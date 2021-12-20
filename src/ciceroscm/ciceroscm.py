@@ -3,11 +3,13 @@ CICEROSCM
 """
 import logging
 import os
-
+import sys
 import numpy as np
 import pandas as pd
 
 from .upwelling_diffusion_model import UpwellingDiffusionModel
+from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,17 +17,34 @@ default_data_dir = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "default_data"
 )
 
-
-def read_components(filename):
-    """
-    Read in components to be considered
-    """
-    df_gas = pd.read_csv(filename, delim_whitespace=True, index_col=0)
-    df_gas.rename(
-        columns={"TAU1(YEARS)": "TAU1", "NATURAL_EMISSIONS": "NAT_EM"}, inplace=True
-    )
-    return df_gas
-
+def check_inputfiles(cfg):
+    if not os.path.exists(cfg["concentrations_file"]):
+        raise FileNotFoundError(
+            "Concentration input file {} not found".format(cfg["concentrations_file"])
+        )
+    if not os.path.exists(cfg["emissions_file"]):
+        raise FileNotFoundError(
+            "Emission input file {} not found".format(cfg["emissions_file"])
+        )
+    if not "nat_ch4_file" in cfg:
+        LOGGER.warning(
+            "Did not find prescribed nat_ch4_file or none was given. Looking in standard path",
+        )
+        cfg["nat_ch4_file"] = os.path.join(os.getcwd(), "input_OTHER", "NATEMIS", "natemis_ch4.txt")
+    if not os.path.exists(cfg["nat_ch4_file"]):
+        raise FileNotFoundError(
+            "Natural emission input file {} not found".format(cfg["nat_ch4_file"])
+        )
+    if not "nat_n2o_file" in cfg:
+        LOGGER.warning(
+            "Did not find prescribed nat_n2o_file or none was given. Looking in standard path",
+        )
+        cfg["nat_n2o_file"] = os.path.join(os.getcwd(), "input_OTHER", "NATEMIS", "natemis_n2o.txt")
+    if not os.path.exists(cfg["nat_n2o_file"]):
+        raise FileNotFoundError(
+            "Natural emission input file {} not found".format(cfg["nat_n2o_file"])
+        ) 
+    return cfg
 
 def check_pamset(pamset):
     """
@@ -41,6 +60,36 @@ def check_pamset(pamset):
         "threstemp": 7.0,
         "lambda": 0.540,
         "mixed": 60.0,
+    }
+    for pam in required:
+        if pam not in pamset:
+            LOGGER.warning(
+                "Parameter %s not in pamset. Using default value %f"%
+                (pam, required[pam]),
+            )
+            pamset[pam] = required[pam]
+        elif not isinstance(pamset[pam], int) and not isinstance(pamset[pam], float):
+            LOGGER.warning(
+                "Parameter %s must be a number. Using default value %f"%
+                (pam, required[pam]),
+            )
+            pamset[pam] = required[pam]
+    return pamset
+
+
+def check_pamset_nonforc_run(pamset):
+    """
+    Check that parameterset has necessary values for run
+    Otherwise set to default values
+    """
+    required = {
+        "lamb": 0.8,
+        "qbmb": 0.03,
+        "qo3": 0.4,
+        "qdirso2":-0.457,
+        "qindso2": -0.514,
+        "qbc": 0.200,
+        "qoc":-0.103,
     }
     for pam in required:
         if pam not in pamset:
@@ -86,6 +135,7 @@ class CICEROSCM:
         """
         self.nystart = 1750
         self.nyend = 2100
+        self.emstart = 1850
         """
         self.idtm = 24
         self.scenstart = 1991
@@ -112,6 +162,10 @@ class CICEROSCM:
             self.nystart = int(pamset["nystart"])
         if "nyend" in pamset:
             self.nyend = int(pamset["nyend"])
+        if "emstart" in pamset:
+            self.emstart = int(pamset["emstart"])
+        else:
+            pamset["emstart"] = self.emstart
         self.ohc_700 = np.zeros(self.nyend - self.nystart + 1)
         self.ohc_tot = np.zeros(self.nyend - self.nystart + 1)
         self.rib = np.zeros(self.nyend - self.nystart + 1)
@@ -170,6 +224,7 @@ class CICEROSCM:
         forc = forc + self.rf_sun.iloc[row_index, 0]
         return forc
 
+        
     def add_year_data_to_output(self, values, forc, index):
         """
         Add single year output to output arrays
@@ -198,13 +253,13 @@ class CICEROSCM:
         Run CICEROSCM
         """
         # Parameters as dict, possible make pamfilereading an option
-        self.df_gas = read_components(pamset["gaspamfile"])
         pamset = check_pamset(pamset)
-        # Add omethng to adjust start and end of simulation
+        # Add something to adjust start and end of simulation
+        
         self.initialise_output_arrays(pamset)
         # Setting up UDM
         udm = UpwellingDiffusionModel(pamset)
-
+                
         # Reading in solar and volcanic forcing
         if "sunvolc" in pamset and pamset["sunvolc"] == 1:
             # Possibly change to allow for other files
@@ -239,6 +294,7 @@ class CICEROSCM:
         )
 
         rf_run = False
+        conc_run = False
         if "forc_file" in cfg:
             rf_run = True
             if not os.path.exists(cfg["forc_file"]):
@@ -246,22 +302,40 @@ class CICEROSCM:
                     "Forcing input file {} not found".format(cfg["forc_file"])
                 )
             self.rf = read_forc(cfg["forc_file"])
-
+        elif "conc_run" in cfg and cfg["conc_run"]==True:
+            conc_run = True
+            cfg = check_inputfiles(cfg)
+            pamset = check_pamset_nonforc_run(pamset)
+            ce_handler = ConcentrationsEmissionsHandler(pamset["gaspamfile"], cfg["concentrations_file"], cfg["emissions_file"], pamset, cfg["nat_ch4_file"], cfg["nat_n2o_file"], conc_run)
+        else:
+            cfg = check_inputfiles(cfg)
+            pamset = check_pamset_nonforc_run(pamset)
+            ce_handler = ConcentrationsEmissionsHandler(pamset["gaspamfile"], cfg["concentrations_file"], cfg["emissions_file"], pamset, cfg["nat_ch4_file"], cfg["nat_n2o_file"], conc_run)
+           
+            
         for yr in range(self.nystart, self.nyend + 1):
             if not rf_run:
-                raise NotImplementedError("Only Forcing runs supported so far")
-            forc = self.forc_set(yr)
+                ce_handler.emi2conc(yr)
+                forc, fn, fs = ce_handler.conc2forc(yr,self.rf_luc.loc[yr,0],self.rf_sun.loc[yr-self.nystart, 0]) 
+
+            else:
+                forc = self.forc_set(yr)
+                fs = forc
+                fn = forc
             values = udm.energy_budget(
-                forc,
-                forc,
+                fn,
+                fs,
                 rf_volc_n.iloc[yr - self.nystart, :],
                 rf_volc_s.iloc[yr - self.nystart, :],
             )
             self.add_year_data_to_output(values, forc, yr - self.nystart)
-            
-        self.write_data_to_file(pamset)
 
-    def write_data_to_file(self, pamset):
+        if not rf_run:
+            ce_handler.write_output_to_files(pamset, self.forcing)
+            
+        self.write_data_to_file(pamset, rf_run)
+
+    def write_data_to_file(self, pamset, rf_run=True):
         """
         Write results to files after run
         """
@@ -272,7 +346,6 @@ class CICEROSCM:
             outdir = os.path.join(os.getcwd(), "output")
 
         indices = np.arange(self.nystart, self.nyend + 1)
-        df_forc = pd.DataFrame(data={"Year": indices, "Total_forcing": self.forcing,})
         df_ohc = pd.DataFrame(
             data={"Year": indices, "OHC700": self.ohc_700, "OHCTOT": self.ohc_tot}
         )
@@ -301,12 +374,7 @@ class CICEROSCM:
                 "dSL_ice(m)": self.dSL_ice,
             }
         )
-        df_forc.to_csv(
-            os.path.join(outdir, "output_forc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
+
         df_ohc.to_csv(
             os.path.join(outdir, "output_ohc.txt"),
             sep="\t",
@@ -325,3 +393,11 @@ class CICEROSCM:
             index=False,
             float_format="%.5e",
         )
+        if rf_run:
+            df_forc = pd.DataFrame(data={"Year": indices, "Total_forcing": self.forcing,})
+            df_forc.to_csv(
+                os.path.join(outdir, "output_forc.txt"),
+                sep="\t",
+                index=False,
+                float_format="%.5e",
+            )
