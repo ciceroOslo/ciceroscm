@@ -14,7 +14,7 @@ def read_components(filename):
     )
     return df_gas
 
-def _rs_function(it, idtm=12):
+def _rs_function(it, idtm=24):
     """
     Calculate pulse response function for mixed layer
     time is the year index*idtm + i, i.e. the month number
@@ -26,7 +26,7 @@ def _rs_function(it, idtm=12):
         rs = 0.022936 + 0.24278*np.exp(-time/1.2679) + 0.13963*np.exp(-time/5.2528) + 0.089318*np.exp(-time/18.601) + 0.03782*np.exp(-time/68.736) + 0.035549*np.exp(-time/232.3)
     return rs
 
-def _rb_function(it, idtm=12):
+def _rb_function(it, idtm=24):
     """
     Calculate biotic decay function
     time is the year index*idtm + i, i.e. the month number
@@ -71,13 +71,13 @@ class ConcentrationsEmissionsHandler:
         self.ref_yr = ref_year
         self.pamset = pamset
         self.years = []
-        self.idtm = 12
+        self.idtm = 24
         self.yCO2 = 0.0
         self.sCO2 = []
         self.xCO2 = 278.
         self.emCO2_prev = 0.
         self.dfnpp = []
-        self.dfnpp.append(0)
+        self.dfnpp.append(0.)
         self.ss1 = 0
         self.lifetime_mode = lifetime_mode
         self.sums = 0.
@@ -96,14 +96,14 @@ class ConcentrationsEmissionsHandler:
         """
         if yr < self.years[0]:
             return 0.0, 0.0
-        chlor_dict = {"CFC-11":3, "CFC-12":2, "CFC-113":3, "CFC-114":2, "CFC-115":1, "CCl4":4,"CH3CCl3":3, "HCFC-22":22, "HCFC-141b":2, "HCFC-123":2,"HCFC-142b":1}
+        chlor_dict = {"CFC-11":3, "CFC-12":2, "CFC-113":3, "CFC-114":2, "CFC-115":1, "CCl4":4,"CH3CCl3":3, "HCFC-22":1, "HCFC-141b":2, "HCFC-123":2,"HCFC-142b":1}
         #More Halons?
         brom_dict = {"H-1211":1, "H-1301":1}
         sumcl = 0
         sumbr = 0
         for comp,mult in chlor_dict.items():
             sumcl = sumcl + (mult*self.conc[comp][yr])**1.7
-        for comp,mult in chlor_dict.items():
+        for comp,mult in brom_dict.items():
             sumbr = sumbr + (mult*self.conc[comp][yr])       
         return sumcl, sumbr
     
@@ -142,6 +142,7 @@ class ConcentrationsEmissionsHandler:
             if tracer == "CO2":
                 q = (a1*(value-c0)**2+b1*np.abs(value-c0)+c1*0.5*(c0_n2o+c_n2o)+5.36)*np.log(value/c0) #Etminan et al 2016 RF
             elif tracer == "CH4":
+                #Hva gjør disse de brukes ikke...
                 fmn = 0.47*np.log(1+2.01E-5*(value*c0_n2o)**(0.75) + 5.31E-15*value*(value*c0_n2o)**(1.52))
                 fmn0 = 0.47*np.log(1+2.01E-5*(c0*c0_n2o)**(0.75) + 5.31E-15*c0*(c0*c0_n2o)**(1.52))
         
@@ -152,10 +153,11 @@ class ConcentrationsEmissionsHandler:
             elif tracer == "N2O":
                 c0_co2 = self.conc["CO2"][self.years[0]]
                 c0_ch4 = self.conc["CH4"][self.years[0]]
+                #Disse brukes ikke?
                 fmn = 0.47*np.log(1+2.01E-5*(value*c0_co2)**(0.75) + 5.31E-15*c0_co2*(value*c0_co2)**(1.52))
                 fmn0 = 0.47*np.log(1+2.01E-5*(c0*c0_co2)**(0.75) + 5.31E-15*c0_co2*(c0*c0_co2)**(1.52))
                 #q = 0.12*(SQRT(c)-SQRT(c0))-(fmn-fmn0) ! TAR FORCING
-                q = (a2*0.5*(self.conc["CO2"][yr]+c0_ch4)+b2*0.5*(value+c0)+c2*0.5*(self.conc["CH4"][yr]+c0_co2) + 0.117)*(np.sqrt(value)-np.sqrt(c0)) #Etminan et al 2016 RF
+                q = (a2*0.5*(self.conc["CO2"][yr]+c0_co2)+b2*0.5*(value+c0)+c2*0.5*(self.conc["CH4"][yr]+c0_ch4) + 0.117)*(np.sqrt(value)-np.sqrt(c0)) #Etminan et al 2016 RF
             elif tracer == "SO2":
                 #Natural emissions
                 #(after IPCC TPII on simple climate models, 1997)
@@ -194,10 +196,12 @@ class ConcentrationsEmissionsHandler:
             elif tracer in self.df_gas.index and self.df_gas['ALPHA'][tracer] != 0:
                 q = (value - c0)*self.df_gas['ALPHA'][tracer] #+forc_pert
             elif tracer == "TROP_O3":
-                yr_emstart = self.pamset["emstart"] - self.years[0]
+                emstart = self.pamset["emstart"]
+                yr_emstart = emstart - self.years[0]
                 if self.conc_run or yr_ix < yr_emstart:
                     # Uses change in CO2_FF emissions
-                    q = (self.emis["CO2_FF"][yr]-self.emis["CO2_FF"][self.years[0]])/(self.emis["CO2_FF"][self.years[0]]-self.emis["CO2_FF"][self.years[0]])*self.pamset["qo3"]
+                    q = (self.emis["CO2_FF"][yr]-self.emis["CO2_FF"][self.years[0]])/(self.emis["CO2_FF"][self.ref_yr]-self.emis["CO2_FF"][self.years[0]])*self.pamset["qo3"]
+                    
                 else:
                     #ALOG(1700.0))  !Concentration in 2010 &
                     self.conc[tracer][yr] =  30.0 + 6.7 * (np.log(self.conc["CH4"][yr])-np.log(1832.0)) + 0.17 * (self.emis["NOx"][yr]-self.emis["NOx"][self.ref_yr]) + 0.0014 * (self.emis["CO"][yr]-self.emis["CO"][self.ref_yr]) + 0.0042 * (self.emis["NMVOC"][yr]-self.emis["NMVOC"][self.ref_yr])
@@ -221,21 +225,24 @@ class ConcentrationsEmissionsHandler:
             #Calculating hemispheric forcing:
             if tracer == "SO2" or tracer == "SO4_IND":
                 FN = FN + q*1.6
-                FN = FS + q*0.4
+                FS = FS + q*0.4
             elif tracer == "TROP_O3":
                 #1.29+0.74 != 2, update/check
                 FN = FN + q*1.29 #1.3
-                FN = FS + q*0.74 #0.7
+                FS = FS + q*0.74 #0.7
             else:
                 FN = FN + q
-                FN = FS + q
+                FS = FS + q
             tot_forc = tot_forc + q
+            #print("Forcer: %s, tot_forc: %f, FN: %f, FS: %f, q: %f"%(tracer, tot_forc, FN, FS, q))
         # Adding solar forcing
-        tot_forc = tot_forc + rf_sun
+        #tot_forc = tot_forc + rf_sun
         self.forc["Total_forcing"].append(tot_forc)
         FN = FN + rf_sun
         FS = FS + rf_sun
-               
+        #print("yr: %d, tot_forc: %f, FN: %f, FS: %f "%(yr, tot_forc, FN, FS))
+        
+        
         return tot_forc, FN, FS
 
     def emi2conc(self, yr):
@@ -350,16 +357,16 @@ class ConcentrationsEmissionsHandler:
             #Net emissions, including biogenic fertilization effects
             if it > 0:
                 self.dfnpp.append(60*beta_f*np.log(self.xCO2/278.))
-            if it > 1:
-                for j in range(1,it-1):
-                    sumf = sumf + self.dfnpp[j]*_rb_function(it-2-j)
+            if it > 0:
+                for j in range(1,it):
+                    sumf = sumf + self.dfnpp[j]*_rb_function(it-1-j)
             ffer = self.dfnpp[it] - dt*sumf
             emCO2 = self.emis["CO2_FF"][yr] + self.emis["CO2_AFOLU"][yr] - ffer
             emCO2 = emCO2 + self.df_gas['NAT_EM']["CO2"]
             emCO2 = emCO2/2.123
 
             if it == 0:
-                self.ss1 = emCO2
+                self.ss1 = 0.5*emCO2/(ocean_area*coeff)
                 ss2 = self.ss1
                 self.sums = 0.
             else:
@@ -369,14 +376,12 @@ class ConcentrationsEmissionsHandler:
             self.emCO2_prev = emCO2
             sumz = 0.
             for j in range(it-1):
-                sumz = sumz + self.sCO2[j]*_rs_function(it-2-j)
+                sumz = sumz + self.sCO2[j]*_rs_function(it-1-j)
             zCO2 = c*coeff*dt/h*(sumz+0.5*self.sCO2[it])
             self.yCO2 = 1.3021*zCO2 + 3.7929E-3*(zCO2**2) + 9.1193E-6*(zCO2**3) + 1.488E-8*(zCO2**4) + 1.2425E-10*(zCO2**5)
             self.xCO2 = self.sCO2[it] + self.yCO2 + 278.
-            #print("emCO2: %f, sCO2: %f, zCO2: %f, yCO2: %f, xCO2: %f"%(emCO2, self.sCO2[it], zCO2, self.yCO2, self.xCO2))
-        
+            #print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, emCO2, self.sCO2[it], zCO2, self.yCO2, self.xCO2, self.ss1, ss2, self.dfnpp[it]))
         self.conc["CO2"][yr] = self.xCO2
-            
 
     def fill_one_row_conc(self, yr, avoid = []):
         """
@@ -409,7 +414,7 @@ class ConcentrationsEmissionsHandler:
             outdir = os.path.join(os.getcwd(), "output")
 
         df_forc = pd.DataFrame(data = self.forc, index=self.years)
-        df_forc["Total_forcing"] = tot_forc
+        #df_forc["Total_forcing"] = tot_forc
         df_forc["Year"] = self.years
         
         cols = df_forc.columns.tolist()
@@ -430,7 +435,6 @@ class ConcentrationsEmissionsHandler:
         for tracer in self.df_gas.index:
             if tracer not in df_emis.columns.tolist():
                 df_emis[tracer] = np.zeros(len(self.years))
-            
         df_forc.to_csv(
             os.path.join(outdir, "output_forc.txt"),
             sep="\t",

@@ -85,11 +85,11 @@ def check_pamset_nonforc_run(pamset):
     required = {
         "lamb": 0.8,
         "qbmb": 0.03,
-        "qo3": 0.34,
-        "qdirso2":-0.4,
-        "qindso2": -0.8,
-        "qbc": 0.22,
-        "qoc":-0.05,
+        "qo3": 0.4,
+        "qdirso2":-0.457,
+        "qindso2": -0.514,
+        "qbc": 0.200,
+        "qoc":-0.103,
     }
     for pam in required:
         if pam not in pamset:

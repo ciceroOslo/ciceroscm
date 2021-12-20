@@ -10,7 +10,7 @@ from ciceroscm import CICEROSCM
 def check_output(
     output_dir, expected_output_dir, update_expected_files=False, rtol=1e-2
 ):
-    files = ["output_em.txt", "output_conc.txt","output_forc.txt","output_temp.txt", "output_ohc.txt"]
+    files = ["output_em.txt", "output_conc.txt","output_temp.txt", "output_forc.txt","output_ohc.txt"]
 
     for filename in files:
         file_to_check = os.path.join(output_dir, filename)
