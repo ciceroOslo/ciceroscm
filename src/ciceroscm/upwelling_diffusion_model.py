@@ -1,11 +1,35 @@
 """
 Energy budget upwelling diffusion model
 """
+import logging
 
 import numpy as np
 
-sek_day = 86400
-day_year = 365.0
+from ._utils import check_numeric_pamset
+
+SEC_DAY = 86400
+DAY_YEAR = 365.0
+
+LOGGER = logging.getLogger(__name__)
+
+
+def check_pamset(pamset):
+    """
+    Check that parameterset has necessary values for run
+    Otherwise set to default values
+    """
+    required = {
+        "rlamdo": 16.0,
+        "akapa": 0.634,
+        "cpi": 0.4,
+        "W": 4.0,
+        "beto": 3.5,
+        "threstemp": 7.0,
+        "lambda": 0.540,
+        "mixed": 60.0,
+    }
+    pamset = check_numeric_pamset(required, pamset)
+    return pamset
 
 
 def _coefic(s, t, p):
@@ -84,6 +108,7 @@ class UpwellingDiffusionModel:
         """
         Intialise
         """
+        params = check_pamset(params)
         self.rlamdo = params["rlamdo"]
         self.rakapa = 1.0e-4 * params["akapa"]
         self.cpi = params["cpi"]
@@ -102,10 +127,10 @@ class UpwellingDiffusionModel:
         self.dz[0] = params["mixed"]
 
         self.ldtime = 12
-        self.dt = 1 / self.ldtime * sek_day * day_year
+        self.dt = 1 / self.ldtime * SEC_DAY * DAY_YEAR
         self.setup_ebud()
-        self.FNOLD = 0.0
-        self.FSOLD = 0.0
+        self.fn_old = 0.0
+        self.fs_old = 0.0
         self.dtempprev = 0.0
         self.setup_sealevel_rise()
 
@@ -158,7 +183,7 @@ class UpwellingDiffusionModel:
 
     def coeff(self, wcfac, gam_fro_fac):
         """
-        Calculate a, b c coefficient arrays for hemispher
+        Calculate a, b c coefficient arrays for hemisphere
         """
         a = np.zeros(self.lm)
         b = np.zeros(self.lm)
@@ -197,15 +222,11 @@ class UpwellingDiffusionModel:
         """
         # Northern hemisphere:
         if self.threstemp == 0:
-            wcfac = (
-                self.w
-                / (sek_day * day_year)
-                * self.dt
-            )
+            wcfac = self.w / (SEC_DAY * DAY_YEAR) * self.dt
         else:
             wcfac = (
                 self.w
-                / (sek_day * day_year)
+                / (SEC_DAY * DAY_YEAR)
                 * (1 - 0.3 * temp1N / self.threstemp)
                 * self.dt
             )
@@ -221,18 +242,14 @@ class UpwellingDiffusionModel:
 
         # Southern hemisphere:
         if self.threstemp == 0:
-            wcfac = (
-                self.w
-                / (sek_day * day_year)
-                * self.dt
-            )
+            wcfac = self.w / (SEC_DAY * DAY_YEAR) * self.dt
         else:
             wcfac = (
                 self.w
-                / (sek_day * day_year)
+                / (SEC_DAY * DAY_YEAR)
                 * (1 - 0.3 * temp1S / self.threstemp)
                 * self.dt
-            )            
+            )
         self.dtrm1s = (
             1.0
             - self.cpi * wcfac / self.dz[0]
@@ -252,7 +269,7 @@ class UpwellingDiffusionModel:
         rho = 1.03
         htcpty = 0.955
         cnvrt = 0.485
-        self.c1 = rho * htcpty * cnvrt * 100.0 * sek_day
+        self.c1 = rho * htcpty * cnvrt * 100.0 * SEC_DAY
 
         fnsa = 1.0  # Can it be something else
         c1fac = self.dt / (self.c1 * self.dz[0])
@@ -281,7 +298,7 @@ class UpwellingDiffusionModel:
         self.dtmnl1 = 1.0 - self.dtmnl3
         self.dtmsl3 = self.fnso * self.dtmnl3
         self.dtmsl1 = 1.0 - self.dtmsl3
-        self.setup_ebud2(0,0)
+        self.setup_ebud2(0, 0)
 
         # Intialising temperature values
         self.tn = np.zeros(self.lm)
@@ -344,7 +361,7 @@ class UpwellingDiffusionModel:
         deltsl[1] = self.zgo + self.zao + self.zso
         return deltsl
 
-    def energy_budget(self, FN, FS, FN_VOLC, FS_VOLC):
+    def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc):
         """
         Do energy budget calculation for single year
         """
@@ -363,22 +380,21 @@ class UpwellingDiffusionModel:
         dtyear = 1.0 / self.ldtime
         dn = np.zeros(self.lm)
         ds = np.zeros(self.lm)
-        
-            
+
         for im in range(self.ldtime):
 
             if self.threstemp != 0:
                 self.setup_ebud2(temp1n, temp1s)
 
             dqn = (
-                (im + 1) * FN * dtyear
-                + (1 - (im + 1) * dtyear) * self.FNOLD
-                + FN_VOLC[im]
+                (im + 1) * forc_nh * dtyear
+                + (1 - (im + 1) * dtyear) * self.fn_old
+                + fn_volc[im]
             )
             dqs = (
-                (im + 1) * FS * dtyear
-                + (1 - (im + 1) * dtyear) * self.FSOLD
-                + FS_VOLC[im]
+                (im + 1) * forc_sh * dtyear
+                + (1 - (im + 1) * dtyear) * self.fs_old
+                + fs_volc[im]
             )
             dn[0] = (
                 self.dtrm1n * self.tn[0]
@@ -458,14 +474,14 @@ class UpwellingDiffusionModel:
 
         deltsl = self.compute_sea_level_rise(templ, dtemp)
         # Updating previous values for next year
-        self.FNOLD = FN
-        self.FSOLD = FS
+        self.fn_old = forc_nh
+        self.fs_old = forc_sh
         self.dtempprev = dtemp
 
         # Getting Ocean temperature:
         ocean_res = self.compute_ocean_temperature()
-        ribn = FN +np.sum(FN_VOLC)/self.ldtime - self.rlamda * tempn
-        ribs = FS +np.sum(FS_VOLC)/self.ldtime- self.rlamda * temps
+        ribn = forc_nh + np.sum(fn_volc) / self.ldtime - self.rlamda * tempn
+        ribs = forc_sh + np.sum(fs_volc) / self.ldtime - self.rlamda * temps
         # Returning results_dict
         return {
             "dtemp": dtemp,
@@ -503,8 +519,8 @@ class UpwellingDiffusionModel:
 
         # Finding the max layer down to 700m
         max_layer = int(7 - self.dz[0] // 100.0)
-        frac = (1 + self.dz[0] // 100.0) - self.dz[0]/100.
-        
+        frac = (1 + self.dz[0] // 100.0) - self.dz[0] / 100.0
+
         return {
             "OHC700": np.sum(havtemp[:max_layer]) + frac * havtemp[max_layer],
             "OHCTOT": np.sum(havtemp[:]),
