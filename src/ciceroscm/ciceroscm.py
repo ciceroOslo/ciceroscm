@@ -21,6 +21,10 @@ def check_inputfiles(cfg):
     """
     Check whether input files are present or not
     """
+    if not os.path.exists(cfg["gaspamfile"]):
+        raise FileNotFoundError(
+            f"Concentration input file {cfg['concentrations_file']} not found"
+        )
     if not os.path.exists(cfg["concentrations_file"]):
         raise FileNotFoundError(
             f"Concentration input file {cfg['concentrations_file']} not found"
@@ -59,7 +63,7 @@ def read_forc(forc_file):
     Read in forcing from forc
     """
     components = False
-    with open(forc_file, "r", encoding='utf8') as fread:
+    with open(forc_file, "r", encoding="utf8") as fread:
         first_line = fread.readline()
         if first_line[:4].lower() == "year":
             components = True
@@ -100,7 +104,26 @@ class CICEROSCM:
             self.nyend = int(cfg["nyend"])
         if "emstart" in cfg:
             self.emstart = int(cfg["emstart"])
-        output_variables = ["OHC700", "OHCTOT", "RIB_glob", "RIB_N", "RIB_S", "dT_glob", "dT_NH", "dT_SH", "dT_glob_air", "dT_NH_air", "dT_SH_air", "dT_glob_sea", "dT_NH_sea", "dT_SHsea", "dSL(m)", "dSL_thermal(m)", "dSL_ice(m)", "Total_forcing"]
+        output_variables = [
+            "OHC700",
+            "OHCTOT",
+            "RIB_glob",
+            "RIB_N",
+            "RIB_S",
+            "dT_glob",
+            "dT_NH",
+            "dT_SH",
+            "dT_glob_air",
+            "dT_NH_air",
+            "dT_SH_air",
+            "dT_glob_sea",
+            "dT_NH_sea",
+            "dT_SHsea",
+            "dSL(m)",
+            "dSL_thermal(m)",
+            "dSL_ice(m)",
+            "Total_forcing",
+        ]
         for output in output_variables:
             self.results[output] = np.zeros(self.nyend - self.nystart + 1)
 
@@ -129,45 +152,10 @@ class CICEROSCM:
         df_data.set_axis(labels=indices, inplace=True)
         return df_data
 
-    def forc_set(self, yr):
+    def read_in_volc_and_sun(self, cfg):
         """
-        Read the forcing for this year
+        Read in solar and volcanic forcing and return them
         """
-        row_index = yr - self.nystart
-        # Add support for other forcing formats
-        if isinstance(self.rf, np.ndarray):
-            # Add luc albedo later
-            forc = self.rf[row_index]  # + self.rf_luc.iloc[row_index][0]
-        else:
-            forc = self.rf["total"][row_index]
-        forc = forc + self.rf_sun.iloc[row_index, 0]
-        return forc
-
-    def add_year_data_to_output(self, values, forc, index):
-        """
-        Add single year output to output arrays
-        """
-        simple_outputs = ["OHC700", "OHCTOT"]
-        for output in simple_outputs:
-            self.results[output][index] = values[output]
-        outputs_dict = {"RIB_glob": "RIB", "RIB_N": "RIBN", "RIB_S": "RIBS", "dT_glob": "dtemp", "dT_NH": "dtempnh", "dT_SH": "dtempsh", "dT_glob_air": "dtemp_air", "dT_NH_air": "dtempnh_air", "dT_SH_air": "dtempsh_air", "dT_glob_sea": "dtemp_sea", "dT_NH_sea": "dtempnh_sea", "dT_SHsea": "dtempsh_sea"}
-        for output, name in outputs_dict.items():
-            self.results[output][index] = values[name]
-        self.results["dSL(m)"][index] = values["deltsl"][0] + values["deltsl"][1]
-        self.results["dSL_ice(m)"][index] = values["deltsl"][1]
-        self.results["dSL_thermal(m)"][index] = values["deltsl"][0]
-        self.results["Total_forcing"][index] = forc
-
-    def _run(self, cfg, pamset_udm={}, pamset_emiconc={}): #pylint: disable=too-many-local-variables
-        """
-        Run CICEROSCM
-        """
-        # Add something to adjust start and end of simulation
-        self.initialise_output_arrays(cfg)
-        # Setting up UDM
-        udm = UpwellingDiffusionModel(pamset_udm)
-
-        # Reading in solar and volcanic forcing
         if "sunvolc" in cfg and cfg["sunvolc"] == 1:
             # Possibly change to allow for other files
             # And for SH to differ from NH
@@ -179,7 +167,7 @@ class CICEROSCM:
             # Se regneark.
             rf_volc_n = rf_volc_n + 0.371457071
             rf_volc_s = rf_volc_s + 0.353195076
-            self.rf_sun = self.read_data_on_year_row(
+            rf_sun = self.read_data_on_year_row(
                 os.path.join(default_data_dir, "solar_IPCC.txt")
             )
         # Add support for sending filename in cfg
@@ -191,17 +179,69 @@ class CICEROSCM:
                 columns=range(12),
             )
             rf_volc_s = rf_volc_n
-            self.rf_sun = pd.DataFrame(
-                data={0: np.zeros(self.nyend - self.nystart + 1)}
-            )
+            rf_sun = pd.DataFrame(data={0: np.zeros(self.nyend - self.nystart + 1)})
+        return {"volc_n": rf_volc_n, "volc_s": rf_volc_s, "sun": rf_sun}
+
+    def forc_set(self, yr, rf_sun):
+        """
+        Read the forcing for this year
+        """
+        row_index = yr - self.nystart
+        # Add support for other forcing formats
+        if isinstance(self.rf, np.ndarray):
+            # Add luc albedo later
+            forc = self.rf[row_index]  # + self.rf_luc.iloc[row_index][0]
+        else:
+            forc = self.rf["total"][row_index]
+        forc = forc + rf_sun.iloc[row_index, 0]
+        return forc
+
+    def add_year_data_to_output(self, values, forc, index):
+        """
+        Add single year output to output arrays
+        """
+        simple_outputs = ["OHC700", "OHCTOT"]
+        for output in simple_outputs:
+            self.results[output][index] = values[output]
+        outputs_dict = {
+            "RIB_glob": "RIB",
+            "RIB_N": "RIBN",
+            "RIB_S": "RIBS",
+            "dT_glob": "dtemp",
+            "dT_NH": "dtempnh",
+            "dT_SH": "dtempsh",
+            "dT_glob_air": "dtemp_air",
+            "dT_NH_air": "dtempnh_air",
+            "dT_SH_air": "dtempsh_air",
+            "dT_glob_sea": "dtemp_sea",
+            "dT_NH_sea": "dtempnh_sea",
+            "dT_SHsea": "dtempsh_sea",
+        }
+        for output, name in outputs_dict.items():
+            self.results[output][index] = values[name]
+        self.results["dSL(m)"][index] = values["deltsl"][0] + values["deltsl"][1]
+        self.results["dSL_ice(m)"][index] = values["deltsl"][1]
+        self.results["dSL_thermal(m)"][index] = values["deltsl"][0]
+        self.results["Total_forcing"][index] = forc
+
+    def _run(self, cfg, pamset_udm={"empty": "yes"}, pamset_emiconc={"empty": "yes"}):
+        """
+        Run CICEROSCM
+        """
+        # Add something to adjust start and end of simulation
+        self.initialise_output_arrays(cfg)
+        # Setting up UDM
+        udm = UpwellingDiffusionModel(pamset_udm)
+
+        # Reading in solar and volcanic forcing
+        rf_volc_sun = self.read_in_volc_and_sun(cfg)
 
         # Add support for sending filename in cfg
-        self.rf_luc = self.read_data_on_year_row(
+        rf_luc = self.read_data_on_year_row(
             os.path.join(default_data_dir, "IPCC_LUCalbedo.txt")
         )
 
         rf_run = False
-        conc_run = False
         if "forc_file" in cfg:
             rf_run = True
             if not os.path.exists(cfg["forc_file"]):
@@ -209,55 +249,35 @@ class CICEROSCM:
                     f"Forcing input file {cfg['forc_file']} not found"
                 )
             self.rf = read_forc(cfg["forc_file"])
-        elif "conc_run" in cfg and cfg["conc_run"] is True:
-            conc_run = True
-            cfg = check_inputfiles(cfg)
-            pamset_emiconc["emstart"] = self.emstart
-            ce_handler = ConcentrationsEmissionsHandler(
-                cfg["gaspamfile"],
-                cfg["concentrations_file"],
-                cfg["emissions_file"],
-                pamset_emiconc,
-                cfg["nat_ch4_file"],
-                cfg["nat_n2o_file"],
-                conc_run,
-            )
         else:
+
             cfg = check_inputfiles(cfg)
             pamset_emiconc["emstart"] = self.emstart
-            ce_handler = ConcentrationsEmissionsHandler(
-                cfg["gaspamfile"],
-                cfg["concentrations_file"],
-                cfg["emissions_file"],
-                pamset_emiconc,
-                cfg["nat_ch4_file"],
-                cfg["nat_n2o_file"],
-                conc_run,
-            )
+            ce_handler = ConcentrationsEmissionsHandler(cfg, pamset_emiconc,)
 
         for yr in range(self.nystart, self.nyend + 1):
             if not rf_run:
                 ce_handler.emi2conc(yr)
                 forc, fn, fs = ce_handler.conc2forc(
-                    yr, self.rf_luc.loc[yr, 0], self.rf_sun.loc[yr - self.nystart, 0]
+                    yr, rf_luc.loc[yr, 0], rf_volc_sun["sun"].loc[yr - self.nystart, 0]
                 )
 
             else:
-                forc = self.forc_set(yr)
+                forc = self.forc_set(yr, rf_volc_sun["sun"])
                 fs = forc
                 fn = forc
             values = udm.energy_budget(
                 fn,
                 fs,
-                rf_volc_n.iloc[yr - self.nystart, :],
-                rf_volc_s.iloc[yr - self.nystart, :],
+                rf_volc_sun["volc_n"].iloc[yr - self.nystart, :],
+                rf_volc_sun["volc_s"].iloc[yr - self.nystart, :],
             )
             self.add_year_data_to_output(values, forc, yr - self.nystart)
 
         if not rf_run:
             ce_handler.write_output_to_files(cfg)
 
-        self.write_data_to_file(cfg)
+        self.write_data_to_file(cfg, rf_run)
 
     def write_data_to_file(self, pamset, rf_run=True):
         """
@@ -271,13 +291,30 @@ class CICEROSCM:
 
         indices = np.arange(self.nystart, self.nyend + 1)
         df_ohc = pd.DataFrame(
-            data={"Year": indices, "OHC700": self.results["OHC700"], "OHCTOT": self.results["OHCTOT"]}
+            data={
+                "Year": indices,
+                "OHC700": self.results["OHC700"],
+                "OHCTOT": self.results["OHCTOT"],
+            }
         )
         list_rib = ["RIB_glob", "RIB_N", "RIB_S"]
         df_rib = pd.DataFrame(data={"Year": indices})
         for vari in list_rib:
             df_rib[vari] = self.results[vari]
-        list_temp = ["dT_glob", "dT_NH", "dT_SH", "dT_glob_air", "dT_NH_air", "dT_SH_air", "dT_glob_sea", "dT_NH_sea", "dT_SHsea", "dSL(m)", "dSL_thermal(m)", "dSL_ice(m)"]
+        list_temp = [
+            "dT_glob",
+            "dT_NH",
+            "dT_SH",
+            "dT_glob_air",
+            "dT_NH_air",
+            "dT_SH_air",
+            "dT_glob_sea",
+            "dT_NH_sea",
+            "dT_SHsea",
+            "dSL(m)",
+            "dSL_thermal(m)",
+            "dSL_ice(m)",
+        ]
         df_temp = pd.DataFrame(data={"Year": indices})
         for vari in list_temp:
             df_temp[vari] = self.results[vari]

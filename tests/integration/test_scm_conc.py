@@ -8,16 +8,12 @@ from ciceroscm import CICEROSCM
 
 
 def check_output(
-    output_dir, expected_output_dir, update_expected_files=False, rtol=1e-2
+    output_dir,
+    expected_output_dir,
+    update_expected_files=False,
+    rtol=1e-2,
+    files=["output_em.txt", "output_conc.txt"],
 ):
-    files = [
-        "output_em.txt",
-        "output_conc.txt",
-        "output_temp.txt",
-        "output_forc.txt",
-        "output_ohc.txt",
-    ]
-
     for filename in files:
         file_to_check = os.path.join(output_dir, filename)
         file_expected = os.path.join(expected_output_dir, filename)
@@ -54,6 +50,11 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     )
 
     check_output(outdir_save, os.path.join(test_data_dir, "ssp245_emis"))
+    check_output(
+        outdir_save,
+        os.path.join(test_data_dir, "ssp245_emis"),
+        files=["output_forc.txt", "output_temp.txt"],
+    )
 
 
 """
