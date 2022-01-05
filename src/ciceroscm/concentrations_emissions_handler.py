@@ -17,8 +17,8 @@ def read_components(filename):
     Read in components to be considered
     """
     df_gas = pd.read_csv(filename, delim_whitespace=True, index_col=0)
-    df_gas.rename(
-        columns={"TAU1(YEARS)": "TAU1", "NATURAL_EMISSIONS": "NAT_EM"}, inplace=True
+    df_gas = df_gas.rename(
+        columns={"TAU1(YEARS)": "TAU1", "NATURAL_EMISSIONS": "NAT_EM"}
     )
     return df_gas
 
@@ -151,8 +151,8 @@ class ConcentrationsEmissionsHandler:
                     self.conc[tracer] = {}
                     self.forc[tracer] = []
             self.forc["Total_forcing"] = []
-            self.emis.rename(
-                columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}, inplace=True
+            self.emis = self.emis.rename(
+                columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}
             )
         self.nat_emis_ch4 = read_natural_emissions(cfg["nat_ch4_file"], "CH4")
         self.nat_emis_n2o = read_natural_emissions(cfg["nat_n2o_file"], "N2O")
@@ -302,10 +302,12 @@ class ConcentrationsEmissionsHandler:
             # RBS101115
             # IF (yr_ix.LT.yr_2010) THEN ! Proportional to TROP_O3 build-up
             # Rewritten a bit, place to check for differences...
-            q1 = self.forc[tracer][yr_emstart - 1]
+            forc_pre_emstart = self.forc[tracer][yr_emstart - 1]
             value = self.conc[tracer][yr]
-            c0 = self.conc[tracer][self.pamset["emstart"]]
-            q = q1 + (value - c0) / (30.0 - c0) * (self.pamset["qo3"] - q1)
+            value_0 = self.conc[tracer][self.pamset["emstart"]]
+            q = forc_pre_emstart + (value - value_0) / (30.0 - value_0) * (
+                self.pamset["qo3"] - forc_pre_emstart
+            )
         return q
 
     def conc2forc(self, yr, rf_luc, rf_sun):
@@ -325,13 +327,6 @@ class ConcentrationsEmissionsHandler:
             if tracer in ["CO2", "N2O", "CH4"]:
                 continue
             q = 0
-            try:
-                value = self.conc[tracer][yr]
-                c0 = self.conc[tracer][self.years[0]]
-            except KeyError:
-                # Tracer with no concentration values
-                value = 0.0
-                c0 = 0.0
             if tracer == "LANDUSE":
                 q = rf_luc
             elif tracer in ref_emission_species:
@@ -349,8 +344,13 @@ class ConcentrationsEmissionsHandler:
                     frac_em = self.emis[ref_emission_species[tracer][0]][yr] / erefyr
                     q = ref_emission_species[tracer][1] * frac_em
 
-            elif tracer in self.df_gas.index and self.df_gas["ALPHA"][tracer] != 0:
-                q = (value - c0) * self.df_gas["ALPHA"][tracer]  # +forc_pert
+            elif (
+                tracer in self.df_gas.index and self.df_gas["ALPHA"][tracer] != 0
+            ):  # pylint: disable=compare-to-zero
+                q = (
+                    (self.conc[tracer][yr] - self.conc[tracer][self.years[0]])
+                    * self.df_gas["ALPHA"][tracer]
+                )  # +forc_pert
             elif tracer == "TROP_O3":
                 q = self.tropospheric_ozone_forcing(yr)
             elif tracer == "STRAT_O3":
@@ -436,7 +436,8 @@ class ConcentrationsEmissionsHandler:
             )  # natural emissions, from gasspamfile
             emis = emis / self.pamset["idtm"]
             point_conc = emis / self.df_gas["BETA"][tracer]
-            for i in range(self.pamset["idtm"]):
+            # Try to do this without loop?
+            for i in range(self.pamset["idtm"]):  # pylint: disable=unused-variable
                 conc_local = point_conc / q + (conc_local - point_conc / q) * np.exp(-q)
             self.conc[tracer][yr] = conc_local
 
@@ -463,7 +464,7 @@ class ConcentrationsEmissionsHandler:
 
         return q
 
-    def co2em2conc(self, yr):  # pylint: disable=too-many-local-variables
+    def co2em2conc(self, yr):  # pylint: disable=too-many-locals
         """
         Calculate co2 concentrations from emissions
         """
@@ -545,7 +546,9 @@ class ConcentrationsEmissionsHandler:
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
         self.conc["CO2"][yr] = self.co2_hold["xCO2"]
 
-    def fill_one_row_conc(self, yr, avoid=[]):
+    def fill_one_row_conc(
+        self, yr, avoid=[]
+    ):  # pylint: disable=dangerous-default-value
         """
         Fill in one row of concentrations in conc_dict
         """

@@ -113,7 +113,7 @@ def _density(p0, t0):
     return _denso(s, t0) / (1.0 - p0 / _coefic(s, t0, p0))
 
 
-class UpwellingDiffusionModel:
+class UpwellingDiffusionModel:  # pylint: disable:too-many-instance-attributes
     """
     Class to handle energy budget upwelling and downwelling
     """
@@ -127,6 +127,7 @@ class UpwellingDiffusionModel:
         # Setting up dz height difference between ocean layers
         self.dz = np.ones(self.pamset["lm"]) * 100.0
         self.dz[0] = params["mixed"]
+        self.varrying = {}
         self.setup_ebud()
 
         # Intialising temperature values
@@ -239,7 +240,7 @@ class UpwellingDiffusionModel:
         to be redone every timestep
         """
         # Northern hemisphere:
-        if self.pamset["threstemp"] == 0:  # pylint disable=compare-to-zero
+        if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
             wcfac = self.pamset["W"] / (SEC_DAY * DAY_YEAR) * self.pamset["dt"]
         else:
             wcfac = (
@@ -248,18 +249,22 @@ class UpwellingDiffusionModel:
                 * (1 - 0.3 * temp_1n / self.pamset["threstemp"])
                 * self.pamset["dt"]
             )
-        self.dtrm1n = (
+        self.varrying["dtrm1n"] = (
             1.0
             - self.pamset["cpi"] * wcfac / self.dz[0]
             - self.pamset["beto"] * self.pamset["dt"] / (self.pamset["c1"] * self.dz[0])
         )
-        self.dtmnl2 = wcfac * self.pamset["cpi"] / self.dz[self.pamset["lm"] - 1]
-        self.acoeffn, self.bcoeffn, self.ccoeffn = self.coeff(
-            wcfac, self.get_gam_and_fro_factor_ns(True)
+        self.varrying["dtmnl2"] = (
+            wcfac * self.pamset["cpi"] / self.dz[self.pamset["lm"] - 1]
         )
+        (
+            self.varrying["acoeffn"],
+            self.varrying["bcoeffn"],
+            self.varrying["ccoeffn"],
+        ) = self.coeff(wcfac, self.get_gam_and_fro_factor_ns(True))
 
         # Southern hemisphere:
-        if self.pamset["threstemp"] == 0:  # pylint disable=compare-to-zero
+        if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
             wcfac = self.pamset["W"] / (SEC_DAY * DAY_YEAR) * self.pamset["dt"]
         else:
             wcfac = (
@@ -268,7 +273,7 @@ class UpwellingDiffusionModel:
                 * (1 - 0.3 * temp_1s / self.pamset["threstemp"])
                 * self.pamset["dt"]
             )
-        self.dtrm1s = (
+        self.varrying["dtrm1s"] = (
             1.0
             - self.pamset["cpi"] * wcfac / self.dz[0]
             - self.pamset["fnso"]
@@ -276,16 +281,19 @@ class UpwellingDiffusionModel:
             * self.pamset["dt"]
             / (self.pamset["c1"] * self.dz[0])
         )
-        self.dtmsl2 = wcfac * self.pamset["cpi"] / self.dz[self.pamset["lm"] - 1]
-        self.acoeffs, self.bcoeffs, self.ccoeffs = self.coeff(
-            wcfac, self.get_gam_and_fro_factor_ns(False)
+        self.varrying["dtmsl2"] = (
+            wcfac * self.pamset["cpi"] / self.dz[self.pamset["lm"] - 1]
         )
+        (
+            self.varrying["acoeffs"],
+            self.varrying["bcoeffs"],
+            self.varrying["ccoeffs"],
+        ) = self.coeff(wcfac, self.get_gam_and_fro_factor_ns(False))
 
     def setup_ebud(self):
         """
         Set up energy budget before run
         """
-
         fnsa = 1.0  # Can it be something else?
         c1fac = self.pamset["dt"] / (self.pamset["c1"] * self.dz[0])
 
@@ -300,34 +308,42 @@ class UpwellingDiffusionModel:
         )
 
         # Northern hemisphere
-        self.dtrm2n = (
+        self.varrying["dtrm2n"] = (
             self.pamset["beto"]
             + self.pamset["foas"]
             * self.pamset["ebbeta"]
             / (self.gams * self.gamn - fnsa * blm ** 2)
         ) * c1fac
-        self.dtrm3n = self.gams / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
-        self.dtrm4n = blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        self.varrying["dtrm3n"] = (
+            self.gams / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        )
+        self.varrying["dtrm4n"] = (
+            blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        )
 
         # Southern hemisphere
-        self.dtrm2s = (
+        self.varrying["dtrm2s"] = (
             self.pamset["fnso"] * self.pamset["beto"]
             + self.pamset["foan"]
             * fnsa
             * self.pamset["ebbeta"]
             / (self.gams * self.gamn - fnsa * blm ** 2)
         ) * c1fac
-        self.dtrm3s = self.gamn / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
-        self.dtrm4s = fnsa * blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        self.varrying["dtrm3s"] = (
+            self.gamn / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        )
+        self.varrying["dtrm4s"] = (
+            fnsa * blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        )
 
-        self.dtmnl3 = (
+        self.varrying["dtmnl3"] = (
             self.pamset["dt"]
             * self.pamset["beto"]
             / (self.pamset["c1"] * self.dz[self.pamset["lm"] - 1])
         )
-        self.dtmnl1 = 1.0 - self.dtmnl3
-        self.dtmsl3 = self.pamset["fnso"] * self.dtmnl3
-        self.dtmsl1 = 1.0 - self.dtmsl3
+        self.varrying["dtmnl1"] = 1.0 - self.varrying["dtmnl3"]
+        self.varrying["dtmsl3"] = self.pamset["fnso"] * self.varrying["dtmnl3"]
+        self.varrying["dtmsl1"] = 1.0 - self.varrying["dtmsl3"]
         self.setup_ebud2(0, 0)
 
     def setup_sealevel_rise(self):
@@ -387,7 +403,9 @@ class UpwellingDiffusionModel:
         )
         return deltsl
 
-    def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc):
+    def energy_budget(
+        self, forc_nh, forc_sh, fn_volc, fs_volc
+    ):  # pylint: disable=too-many-locals
         """
         Do energy budget calculation for single year
         """
@@ -409,7 +427,7 @@ class UpwellingDiffusionModel:
 
         for im in range(self.pamset["ldtime"]):
 
-            if self.pamset["threstemp"] != 0:
+            if self.pamset["threstemp"] != 0:  # pylint: disable=compare-to-zero
                 self.setup_ebud2(temp1n, temp1s)
 
             dqn = (
@@ -423,16 +441,16 @@ class UpwellingDiffusionModel:
                 + fs_volc[im]
             )
             dn[0] = (
-                self.dtrm1n * self.tn[0]
-                + self.dtrm2n * self.ts[0]
-                + self.dtrm3n * dqn
-                + self.dtrm4n * dqs
+                self.varrying["dtrm1n"] * self.tn[0]
+                + self.varrying["dtrm2n"] * self.ts[0]
+                + self.varrying["dtrm3n"] * dqn
+                + self.varrying["dtrm4n"] * dqs
             )
             ds[0] = (
-                self.dtrm1s * self.ts[0]
-                + self.dtrm2s * self.tn[0]
-                + self.dtrm3s * dqs
-                + self.dtrm4s * dqn
+                self.varrying["dtrm1s"] * self.ts[0]
+                + self.varrying["dtrm2s"] * self.tn[0]
+                + self.varrying["dtrm3s"] * dqs
+                + self.varrying["dtrm4s"] * dqn
             )
 
             for i in range(1, self.pamset["lm"] - 1):
@@ -446,22 +464,32 @@ class UpwellingDiffusionModel:
                 )
 
             dn[self.pamset["lm"] - 1] = (
-                self.dtmnl1 * self.tn[self.pamset["lm"] - 1]
-                + self.dtmnl2 * self.tn[0]
-                + self.dtmnl3 * self.ts[self.pamset["lm"] - 1]
+                self.varrying["dtmnl1"] * self.tn[self.pamset["lm"] - 1]
+                + self.varrying["dtmnl2"] * self.tn[0]
+                + self.varrying["dtmnl3"] * self.ts[self.pamset["lm"] - 1]
             )
             ds[self.pamset["lm"] - 1] = (
-                self.dtmsl1 * self.ts[self.pamset["lm"] - 1]
-                + self.dtmsl2 * self.ts[0]
-                + self.dtmsl3 * self.tn[self.pamset["lm"] - 1]
+                self.varrying["dtmsl1"] * self.ts[self.pamset["lm"] - 1]
+                + self.varrying["dtmsl2"] * self.ts[0]
+                + self.varrying["dtmsl3"] * self.tn[self.pamset["lm"] - 1]
             )
 
             #
             # Where are these being initialised? Ok, I think
-            self.tn = self._band(self.acoeffn, self.bcoeffn, self.ccoeffn, dn)
-            self.ts = self._band(self.acoeffs, self.bcoeffs, self.ccoeffs, ds)
-            # print("self.aceoffn: %s self.bcoeffn: %s self.ccoeffn %s"%(self.acoeffn, self.bcoeffn, self.ccoeffn))
-            # print("self.aceoffs: %s self.bcoeffs: %s self.ccoeffs %s"%(self.acoeffs, self.bcoeffs, self.ccoeffs))
+            self.tn = self._band(
+                self.varrying["acoeffn"],
+                self.varrying["bcoeffn"],
+                self.varrying["ccoeffn"],
+                dn,
+            )
+            self.ts = self._band(
+                self.varrying["acoeffs"],
+                self.varrying["bcoeffs"],
+                self.varrying["ccoeffs"],
+                ds,
+            )
+            # print("self.aceoffn: %s self.varrying["bcoeffn"]: %s self.ccoeffn %s"%(self.varrying["acoeffn"], self.varrying["bcoeffn"], self.varrying["ccoeffn"]))
+            # print("self.aceoffs: %s self.bcoeffs: %s self.ccoeffs %s"%(self.varrying["acoeffs"], self.bcoeffs, self.ccoeffs))
             temp1n = self.tn[0]
             temp1s = self.ts[0]
             # print("temp1n: %.5e temp1s %.5e"%(temp1n, temp1s))

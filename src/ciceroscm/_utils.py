@@ -14,12 +14,12 @@ def check_numeric_pamset(required, pamset):
     """
     for pam, value in required.items():
         if pam not in pamset:
-            LOGGER.warning(
+            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
                 f"Parameter {pam} not in pamset. Using default value {value}",
             )
             pamset[pam] = value
         elif not isinstance(pamset[pam], int) and not isinstance(pamset[pam], float):
-            LOGGER.warning(
+            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
                 f"Parameter {pam} must be a number. Using default value {value}",
             )
             pamset[pam] = value
