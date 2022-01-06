@@ -17,8 +17,8 @@ def read_components(filename):
     Read in components to be considered
     """
     df_gas = pd.read_csv(filename, delim_whitespace=True, index_col=0)
-    df_gas = df_gas.rename(
-        columns={"TAU1(YEARS)": "TAU1", "NATURAL_EMISSIONS": "NAT_EM"}
+    df_gas.rename(
+        columns={"TAU1(YEARS)": "TAU1", "NATURAL_EMISSIONS": "NAT_EM"}, inplace=True
     )
     return df_gas
 
@@ -151,8 +151,8 @@ class ConcentrationsEmissionsHandler:
                     self.conc[tracer] = {}
                     self.forc[tracer] = []
             self.forc["Total_forcing"] = []
-            self.emis = self.emis.rename(
-                columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}
+            self.emis.rename(
+                columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}, inplace=True
             )
         self.nat_emis_ch4 = read_natural_emissions(cfg["nat_ch4_file"], "CH4")
         self.nat_emis_n2o = read_natural_emissions(cfg["nat_n2o_file"], "N2O")
@@ -345,8 +345,9 @@ class ConcentrationsEmissionsHandler:
                     q = ref_emission_species[tracer][1] * frac_em
 
             elif (
-                tracer in self.df_gas.index and self.df_gas["ALPHA"][tracer] != 0
-            ):  # pylint: disable=compare-to-zero
+                tracer in self.df_gas.index
+                and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
+            ):
                 q = (
                     (self.conc[tracer][yr] - self.conc[tracer][self.years[0]])
                     * self.df_gas["ALPHA"][tracer]
@@ -429,17 +430,16 @@ class ConcentrationsEmissionsHandler:
             if tracer == "N2O":
                 self.df_gas["NAT_EM"][tracer] = self.nat_emis_n2o["N2O"][yr]
 
-            q = q / self.pamset["idtm"]
             emis = self.emis[tracer][yr]
             emis = (
                 emis + self.df_gas["NAT_EM"][tracer]
             )  # natural emissions, from gasspamfile
-            emis = emis / self.pamset["idtm"]
             point_conc = emis / self.df_gas["BETA"][tracer]
-            # Try to do this without loop?
-            for i in range(self.pamset["idtm"]):  # pylint: disable=unused-variable
-                conc_local = point_conc / q + (conc_local - point_conc / q) * np.exp(-q)
-            self.conc[tracer][yr] = conc_local
+            # Rewrote this quite a bit from an original loop,
+            # but I think it is mathematically equivalent
+            self.conc[tracer][yr] = point_conc / q + (
+                conc_local - point_conc / q
+            ) * np.exp(-q)
 
     def methane_lifetime(self, q, conc_local, yr):
         """

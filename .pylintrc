@@ -9,6 +9,9 @@ load-plugins=
     pylint.extensions.overlapping_exceptions,
     pylint.extensions.redefined_variable_type
 
+# As a temporary workaround for https://github.com/PyCQA/pylint/issues/4577
+init-hook = "import astroid; astroid.context.InferenceContext.max_inferred = 500"
+
 [MESSAGES CONTROL]
 disable=
     # handled by black

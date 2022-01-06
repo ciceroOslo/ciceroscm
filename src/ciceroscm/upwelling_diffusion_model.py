@@ -113,7 +113,7 @@ def _density(p0, t0):
     return _denso(s, t0) / (1.0 - p0 / _coefic(s, t0, p0))
 
 
-class UpwellingDiffusionModel:  # pylint: disable:too-many-instance-attributes
+class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     """
     Class to handle energy budget upwelling and downwelling
     """

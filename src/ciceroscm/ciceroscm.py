@@ -224,7 +224,9 @@ class CICEROSCM:
         self.results["dSL_thermal(m)"][index] = values["deltsl"][0]
         self.results["Total_forcing"][index] = forc
 
-    def _run(self, cfg, pamset_udm={"empty": "yes"}, pamset_emiconc={"empty": "yes"}):
+    def _run(
+        self, cfg, pamset_udm={}, pamset_emiconc={}
+    ):  # pylint: disable=dangerous-default-value
         """
         Run CICEROSCM
         """
