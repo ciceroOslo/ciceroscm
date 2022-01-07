@@ -8,10 +8,6 @@ CiceroSCM
 ==============
 
 .. include:: ../../README.rst
-    :start-after: sec-begin-index
-    :end-before: sec-end-index
-
-.. include:: ../../README.rst
     :start-after: sec-begin-license
     :end-before: sec-end-license
 
