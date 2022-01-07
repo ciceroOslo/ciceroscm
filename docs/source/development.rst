@@ -5,7 +5,7 @@ Development
 
 If you're interested in contributing to OpenSCM-Runner, we'd love to have you on board!
 This section of the docs will (once we've written it) detail how to get setup to contribute and how best to communicate.
-This whole documentation has been copied more or less verbatim from the docs for  `OpenSCM-runner <https://github.com/openscm/openscm-runner/docs/>`_
+This whole documentation has been copied more or less verbatim from the docs for  `OpenSCM-runner <https://github.com/openscm/openscm-runner/tree/master/docs/>`_
 
 .. contents:: :local:
 
@@ -27,7 +27,7 @@ If your issue is a feature request or a bug, please use the templates available,
 As a contributor, please follow a couple of conventions:
 
 - Create issues in the `Ciceroscm issue tracker`_ for changes and enhancements, this ensures that everyone in the community has a chance to comment
-- Be welcoming to newcomers and encourage diverse new contributors from all backgrounds: see the `Python Community Code of Conduct <https://www.python.org/psf/codeofconduct/>`_
+- Be welcoming to newcomers and encourage diverse new contributors from all backgrounds: see the `Python Community Code of Conduct <https://www.python.org/psf/conduct/>`_
 - Only push to your own branches, this allows people to force push to their own branches as they need without fear or causing others headaches
 - Start all pull requests as draft pull requests and only mark them as ready for review once they've been rebased onto master, this makes it much simpler for reviewers
 - Try and make lots of small pull requests, this makes it easier for reviewers and faster for everyone as review time grows exponentially with the number of lines in a pull request
@@ -44,7 +44,7 @@ To get setup as a developer, we recommend the following steps (if any of these t
     #. Change your current directory to OpenSCM-Runner's root directory (i.e. the one which contains ``README.rst``), ``cd openscm-runner``
     #. Create a virtual environment to use with OpenSCM-Runner ``python3 -m venv venv``
     #. Activate your virtual environment ``source ./venv/bin/activate``
-    #. Upgrade pip ``pip intall --upgrade pip``
+    #. Upgrade pip ``pip install --upgrade pip``
     #. Install the development dependencies (very important, make sure your virtual environment is active before doing this) ``pip install -e .[dev]``
 
 #. Make sure the tests pass by running ``make check``, if that fails the commands can be read out of the ``Makefile``
@@ -65,11 +65,11 @@ This list of development tools is what we rely on to develop OpenSCM-Runner reli
 It gives you a few starting points in case things do go inexplicably wrong and you want to work out why.
 We include links with each of these tools to starting points that we think are useful, in case you want to learn more.
 
-- `Git <http://swcarpentry.github.io/git-novice/>`_
+- `Git <https://swcarpentry.github.io/git-novice/>`_
 
 - `Make <https://swcarpentry.github.io/make-novice/>`_
 
-- `Conda virtual environments <https://medium.freecodecamp.org/why-you-need-python-environments-and-how-to-manage-them-with-conda-85f155f4353c>`_
+- `Conda virtual environments <https://www.freecodecamp.org/news/why-you-need-python-environments-and-how-to-manage-them-with-conda-85f155f4353c>`_
 
 - `Pip and pip virtual environments <https://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/>`_
 
@@ -77,7 +77,7 @@ We include links with each of these tools to starting points that we think are u
 
     - we use a blend of `pytest <https://docs.pytest.org/en/latest/>`_ and the inbuilt Python testing capabilities for our tests so checkout what we've already done in ``tests`` to get a feel for how it works
 
-- `Continuous integration (CI) <https://help.github.com/en/actions>`_ (also `brief intro blog post <https://gabrieltanner.org/blog/an-introduction-to-github-actions>`_ and a `longer read <https://dev.to/bnb/an-unintentionally-comprehensive-introduction-to-github-actions-ci-blm>`_)
+- `Continuous integration (CI) <https://docs.github.com/en/actions>`_ (also `brief intro blog post <https://gabrieltanner.org/blog/an-introduction-to-github-actions>`_ and a `longer read <https://dev.to/bnb/an-unintentionally-comprehensive-introduction-to-github-actions-ci-blm>`_)
 
     - we use GitHub CI for our CI but there are a number of good providers
 
@@ -96,9 +96,9 @@ Here we provide a list of these along with useful resources.
 
 .. _regular-expressions:
 
-- `Regular expressions <https://www.oreilly.com/ideas/an-introduction-to-regular-expressions>`_
+- `Regular expressions <https://www.oreilly.com/content/an-introduction-to-regular-expressions>`_
 
-    - we use `regex101.com <regex101.com>`_ to help us write and check our regular expressions, make sure the language is set to Python to make your life easy!
+    - we use `regex101.com <https://regex101.com>`_ to help us write and check our regular expressions, make sure the language is set to Python to make your life easy!
 
 Formatting
 ----------
@@ -118,7 +118,7 @@ This will build the docs for you.
 You can preview them by opening ``docs/build/html/index.html`` in a browser.
 
 For documentation we use Sphinx_.
-To get ourselves started with Sphinx, we started with `this example <https://pythonhosted.org/an_example_pypi_project/sphinx.html>`_ then used `Sphinx's getting started guide <http://www.sphinx-doc.org/en/master/usage/quickstart.html>`_.
+To get ourselves started with Sphinx, we started with `this example <https://pythonhosted.org/an_example_pypi_project/sphinx.html>`_ then used `Sphinx's getting started guide <https://www.sphinx-doc.org/en/master/usage/quickstart.html>`_.
 
 
 Gotchas
@@ -173,6 +173,6 @@ Why is there a ``Makefile`` in a pure Python repository?
 Whilst it may not be standard practice, a ``Makefile`` is a simple way to automate general setup (environment setup in particular).
 Hence we have one here which basically acts as a notes file for how to do all those little jobs which we often forget e.g. setting up environments, running tests (and making sure we're in the right environment), building docs, setting up auxillary bits and pieces.
 
-.. _Sphinx: http://www.sphinx-doc.org/en/master/
+.. _Sphinx: https://www.sphinx-doc.org/en/master/
 .. _Ciceroscm issue tracker: https://github.com/openscm/openscm-runner/issues
 .. _`OpenSCM-Runner's PyPI`: https://pypi.org/project/openscm-runner/
