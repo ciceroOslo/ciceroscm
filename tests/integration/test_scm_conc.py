@@ -62,7 +62,7 @@ def check_output_just_some_lines(
 
 def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     cscm = CICEROSCM()
-    #outdir_save = os.path.join(os.getcwd(), "output")
+    # outdir_save = os.path.join(os.getcwd(), "output")
     outdir = str(tmpdir)
     # One year forcing:
 
