@@ -62,14 +62,14 @@ def check_output_just_some_lines(
 
 def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     cscm = CICEROSCM()
-    outdir_save = os.path.join(os.getcwd(), "output")
-    # outdir = str(tmpdir)
+    #outdir_save = os.path.join(os.getcwd(), "output")
+    outdir = str(tmpdir)
     # One year forcing:
 
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir_save,
+            "output_prefix": outdir,
             "nyend": 2100,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
@@ -78,15 +78,15 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
         },
     )
 
-    check_output(outdir_save, os.path.join(test_data_dir, "ssp245_emis"))
+    check_output(outdir, os.path.join(test_data_dir, "ssp245_emis"))
     check_output_just_some_lines(
-        outdir_save,
+        outdir,
         os.path.join(test_data_dir, "ssp245_emis"),
         files=["output_forc.txt"],
         lines=19,
     )
     check_output_just_some_lines(
-        outdir_save,
+        outdir,
         os.path.join(test_data_dir, "ssp245_emis"),
         files=["output_temp.txt"],
         lines=16,
