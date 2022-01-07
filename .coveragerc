@@ -1,0 +1,13 @@
+[run]
+branch = True
+source = ciceroscm
+omit = *_version.py,*testing.py
+
+[report]
+fail_under = 90
+exclude_lines =
+    if self.debug:
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+ignore_errors = True

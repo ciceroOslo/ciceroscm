@@ -1,11 +1,49 @@
 """
 Energy budget upwelling diffusion model
 """
+import logging
 
 import numpy as np
 
-sek_day = 86400
-day_year = 365.0
+from ._utils import check_numeric_pamset
+
+SEC_DAY = 86400
+DAY_YEAR = 365.0
+
+LOGGER = logging.getLogger(__name__)
+
+
+def check_pamset(pamset):
+    """
+    Check that parameterset has necessary values for run
+    Otherwise set to default values
+    """
+    required = {
+        "rlamdo": 16.0,
+        "akapa": 0.634,
+        "cpi": 0.4,
+        "W": 4.0,
+        "beto": 3.5,
+        "threstemp": 7.0,
+        "lambda": 0.540,
+        "mixed": 60.0,
+        "foan": 0.61,
+        "foas": 0.81,
+        "ebbeta": 0.0,
+        "fnso": 0.7531,
+        "lm": 40,
+        "ldtime": 12,
+    }
+    pamset = check_numeric_pamset(required, pamset)
+    pamset["rakapa"] = 1.0e-4 * pamset["akapa"]
+    pamset["rlamda"] = 1.0 / pamset["lambda"]
+    pamset["dt"] = 1 / pamset["ldtime"] * SEC_DAY * DAY_YEAR
+    rho = 1.03
+    htcpty = 0.955
+    cnvrt = 0.485
+    pamset["c1"] = rho * htcpty * cnvrt * 100.0 * SEC_DAY
+
+    return pamset
 
 
 def _coefic(s, t, p):
@@ -75,7 +113,7 @@ def _density(p0, t0):
     return _denso(s, t0) / (1.0 - p0 / _coefic(s, t0, p0))
 
 
-class UpwellingDiffusionModel:
+class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     """
     Class to handle energy budget upwelling and downwelling
     """
@@ -84,86 +122,91 @@ class UpwellingDiffusionModel:
         """
         Intialise
         """
-        self.rlamdo = params["rlamdo"]
-        self.rakapa = 1.0e-4 * params["akapa"]
-        self.cpi = params["cpi"]
-        self.w = params["W"]
-        self.beto = params["beto"]
-        self.threstemp = params["threstemp"]
-        self.rlamda = 1.0 / params["lambda"]
-        self.foan = 0.61  # ocean fraction in the Nothern Hemisphere make changable?
-        self.foas = 0.81  # ocean fraction in the Southern Hemisphere make changable?
-        self.ebbeta = 0.0  # Make changable?
-        self.fnso = 0.7531
-        self.lm = 40
+        self.pamset = check_pamset(params)
 
         # Setting up dz height difference between ocean layers
-        self.dz = np.ones(self.lm) * 100.0
+        self.dz = np.ones(self.pamset["lm"]) * 100.0
         self.dz[0] = params["mixed"]
-
-        self.ldtime = 12
-        self.dt = 1 / self.ldtime * sek_day * day_year
+        self.varrying = {}
         self.setup_ebud()
-        self.FNOLD = 0.0
-        self.FSOLD = 0.0
+
+        # Intialising temperature values
+        self.tn = np.zeros(self.pamset["lm"])
+        self.ts = np.zeros(self.pamset["lm"])
+        # Dict of values to keep from one year to the next
+        self.prev_values = {
+            "zso": 0.0,
+            "zgo": 0.0,
+            "zao": 0.0,
+            "fn": 0.0,
+            "fs": 0.0,
+            "dtemp": 0.0,
+        }
+
         self.dtempprev = 0.0
         self.setup_sealevel_rise()
 
-    def _band(self, a, b, c, d):
+    def _band(self, a_array, b_array, c_array, d_array):
         """
         Calculate band
         """
-        alfa = np.zeros(self.lm - 1)
-        ans = np.zeros(self.lm)
-        bbeta = np.zeros(self.lm - 1)
+        alfa = np.zeros(self.pamset["lm"] - 1)
+        ans = np.zeros(self.pamset["lm"])
+        bbeta = np.zeros(self.pamset["lm"] - 1)
 
-        alfa[0] = -b[0] / a[0]
-        bbeta[0] = d[0] / a[0]
+        alfa[0] = -b_array[0] / a_array[0]
+        bbeta[0] = d_array[0] / a_array[0]
 
-        for i in range(1, self.lm - 1):
-            tem = a[i] * alfa[i - 1] + b[i]
-            alfa[i] = -c[i] / tem
-            bbeta[i] = (d[i] - a[i] * bbeta[i - 1]) / tem
-        tem = a[self.lm - 1] * alfa[self.lm - 2] + b[self.lm - 1]
-        ans[self.lm - 1] = (d[self.lm - 1] - a[self.lm - 1] * bbeta[self.lm - 2]) / tem
+        for i in range(1, self.pamset["lm"] - 1):
+            tem = a_array[i] * alfa[i - 1] + b_array[i]
+            alfa[i] = -c_array[i] / tem
+            bbeta[i] = (d_array[i] - a_array[i] * bbeta[i - 1]) / tem
+        tem = (
+            a_array[self.pamset["lm"] - 1] * alfa[self.pamset["lm"] - 2]
+            + b_array[self.pamset["lm"] - 1]
+        )
+        ans[self.pamset["lm"] - 1] = (
+            d_array[self.pamset["lm"] - 1]
+            - a_array[self.pamset["lm"] - 1] * bbeta[self.pamset["lm"] - 2]
+        ) / tem
 
-        for i in range(1, self.lm):
-            j = self.lm - 1 - i
+        for i in range(1, self.pamset["lm"]):
+            j = self.pamset["lm"] - 1 - i
             ans[j] = alfa[j] * ans[j + 1] + bbeta[j]
 
         return ans
 
-    def get_gam_and_fro_factor_ns(self, nh):
+    def get_gam_and_fro_factor_ns(self, northern_hemisphere):
         """
         Get correct cam and fro variables depending on
         whether Northern or Southern hemispher is
         considered
         """
-        blm = self.ebbeta / self.rlamdo
-        if nh:
+        blm = self.pamset["ebbeta"] / self.pamset["rlamdo"]
+        if northern_hemisphere:
             gam1 = self.gamn
             gam2 = self.gams
-            fro1 = self.foan
+            fro1 = self.pamset["foan"]
         else:
             gam1 = self.gams
             gam2 = self.gamn
-            fro1 = self.foas
+            fro1 = self.pamset["foas"]
         factor = (
-            self.rlamdo
+            self.pamset["rlamdo"]
             * (1.0 - fro1 * gam2 / (gam2 * gam1 - blm * blm))
-            * self.dt
-            / (self.c1 * self.dz[0])
+            * self.pamset["dt"]
+            / (self.pamset["c1"] * self.dz[0])
         )
         return factor
 
     def coeff(self, wcfac, gam_fro_fac):
         """
-        Calculate a, b c coefficient arrays for hemispher
+        Calculate a, b c coefficient arrays for hemisphere
         """
-        a = np.zeros(self.lm)
-        b = np.zeros(self.lm)
-        c = np.zeros(self.lm)
-        rakapafac = 2 * self.rakapa * self.dt
+        a = np.zeros(self.pamset["lm"])
+        b = np.zeros(self.pamset["lm"])
+        c = np.zeros(self.pamset["lm"])
+        rakapafac = 2 * self.pamset["rakapa"] * self.pamset["dt"]
 
         b[0] = -rakapafac / (
             self.dz[0] * (0.0 * self.dz[0] + self.dz[1])
@@ -174,7 +217,7 @@ class UpwellingDiffusionModel:
             -rakapafac / (self.dz[1] * (self.dz[1] + self.dz[2])) - wcfac / self.dz[1]
         )
         b[1] = 1.0 - a[1] - c[1]
-        for i in range(2, self.lm - 1):
+        for i in range(2, self.pamset["lm"] - 1):
             a[i] = -rakapafac / (self.dz[i] * (self.dz[i - 1] + self.dz[i]))
             c[i] = (
                 -rakapafac / (self.dz[i] * (self.dz[i] + self.dz[i + 1]))
@@ -182,135 +225,139 @@ class UpwellingDiffusionModel:
             )
             b[i] = 1.0 - a[i] - c[i]
 
-        a[self.lm - 1] = -rakapafac / (
-            self.dz[self.lm - 1] * (self.dz[self.lm - 2] + self.dz[self.lm - 1])
+        a[self.pamset["lm"] - 1] = -rakapafac / (
+            self.dz[self.pamset["lm"] - 1]
+            * (self.dz[self.pamset["lm"] - 2] + self.dz[self.pamset["lm"] - 1])
         )
-        b[self.lm - 1] = (
-            1.0 - a[self.lm - 1] + wcfac / self.dz[self.lm - 1]
+        b[self.pamset["lm"] - 1] = (
+            1.0 - a[self.pamset["lm"] - 1] + wcfac / self.dz[self.pamset["lm"] - 1]
         )  # Her var det brukt i selvom vi var utenfor loekka, litt uklart hva som er ment...
         return a, b, c
 
-    def setup_ebud2(self, temp1N, temp1S):
+    def setup_ebud2(self, temp_1n, temp_1s):
         """
         Set up coefficients and more for the two hemispheres
         to be redone every timestep
         """
         # Northern hemisphere:
-        if self.threstemp == 0:
-            wcfac = (
-                self.w
-                / (sek_day * day_year)
-                * self.dt
-            )
+        if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
+            wcfac = self.pamset["W"] / (SEC_DAY * DAY_YEAR) * self.pamset["dt"]
         else:
             wcfac = (
-                self.w
-                / (sek_day * day_year)
-                * (1 - 0.3 * temp1N / self.threstemp)
-                * self.dt
+                self.pamset["W"]
+                / (SEC_DAY * DAY_YEAR)
+                * (1 - 0.3 * temp_1n / self.pamset["threstemp"])
+                * self.pamset["dt"]
             )
-        self.dtrm1n = (
+        self.varrying["dtrm1n"] = (
             1.0
-            - self.cpi * wcfac / self.dz[0]
-            - self.beto * self.dt / (self.c1 * self.dz[0])
+            - self.pamset["cpi"] * wcfac / self.dz[0]
+            - self.pamset["beto"] * self.pamset["dt"] / (self.pamset["c1"] * self.dz[0])
         )
-        self.dtmnl2 = wcfac * self.cpi / self.dz[self.lm - 1]
-        self.acoeffn, self.bcoeffn, self.ccoeffn = self.coeff(
-            wcfac, self.get_gam_and_fro_factor_ns(True)
+        self.varrying["dtmnl2"] = (
+            wcfac * self.pamset["cpi"] / self.dz[self.pamset["lm"] - 1]
         )
+        (
+            self.varrying["acoeffn"],
+            self.varrying["bcoeffn"],
+            self.varrying["ccoeffn"],
+        ) = self.coeff(wcfac, self.get_gam_and_fro_factor_ns(True))
 
         # Southern hemisphere:
-        if self.threstemp == 0:
-            wcfac = (
-                self.w
-                / (sek_day * day_year)
-                * self.dt
-            )
+        if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
+            wcfac = self.pamset["W"] / (SEC_DAY * DAY_YEAR) * self.pamset["dt"]
         else:
             wcfac = (
-                self.w
-                / (sek_day * day_year)
-                * (1 - 0.3 * temp1S / self.threstemp)
-                * self.dt
-            )            
-        self.dtrm1s = (
+                self.pamset["W"]
+                / (SEC_DAY * DAY_YEAR)
+                * (1 - 0.3 * temp_1s / self.pamset["threstemp"])
+                * self.pamset["dt"]
+            )
+        self.varrying["dtrm1s"] = (
             1.0
-            - self.cpi * wcfac / self.dz[0]
-            - self.fnso * self.beto * self.dt / (self.c1 * self.dz[0])
+            - self.pamset["cpi"] * wcfac / self.dz[0]
+            - self.pamset["fnso"]
+            * self.pamset["beto"]
+            * self.pamset["dt"]
+            / (self.pamset["c1"] * self.dz[0])
         )
-        self.dtmsl2 = wcfac * self.cpi / self.dz[self.lm - 1]
-        self.acoeffs, self.bcoeffs, self.ccoeffs = self.coeff(
-            wcfac, self.get_gam_and_fro_factor_ns(False)
+        self.varrying["dtmsl2"] = (
+            wcfac * self.pamset["cpi"] / self.dz[self.pamset["lm"] - 1]
         )
-
-        return
+        (
+            self.varrying["acoeffs"],
+            self.varrying["bcoeffs"],
+            self.varrying["ccoeffs"],
+        ) = self.coeff(wcfac, self.get_gam_and_fro_factor_ns(False))
 
     def setup_ebud(self):
         """
         Set up energy budget before run
         """
-        rho = 1.03
-        htcpty = 0.955
-        cnvrt = 0.485
-        self.c1 = rho * htcpty * cnvrt * 100.0 * sek_day
+        fnsa = 1.0  # Can it be something else?
+        c1fac = self.pamset["dt"] / (self.pamset["c1"] * self.dz[0])
 
-        fnsa = 1.0  # Can it be something else
-        c1fac = self.dt / (self.c1 * self.dz[0])
-
-        blm = self.ebbeta / self.rlamdo
-        self.gamn = self.foan + self.rlamda / self.rlamdo + blm
-        self.gams = self.foas + self.rlamda / self.rlamdo + fnsa * blm
+        blm = self.pamset["ebbeta"] / self.pamset["rlamdo"]
+        self.gamn = (
+            self.pamset["foan"] + self.pamset["rlamda"] / self.pamset["rlamdo"] + blm
+        )
+        self.gams = (
+            self.pamset["foas"]
+            + self.pamset["rlamda"] / self.pamset["rlamdo"]
+            + fnsa * blm
+        )
 
         # Northern hemisphere
-        self.dtrm2n = (
-            self.beto
-            + self.foas * self.ebbeta / (self.gams * self.gamn - fnsa * blm ** 2)
+        self.varrying["dtrm2n"] = (
+            self.pamset["beto"]
+            + self.pamset["foas"]
+            * self.pamset["ebbeta"]
+            / (self.gams * self.gamn - fnsa * blm ** 2)
         ) * c1fac
-        self.dtrm3n = self.gams / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
-        self.dtrm4n = blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        self.varrying["dtrm3n"] = (
+            self.gams / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        )
+        self.varrying["dtrm4n"] = (
+            blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        )
 
         # Southern hemisphere
-        self.dtrm2s = (
-            self.fnso * self.beto
-            + self.foan * fnsa * self.ebbeta / (self.gams * self.gamn - fnsa * blm ** 2)
+        self.varrying["dtrm2s"] = (
+            self.pamset["fnso"] * self.pamset["beto"]
+            + self.pamset["foan"]
+            * fnsa
+            * self.pamset["ebbeta"]
+            / (self.gams * self.gamn - fnsa * blm ** 2)
         ) * c1fac
-        self.dtrm3s = self.gamn / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
-        self.dtrm4s = fnsa * blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        self.varrying["dtrm3s"] = (
+            self.gamn / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        )
+        self.varrying["dtrm4s"] = (
+            fnsa * blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+        )
 
-        self.dtmnl3 = self.dt * self.beto / (self.c1 * self.dz[self.lm - 1])
-        self.dtmnl1 = 1.0 - self.dtmnl3
-        self.dtmsl3 = self.fnso * self.dtmnl3
-        self.dtmsl1 = 1.0 - self.dtmsl3
-        self.setup_ebud2(0,0)
-
-        # Intialising temperature values
-        self.tn = np.zeros(self.lm)
-        self.ts = np.zeros(self.lm)
-
-        self.betag = 3.0e-4
-        self.betaa = -2.0e-4
-
-        self.z0 = 0.5
-        self.betas = 0.25
-        self.ebtau = 20.0
-        self.zso = 0.0
-        self.zgo = 0.0
-        self.zao = 0.0
-
-        return
+        self.varrying["dtmnl3"] = (
+            self.pamset["dt"]
+            * self.pamset["beto"]
+            / (self.pamset["c1"] * self.dz[self.pamset["lm"] - 1])
+        )
+        self.varrying["dtmnl1"] = 1.0 - self.varrying["dtmnl3"]
+        self.varrying["dtmsl3"] = self.pamset["fnso"] * self.varrying["dtmnl3"]
+        self.varrying["dtmsl1"] = 1.0 - self.varrying["dtmsl3"]
+        self.setup_ebud2(0, 0)
 
     def setup_sealevel_rise(self):
         """
         Set up variables to be used in sea level rise calculations
         """
-        self.press = np.zeros(self.lm)
-        self.tempunp = np.zeros(self.lm)
+        self.press = np.zeros(self.pamset["lm"])
+        self.tempunp = np.zeros(self.pamset["lm"])
         self.press[0] = 35.0 * 1.0e4 * 1.0e-5
         self.tempunp[0] = 19.5
-        self.dens0 = np.zeros(self.lm)
+        self.dens0 = np.zeros(self.pamset["lm"])
         self.dens0[0] = _density(self.press[0], self.tempunp[0])
 
-        for i in range(1, self.lm):
+        for i in range(1, self.pamset["lm"]):
             z = 120.0 + 100.0 * (i - 1)  # Skulle 120. = mixed?
             self.press[i] = z * 1.0e4  # Units=Pa
             self.press[i] = self.press[i] * 1.0e-5  # Units=bar
@@ -321,10 +368,15 @@ class UpwellingDiffusionModel:
         """
         Compute sea level rise associated with temperature change
         """
+        betag = 3.0e-4  # Make changeable parameter?
+        betaa = -2.0e-4  # Make changeable parameter?
+        betas = 0.25  # Make changeable parameter?
+        ebtau = 20  # Make changeable parameter?
+        z0_param = 0.5  # Make changeable parameter?
         deltsl = np.zeros(2)
 
         # Sea level rise from temperature change
-        for i in range(self.lm):
+        for i in range(self.pamset["lm"]):
             dens1 = _density(self.press[i], (templ[i] + self.tempunp[i]))
             deldens = dens1 - self.dens0[i]
             deltsl[0] = deltsl[0] - deldens * self.dz[i] / dens1
@@ -333,18 +385,27 @@ class UpwellingDiffusionModel:
         # Maybe outdated
         # Also why not use hemispheric temperature change?
         # Greenland
-        self.zgo = self.zgo + 1.5 * self.betag * (dtemp + self.dtempprev) / 2.0
+        self.prev_values["zgo"] = (
+            self.prev_values["zgo"]
+            + 1.5 * betag * (dtemp + self.prev_values["dtemp"]) / 2.0
+        )
         # Antarctica
-        self.zao = self.zao + self.betaa * (dtemp + self.dtempprev) / 2.0
+        self.prev_values["zao"] = (
+            self.prev_values["zao"] + betaa * (dtemp + self.prev_values["dtemp"]) / 2.0
+        )
         # Small glaciers:
-        aa = self.zso + self.z0 * self.betas * dtemp / self.ebtau
-        bb = 1.0 + (1.0 + self.betas * dtemp) / self.ebtau
-        self.zso = aa / bb
+        aa = self.prev_values["zso"] + z0_param * betas * dtemp / ebtau
+        bb = 1.0 + (1.0 + betas * dtemp) / ebtau
+        self.prev_values["zso"] = aa / bb
 
-        deltsl[1] = self.zgo + self.zao + self.zso
+        deltsl[1] = (
+            self.prev_values["zgo"] + self.prev_values["zao"] + self.prev_values["zso"]
+        )
         return deltsl
 
-    def energy_budget(self, FN, FS, FN_VOLC, FS_VOLC):
+    def energy_budget(
+        self, forc_nh, forc_sh, fn_volc, fs_volc
+    ):  # pylint: disable=too-many-locals
         """
         Do energy budget calculation for single year
         """
@@ -358,90 +419,113 @@ class UpwellingDiffusionModel:
         tempn_sea = 0.0
         temps_sea = 0.0
 
-        templ = np.zeros(self.lm)
+        templ = np.zeros(self.pamset["lm"])
 
-        dtyear = 1.0 / self.ldtime
-        dn = np.zeros(self.lm)
-        ds = np.zeros(self.lm)
-        
-            
-        for im in range(self.ldtime):
+        dtyear = 1.0 / self.pamset["ldtime"]
+        dn = np.zeros(self.pamset["lm"])
+        ds = np.zeros(self.pamset["lm"])
 
-            if self.threstemp != 0:
+        for im in range(self.pamset["ldtime"]):
+
+            if self.pamset["threstemp"] != 0:  # pylint: disable=compare-to-zero
                 self.setup_ebud2(temp1n, temp1s)
 
             dqn = (
-                (im + 1) * FN * dtyear
-                + (1 - (im + 1) * dtyear) * self.FNOLD
-                + FN_VOLC[im]
+                (im + 1) * forc_nh * dtyear
+                + (1 - (im + 1) * dtyear) * self.prev_values["fn"]
+                + fn_volc[im]
             )
             dqs = (
-                (im + 1) * FS * dtyear
-                + (1 - (im + 1) * dtyear) * self.FSOLD
-                + FS_VOLC[im]
+                (im + 1) * forc_sh * dtyear
+                + (1 - (im + 1) * dtyear) * self.prev_values["fs"]
+                + fs_volc[im]
             )
             dn[0] = (
-                self.dtrm1n * self.tn[0]
-                + self.dtrm2n * self.ts[0]
-                + self.dtrm3n * dqn
-                + self.dtrm4n * dqs
+                self.varrying["dtrm1n"] * self.tn[0]
+                + self.varrying["dtrm2n"] * self.ts[0]
+                + self.varrying["dtrm3n"] * dqn
+                + self.varrying["dtrm4n"] * dqs
             )
             ds[0] = (
-                self.dtrm1s * self.ts[0]
-                + self.dtrm2s * self.tn[0]
-                + self.dtrm3s * dqs
-                + self.dtrm4s * dqn
+                self.varrying["dtrm1s"] * self.ts[0]
+                + self.varrying["dtrm2s"] * self.tn[0]
+                + self.varrying["dtrm3s"] * dqs
+                + self.varrying["dtrm4s"] * dqn
             )
 
-            for i in range(1, self.lm - 1):
-                dn[i] = self.tn[i] + self.beto * self.dt / (self.c1 * self.dz[i]) * (
-                    self.ts[i] - self.tn[i]
+            for i in range(1, self.pamset["lm"] - 1):
+                dn[i] = self.tn[i] + self.pamset["beto"] * self.pamset["dt"] / (
+                    self.pamset["c1"] * self.dz[i]
+                ) * (self.ts[i] - self.tn[i])
+                ds[i] = self.ts[i] + self.pamset["fnso"] * self.pamset[
+                    "beto"
+                ] * self.pamset["dt"] / (self.pamset["c1"] * self.dz[i]) * (
+                    self.tn[i] - self.ts[i]
                 )
-                ds[i] = self.ts[i] + self.fnso * self.beto * self.dt / (
-                    self.c1 * self.dz[i]
-                ) * (self.tn[i] - self.ts[i])
 
-            dn[self.lm - 1] = (
-                self.dtmnl1 * self.tn[self.lm - 1]
-                + self.dtmnl2 * self.tn[0]
-                + self.dtmnl3 * self.ts[self.lm - 1]
+            dn[self.pamset["lm"] - 1] = (
+                self.varrying["dtmnl1"] * self.tn[self.pamset["lm"] - 1]
+                + self.varrying["dtmnl2"] * self.tn[0]
+                + self.varrying["dtmnl3"] * self.ts[self.pamset["lm"] - 1]
             )
-            ds[self.lm - 1] = (
-                self.dtmsl1 * self.ts[self.lm - 1]
-                + self.dtmsl2 * self.ts[0]
-                + self.dtmsl3 * self.tn[self.lm - 1]
+            ds[self.pamset["lm"] - 1] = (
+                self.varrying["dtmsl1"] * self.ts[self.pamset["lm"] - 1]
+                + self.varrying["dtmsl2"] * self.ts[0]
+                + self.varrying["dtmsl3"] * self.tn[self.pamset["lm"] - 1]
             )
 
             #
             # Where are these being initialised? Ok, I think
-            self.tn = self._band(self.acoeffn, self.bcoeffn, self.ccoeffn, dn)
-            self.ts = self._band(self.acoeffs, self.bcoeffs, self.ccoeffs, ds)
-            # print("self.aceoffn: %s self.bcoeffn: %s self.ccoeffn %s"%(self.acoeffn, self.bcoeffn, self.ccoeffn))
-            # print("self.aceoffs: %s self.bcoeffs: %s self.ccoeffs %s"%(self.acoeffs, self.bcoeffs, self.ccoeffs))
+            self.tn = self._band(
+                self.varrying["acoeffn"],
+                self.varrying["bcoeffn"],
+                self.varrying["ccoeffn"],
+                dn,
+            )
+            self.ts = self._band(
+                self.varrying["acoeffs"],
+                self.varrying["bcoeffs"],
+                self.varrying["ccoeffs"],
+                ds,
+            )
+            # print("self.aceoffn: %s self.varrying["bcoeffn"]: %s self.ccoeffn %s"%(self.varrying["acoeffn"], self.varrying["bcoeffn"], self.varrying["ccoeffn"]))
+            # print("self.aceoffs: %s self.bcoeffs: %s self.ccoeffs %s"%(self.varrying["acoeffs"], self.bcoeffs, self.ccoeffs))
             temp1n = self.tn[0]
             temp1s = self.ts[0]
             # print("temp1n: %.5e temp1s %.5e"%(temp1n, temp1s))
-            for i in range(self.lm):
+            for i in range(self.pamset["lm"]):
                 templ[i] = (
                     templ[i] + 0.5 * (self.tn[i] + self.ts[i]) / 12.0
                 )  # skulle 12 her vrt ldtime?
 
-            fnx = self.rlamda + self.foan * self.rlamdo + self.ebbeta
-            fsx = self.rlamda + self.foas * self.rlamdo + self.ebbeta
+            fnx = (
+                self.pamset["rlamda"]
+                + self.pamset["foan"] * self.pamset["rlamdo"]
+                + self.pamset["ebbeta"]
+            )
+            fsx = (
+                self.pamset["rlamda"]
+                + self.pamset["foas"] * self.pamset["rlamdo"]
+                + self.pamset["ebbeta"]
+            )
             tempan = (
                 dqn
-                + self.foan * self.rlamdo * temp1n
-                + self.ebbeta * (dqs + self.foas * self.rlamdo * temp1s) / fsx
+                + self.pamset["foan"] * self.pamset["rlamdo"] * temp1n
+                + self.pamset["ebbeta"]
+                * (dqs + self.pamset["foas"] * self.pamset["rlamdo"] * temp1s)
+                / fsx
             )
-            tempan = tempan / (fnx - self.ebbeta ** 2 / fsx)
+            tempan = tempan / (fnx - self.pamset["ebbeta"] ** 2 / fsx)
             tempas = (
                 dqs
-                + self.foas * self.rlamdo * temp1s
-                + self.ebbeta * (dqn + self.foan * self.rlamdo * temp1n) / fnx
+                + self.pamset["foas"] * self.pamset["rlamdo"] * temp1s
+                + self.pamset["ebbeta"]
+                * (dqn + self.pamset["foan"] * self.pamset["rlamdo"] * temp1n)
+                / fnx
             )
-            tempas = tempas / (fsx - self.ebbeta ** 2 / fnx)
-            tmpn = self.foan * temp1n + (1.0 - self.foan) * tempan
-            tmps = self.foas * temp1s + (1.0 - self.foas) * tempas
+            tempas = tempas / (fsx - self.pamset["ebbeta"] ** 2 / fnx)
+            tmpn = self.pamset["foan"] * temp1n + (1.0 - self.pamset["foan"]) * tempan
+            tmps = self.pamset["foas"] * temp1s + (1.0 - self.pamset["foas"]) * tempas
 
             # x1=1638.+float(years_since_start)+float(im-1)/12.
 
@@ -458,14 +542,22 @@ class UpwellingDiffusionModel:
 
         deltsl = self.compute_sea_level_rise(templ, dtemp)
         # Updating previous values for next year
-        self.FNOLD = FN
-        self.FSOLD = FS
-        self.dtempprev = dtemp
+        self.prev_values["fn"] = forc_nh
+        self.prev_values["fs"] = forc_sh
+        self.prev_values["dtemp"] = dtemp
 
         # Getting Ocean temperature:
         ocean_res = self.compute_ocean_temperature()
-        ribn = FN +np.sum(FN_VOLC)/self.ldtime - self.rlamda * tempn
-        ribs = FS +np.sum(FS_VOLC)/self.ldtime- self.rlamda * temps
+        ribn = (
+            forc_nh
+            + np.sum(fn_volc) / self.pamset["ldtime"]
+            - self.pamset["rlamda"] * tempn
+        )
+        ribs = (
+            forc_sh
+            + np.sum(fs_volc) / self.pamset["ldtime"]
+            - self.pamset["rlamda"] * temps
+        )
         # Returning results_dict
         return {
             "dtemp": dtemp,
@@ -498,13 +590,13 @@ class UpwellingDiffusionModel:
             * constant
             * area_hemisphere
             * self.dz
-            * (self.tn * self.foan + self.ts * self.foas)
+            * (self.tn * self.pamset["foan"] + self.ts * self.pamset["foas"])
         )
 
         # Finding the max layer down to 700m
         max_layer = int(7 - self.dz[0] // 100.0)
-        frac = (1 + self.dz[0] // 100.0) - self.dz[0]/100.
-        
+        frac = (1 + self.dz[0] // 100.0) - self.dz[0] / 100.0
+
         return {
             "OHC700": np.sum(havtemp[:max_layer]) + frac * havtemp[max_layer],
             "OHCTOT": np.sum(havtemp[:]),
