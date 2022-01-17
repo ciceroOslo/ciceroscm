@@ -9,6 +9,9 @@ load-plugins=
     pylint.extensions.overlapping_exceptions,
     pylint.extensions.redefined_variable_type
 
+# As a temporary workaround for https://github.com/PyCQA/pylint/issues/4577
+init-hook = "import astroid; astroid.context.InferenceContext.max_inferred = 500"
+
 [MESSAGES CONTROL]
 disable=
     # handled by black
@@ -23,4 +26,4 @@ ignore-docstrings=yes
 ignore-imports=yes
 
 [FORMAT]
-good-names=i,j,k,nt
+good-names=i,j,k,nt,yr,it,dt,rf,dT_glob,dT_NH,dT_SH,dT_glob_air,dT_glob_NH_air,dT_glob_SH_air,dT_glob_sea,q,dT_glob_NH_sea,dT_glob_SH_sea,dSL,dSL_ice,dSL_thermal,fs,fn,s,t,p0,p,t0,w,dz,tn,ts,z0,a,b,c,aa,bb,z,dn,ds,im

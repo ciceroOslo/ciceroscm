@@ -6,7 +6,6 @@ import pandas as pd
 from ciceroscm import ciceroscm
 
 
-
 def test_read_volc_sun(test_data_dir):
     cscm = ciceroscm.CICEROSCM()
 
