@@ -21,6 +21,7 @@ export PRINT_HELP_PYSCRIPT
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
+.PHONY: checks
 checks: $(VENV_DIR)  ## run all the checks
 	@echo "=== bandit ==="; $(VENV_DIR)/bin/bandit -c .bandit.yml -r src || echo "--- bandit failed ---" >&2; \
 		echo "\n\n=== black ==="; $(VENV_DIR)/bin/black --check src tests setup.py  || echo "--- black failed ---" >&2; \
@@ -105,17 +106,18 @@ test-install: $(VENV_DIR)  ## test installing works
 	$(TEMPVENV)/bin/pip install .
 	$(TEMPVENV)/bin/python scripts/test_install.py
 
-virtual-environment:  ## update venv, create a new venv if it doesn't exist
-	make $(VENV_DIR)
-
-$(VENV_DIR): setup.py
+virtual-environment: $(VENV_DIR)  ## update venv, create a new venv if it doesn't exist make
+	echo "If you want this to be rerun, run make clean first"
+$(VENV_DIR): setup.py setup.cfg
 	[ -d $(VENV_DIR) ] || python3 -m venv $(VENV_DIR)
-
 	$(VENV_DIR)/bin/pip install --upgrade pip wheel
 	$(VENV_DIR)/bin/pip install -e .[dev]
 	$(VENV_DIR)/bin/jupyter nbextension enable --py widgetsnbextension
 
+
 	touch $(VENV_DIR)
+clean: $(VENV_DIR)
+	touch setup.py
 
 first-venv: ## create a new virtual environment for the very first repo setup
 	python3 -m venv $(VENV_DIR)
@@ -123,3 +125,5 @@ first-venv: ## create a new virtual environment for the very first repo setup
 	$(VENV_DIR)/bin/pip install --upgrade pip
 	$(VENV_DIR)/bin/pip install versioneer
 	# don't touch here as we don't want this venv to persist anyway
+
+
