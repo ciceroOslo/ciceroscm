@@ -161,7 +161,7 @@ class ConcentrationsEmissionsHandler:
             self.pamset["conc_run"] = cfg["conc_run"]
         else:
             self.pamset["conc_run"] = False
-        self.years = []
+        self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
 
         self.co2_hold = {
             "yCO2": 0.0,
@@ -178,11 +178,11 @@ class ConcentrationsEmissionsHandler:
         )  # if speedup, get this to reflect number of years
         self.r_functions[0, :] = [
             _rs_function(it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * 351)
+            for it in range(self.pamset["idtm"] * len(self.years))
         ]
         self.r_functions[1, :] = [
             _rb_function(it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * 351)
+            for it in range(self.pamset["idtm"] * len(self.years))
         ]
 
     def calculate_strat_quantities(self, yr):
@@ -405,8 +405,6 @@ class ConcentrationsEmissionsHandler:
         #  + 0.17 * (EMISSIONS(yr_ix,trcID("NOx"))-EM2010(trcID("NOx"))) &
         #  + 0.0014 * (EMISSIONS(yr_ix,trcID("CO"))-EM2010(trcID("CO"))) &
         #  + 0.0042 *(EMISSIONS(yr_ix,trcID("NMVOC"))-EM2010(trcID("NMVOC")))
-
-        self.years.append(yr)
         if self.pamset["conc_run"]:
             self.fill_one_row_conc(yr)
             return
