@@ -255,6 +255,8 @@ class CICEROSCM:
 
             cfg = check_inputfiles(cfg)
             pamset_emiconc["emstart"] = self.emstart
+            pamset_emiconc["nystart"] = self.nystart
+            pamset_emiconc["nyend"] = self.nyend
             ce_handler = ConcentrationsEmissionsHandler(cfg, pamset_emiconc,)
 
         for yr in range(self.nystart, self.nyend + 1):

@@ -161,7 +161,7 @@ class ConcentrationsEmissionsHandler:
             self.pamset["conc_run"] = cfg["conc_run"]
         else:
             self.pamset["conc_run"] = False
-        self.years = []
+        self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
 
         self.co2_hold = {
             "yCO2": 0.0,
@@ -173,6 +173,17 @@ class ConcentrationsEmissionsHandler:
             "sums": 0.0,
         }
         self.co2_hold["dfnpp"].append(0.0)
+        self.r_functions = np.empty(
+            (2, self.pamset["idtm"] * 351)
+        )  # if speedup, get this to reflect number of years
+        self.r_functions[0, :] = [
+            _rs_function(it, self.pamset["idtm"])
+            for it in range(self.pamset["idtm"] * len(self.years))
+        ]
+        self.r_functions[1, :] = [
+            _rb_function(it, self.pamset["idtm"])
+            for it in range(self.pamset["idtm"] * len(self.years))
+        ]
 
     def calculate_strat_quantities(self, yr):
         """
@@ -394,8 +405,6 @@ class ConcentrationsEmissionsHandler:
         #  + 0.17 * (EMISSIONS(yr_ix,trcID("NOx"))-EM2010(trcID("NOx"))) &
         #  + 0.0014 * (EMISSIONS(yr_ix,trcID("CO"))-EM2010(trcID("CO"))) &
         #  + 0.0042 *(EMISSIONS(yr_ix,trcID("NMVOC"))-EM2010(trcID("NMVOC")))
-
-        self.years.append(yr)
         if self.pamset["conc_run"]:
             self.fill_one_row_conc(yr)
             return
@@ -500,7 +509,10 @@ class ConcentrationsEmissionsHandler:
                 )
             if it > 0:
                 for j in range(1, it):
-                    sumf = sumf + self.co2_hold["dfnpp"][j] * _rb_function(it - 1 - j)
+                    sumf = (
+                        sumf
+                        + self.co2_hold["dfnpp"][j] * self.r_functions[1, it - 1 - j]
+                    )
             ffer = self.co2_hold["dfnpp"][it] - dt * sumf
             em_co2 = self.emis["CO2_FF"][yr] + self.emis["CO2_AFOLU"][yr] - ffer
             em_co2 = em_co2 + self.df_gas["NAT_EM"]["CO2"]
@@ -525,7 +537,7 @@ class ConcentrationsEmissionsHandler:
             self.co2_hold["emCO2_prev"] = em_co2
             sumz = 0.0
             for j in range(it - 1):
-                sumz = sumz + self.co2_hold["sCO2"][j] * _rs_function(it - 1 - j)
+                sumz = sumz + self.co2_hold["sCO2"][j] * self.r_functions[0, it - 1 - j]
             z_co2 = (
                 conv_factor
                 * coeff
