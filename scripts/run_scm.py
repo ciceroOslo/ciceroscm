@@ -4,7 +4,8 @@ import sys
 
 import pandas as pd
 
-sys.path.append('/div/no-backup/users/ragnhibs/ciceroscm/src/')
+sys.path.append(os.path.join(os.path.dirname(__file__), "../", "src"))
+
 print(sys.path)
 from ciceroscm import CICEROSCM
 
