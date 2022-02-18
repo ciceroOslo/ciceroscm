@@ -9,11 +9,11 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../", "src"))
 print(sys.path)
 from ciceroscm import CICEROSCM
 
-data_dir = '/div/no-backup/users/ragnhibs/ciceroscm/tests/test-data/'
+data_dir = os.path.join(os.path.dirname(__file__), "../", "tests", "test-data")
 
 cscm = CICEROSCM()
-outdir = '/div/qbo/utrics/CSCM/output/' 
 
+outdir = os.path.join(os.getcwd(), "output_test")
 
 cscm._run(
     {
