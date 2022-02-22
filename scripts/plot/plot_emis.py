@@ -1,9 +1,6 @@
 #Plot emissions all components in the CICERO SCM
 #If unit is 'X', no emissions is provided, but component in output file.
 
-import sys
-import os
-import shutil
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np

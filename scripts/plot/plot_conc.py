@@ -1,10 +1,7 @@
 #Plot concentration all components in the CICERO SCM
 #If unit is '-', no concentration is provided, but component in output file.
-#To do, Trop O3, concentration output given, unit '-'. This is DobsenUnit. 
+#To do: Trop O3, concentration output given, unit '-'. This is DobsenUnit. 
 
-import sys
-import os
-import shutil
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -36,7 +33,8 @@ for i,c in enumerate(complist):
     print(i)
     comp = df_conc.columns[c]
     print(comp)
-    df_conc[comp].plot(ylabel='Conc. ['+df_comp.loc[comp]['CONC_UNIT']+']',ax=axs[i],label=scen)
+    df_conc[comp].plot(ylabel='Conc. ['+df_comp.loc[comp]['CONC_UNIT']+']',
+                       ax=axs[i],label=scen)
     axs[i].set_title(comp)
     axs[i].legend()
     axs[i].set_ylim(bottom=0)
@@ -65,7 +63,8 @@ for i,c in enumerate(complist):
     print(i)
     comp = df_conc.columns[c]
     print(comp)
-    df_conc[comp].plot(ylabel='Conc. ['+df_comp.loc[comp]['CONC_UNIT']+']',ax=axs[i],label=scen)
+    df_conc[comp].plot(ylabel='Conc. ['+df_comp.loc[comp]['CONC_UNIT']+']',
+                       ax=axs[i],label=scen)
     axs[i].set_title(comp)
     axs[i].legend()
     axs[i].set_ylim(bottom=0)

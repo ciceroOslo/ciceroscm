@@ -9,9 +9,9 @@
 #modelling (CMIP6), Geosci. Model Dev., 10,2057-2116,
 #10.5194/gmd-10-2057-2017, 2017.
 
-import sys
-import os
-import shutil
+#Several components here not included in the CSCM
+#Only compared the components with identical names.
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -42,7 +42,9 @@ compskiped = ['HCFC-123',
               'HFC143a','HFC227ea', 'HFC23', 'HFC245fa','HFC32',
               'HFC4310mee']
 
-cmip6_conc = pd.read_excel('data_compare/Supplementary_Table_UoM_GHGConcentrations-1-1-0_annualmeans_v23March2017.xls', sheet_name='historical-annualmean-Global',header=21,index_col=0)
+cmip6_conc = pd.read_excel('data_compare/Supplementary_Table_UoM_GHGConcentrations-1-1-0_annualmeans_v23March2017.xls',
+                           sheet_name='historical-annualmean-Global',
+                           header=21,index_col=0)
 cmip6_conc.index.name='Years'
 print(cmip6_conc)
 
@@ -51,7 +53,8 @@ fig, axs = plt.subplots(nrows=4, ncols=4,sharex=True,figsize=(12,16))
 axs=axs.flatten()
 fig.suptitle('CICERO SCM simulation, concentrations')
 for i,comp in enumerate(complist):
-    df_conc[comp].plot(ylabel= comp +' ['+df_comp.loc[comp]['CONC_UNIT']+']',ax=axs[i],label=scen)
+    df_conc[comp].plot(ylabel= comp +' ['+df_comp.loc[comp]['CONC_UNIT']+']',
+                       ax=axs[i],label=scen)
     
     cmip6_conc[comp].plot(ax=axs[i],color='black',label='CMIP6input')
     axs[i].set_title(comp)

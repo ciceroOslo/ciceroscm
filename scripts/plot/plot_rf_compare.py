@@ -2,9 +2,9 @@
 #and compare to IPCC AR6 forcing timeseries.
 #https://github.com/chrisroadmap/ar6/blob/main/data_output/AR6_ERF_1750-2019.csv
 #https://raw.githubusercontent.com/chrisroadmap/ar6/main/data_output/AR6_ERF_1750-2019.csv
-import sys
-import os
-import shutil
+#Can add 90% CI as well.
+
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -30,7 +30,8 @@ df_rf_ar6 = pd.read_csv('data_compare/AR6_ERF_1750-2019.csv',sep=',',header=0,in
 #       'total_anthropogenic', 'total_natural', 'total'
 
 complist_ar6 = ['co2', 'ch4', 'n2o', 'other_wmghg',
-                'o3','h2o_stratospheric','land_use','aerosol','total_anthropogenic']
+                'o3','h2o_stratospheric','land_use','aerosol',
+                'total_anthropogenic']
 
 
 fig, axs = plt.subplots(nrows=3, ncols=3,sharex=True,figsize=(12,20))
@@ -39,7 +40,8 @@ fig.suptitle('CICERO SCM simulation, Radiative Forcing')
 for i,comp in enumerate(complist_ar6):
     print(i)
     print(comp)
-    df_rf_ar6[comp].plot(ylabel='RF [Wm$^{-2}$ ]',ax=axs[i],color='black',label='IPCC AR6')
+    df_rf_ar6[comp].plot(ylabel='RF [Wm$^{-2}$ ]',
+                         ax=axs[i],color='black',label='IPCC AR6')
     if comp == 'co2':
         df_rf['CO2'].plot(ax=axs[i],label=scen)
     elif comp == 'ch4':

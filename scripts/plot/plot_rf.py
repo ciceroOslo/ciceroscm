@@ -1,9 +1,6 @@
 #Plot radiative forcing all components in the CICERO SCM
 #Not all components have radiative forcing output.
 
-import sys
-import os
-import shutil
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np

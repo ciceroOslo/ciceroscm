@@ -1,10 +1,5 @@
 #To be fixed in scm-code: dT_SHsea
 
-
-
-import sys
-import os
-import shutil
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -22,12 +17,9 @@ print(antcomp)
 #print(len(df_comp.index))
 
 
-#Plot first 16 components:
-
 fig, axs = plt.subplots(nrows=1, ncols=3,sharex=True,figsize=(12,6))
 axs=axs.flatten()
 fig.suptitle('CICERO SCM simulation, Temperature')
-
 
 
 i=0
@@ -52,9 +44,6 @@ df_temp['dT_SH'].plot(linestyle='--',ax=axs[i],label='dT_SH')
 df_temp['dT_SH_air'].plot(ax=axs[i],linestyle='--',label='dT_SH_air')
 df_temp['dT_SHsea'].plot(ax=axs[i],linestyle='--',label='dT_SHsea')
 
-
-
-#axs[i].set_title(comp)
 axs[0].legend()
 axs[1].legend()
 axs[2].legend()
@@ -68,8 +57,10 @@ fig.suptitle('CICERO SCM simulation, SLR (!!!!!need to be revised-checked!!!!)')
 df_temp['dSL(m)'].plot(ylabel='Sea level rise [m]',ax=axs[0],label=scen)
 
 df_temp['dSL(m)'].plot(ylabel='Sea level rise [m]',ax=axs[1],label='dSL(m)')
-df_temp['dSL_thermal(m)'].plot(ylabel='Sea level rise [m]',ax=axs[1],label='dSL_thermal(m)')
-df_temp['dSL_ice(m)'].plot(ylabel='Sea level rise [m]',ax=axs[1],label='dSL_ice(m)')
+df_temp['dSL_thermal(m)'].plot(ylabel='Sea level rise [m]',
+                               ax=axs[1],label='dSL_thermal(m)')
+df_temp['dSL_ice(m)'].plot(ylabel='Sea level rise [m]',
+                           ax=axs[1],label='dSL_ice(m)')
 
 axs[0].legend()
 axs[1].legend()
