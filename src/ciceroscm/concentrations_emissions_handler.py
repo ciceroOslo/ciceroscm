@@ -166,13 +166,13 @@ class ConcentrationsEmissionsHandler:
         self.co2_hold = {
             "yCO2": 0.0,
             "xCO2": 278.0,
-            "sCO2": [],
+            "sCO2": np.zeros(self.pamset["idtm"] * len(self.years)),
             "emCO2_prev": 0.0,
-            "dfnpp": [],
-            "ss1": [],
+            "dfnpp": np.zeros(self.pamset["idtm"] * len(self.years)),
+            "ss1": 0.0,
             "sums": 0.0,
         }
-        self.co2_hold["dfnpp"].append(0.0)
+        self.co2_hold["dfnpp"]
         self.r_functions = np.empty(
             (2, self.pamset["idtm"] * 351)
         )  # if speedup, get this to reflect number of years
@@ -498,13 +498,18 @@ class ConcentrationsEmissionsHandler:
         cc1 = dt * ocean_area * coeff / (1 + dt * ocean_area * coeff / 2.0)
         yr_ix = yr - self.years[0]
         # Monthloop:
+        em_co2_common = (
+            self.emis["CO2_FF"][yr]
+            + self.emis["CO2_AFOLU"][yr]
+            + self.df_gas["NAT_EM"]["CO2"]
+        )
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
             sumf = 0.0
 
             # Net emissions, including biogenic fertilization effects
             if it > 0:
-                self.co2_hold["dfnpp"].append(
+                self.co2_hold["dfnpp"][it] = (
                     60 * beta_f * np.log(self.co2_hold["xCO2"] / 278.0)
                 )
             if it > 0:
@@ -514,9 +519,7 @@ class ConcentrationsEmissionsHandler:
                         + self.co2_hold["dfnpp"][j] * self.r_functions[1, it - 1 - j]
                     )
             ffer = self.co2_hold["dfnpp"][it] - dt * sumf
-            em_co2 = self.emis["CO2_FF"][yr] + self.emis["CO2_AFOLU"][yr] - ffer
-            em_co2 = em_co2 + self.df_gas["NAT_EM"]["CO2"]
-            em_co2 = em_co2 / 2.123
+            em_co2 = (em_co2_common - ffer) / 2.123
 
             if it == 0:  # pylint: disable=compare-to-zero
                 self.co2_hold["ss1"] = 0.5 * em_co2 / (ocean_area * coeff)
@@ -531,8 +534,8 @@ class ConcentrationsEmissionsHandler:
                     + self.co2_hold["emCO2_prev"] / (ocean_area * coeff)
                     - self.co2_hold["sCO2"][it - 1]
                 )
-            self.co2_hold["sCO2"].append(
-                cc1 * (self.co2_hold["sums"] + self.co2_hold["ss1"] + ss2)
+            self.co2_hold["sCO2"][it] = cc1 * (
+                self.co2_hold["sums"] + self.co2_hold["ss1"] + ss2
             )
             self.co2_hold["emCO2_prev"] = em_co2
             sumz = 0.0
