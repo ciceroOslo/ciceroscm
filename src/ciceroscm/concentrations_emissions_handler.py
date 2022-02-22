@@ -512,11 +512,10 @@ class ConcentrationsEmissionsHandler:
                     60 * beta_f * np.log(self.co2_hold["xCO2"] / 278.0)
                 )
             if it > 0:
-                for j in range(1, it):
-                    sumf = (
-                        sumf
-                        + self.co2_hold["dfnpp"][j] * self.r_functions[1, it - 1 - j]
-                    )
+                sumf = np.dot(
+                    self.co2_hold["dfnpp"][1:it], np.flip(self.r_functions[1, : it - 1])
+                )
+
             ffer = self.co2_hold["dfnpp"][it] - dt * sumf
             em_co2 = (em_co2_common - ffer) / 2.123
 
@@ -537,9 +536,13 @@ class ConcentrationsEmissionsHandler:
                 self.co2_hold["sums"] + self.co2_hold["ss1"] + ss2
             )
             self.co2_hold["emCO2_prev"] = em_co2
-            sumz = 0.0
-            for j in range(it - 1):
-                sumz = sumz + self.co2_hold["sCO2"][j] * self.r_functions[0, it - 1 - j]
+            if it > 0:
+                sumz = np.dot(
+                    self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
+                )
+            else:
+                sumz = 0.0
+
             z_co2 = (
                 conv_factor
                 * coeff
