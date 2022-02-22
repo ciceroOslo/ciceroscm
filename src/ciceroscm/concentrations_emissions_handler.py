@@ -172,7 +172,6 @@ class ConcentrationsEmissionsHandler:
             "ss1": 0.0,
             "sums": 0.0,
         }
-        self.co2_hold["dfnpp"]
         self.r_functions = np.empty(
             (2, self.pamset["idtm"] * 351)
         )  # if speedup, get this to reflect number of years
