@@ -58,7 +58,7 @@ The concentration and emission parameterset (which is needed for emission runs) 
 
 It will tell you the branch you are on, changes since last etc
 * To commit your code changes
-> <code>git add path-of-file-that-changed<code>
+> <code>git add path-of-file-that-changed</code>
 
 Repeat this for all the files that you would want to commit the changes for
 > <code>git commit -m "A small message to describe the changes"</code>
