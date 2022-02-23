@@ -59,22 +59,30 @@ The concentration and emission parameterset (which is needed for emission runs) 
 It will tell you the branch you are on, changes since last etc
 * To commit your code changes
 > <code>git add path-of-file-that-changed<code>
+
 Repeat this for all the files that you would want to commit the changes for
 > <code>git commit -m "A small message to describe the changes"</code>
+
 > <code>git push</code>
 
 (The last one is to push the changes to the github version. The first time youi do this on a new branch you will need to set where to push to, but how to do that will be suggested when you just do git push)
 * To get new changes that have happened on the main branch is always good before you commit. To do so do:
 > <code>git checkout main</code>
+
 > <code>git pull</code>
+
 > <code>git checkout your-cool-branch-name</code>
+
 > <code>git merge main</code>
+
 > <code>git push</code>
+
 The last part is just to pushed this new version of your branch again
 
 ### Test suite and environment
 The code comes with a suite of tests and tools. To use this you must do:
 > <code>make first-venv</code>
+
 > <code>make virtual-environment</code>
 
 This should only be necessary the first time you setup the code
@@ -86,6 +94,7 @@ Later to update you should do:
 
 Or if you know you need updates, but aren't getting them:
 > <code>make clean</code>
+
 > <code>make virtual-environment</code>
 
 After this you should be able to run the automatic tests
