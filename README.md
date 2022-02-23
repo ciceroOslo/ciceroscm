@@ -11,7 +11,7 @@ emissions.
 The scripts show you how to specify input data and output data placement.
 The output data will be placed in a folder called output_test in the
 folder from which you run the script.
-More input data on the appropriate format (at least for emission runs) can be found in /div/amoc/CSCM/SCM_Linux_v2019/RCMIP/input/ on amoc for internal use.
+More input data on the appropriate format (at least for emission runs) can be found in <code>/div/amoc/CSCM/SCM_Linux_v2019/RCMIP/input/</code> on amoc for internal use.
 
 ## Paramters
 Physical parameters to the model is divided in two parametersets
