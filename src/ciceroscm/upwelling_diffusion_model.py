@@ -118,6 +118,9 @@ def _density(p0, t0):
     return _denso(s, t0) / (1.0 - p0 / _coefic(s, t0, p0))
 
 
+_density_vec = np.vectorize(_density)
+
+
 class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     """
     Class to handle energy budget upwelling and downwelling
@@ -361,8 +364,8 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
                 for i in range(1, self.pamset["lm"])
             ]
         )
-        density = np.vectorize(_density)
-        self.dens0[1:] = density(self.press[1:], self.tempunp[1:])
+
+        self.dens0[1:] = _density_vec(self.press[1:], self.tempunp[1:])
         # self.dens0[1:] = np.array([])
         # for i in range(1, self.pamset["lm"]):
         #    z = 120.0 + 100.0 * (i - 1)  # Skulle 120. = mixed?
@@ -383,10 +386,14 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         deltsl = np.zeros(2)
 
         # Sea level rise from temperature change
-        for i in range(self.pamset["lm"]):
-            dens1 = _density(self.press[i], (templ[i] + self.tempunp[i]))
-            deldens = dens1 - self.dens0[i]
-            deltsl[0] = deltsl[0] - deldens * self.dz[i] / dens1
+        deltsl[0] = np.sum(
+            self.dz
+            * (self.dens0 / _density_vec(self.press, (templ + self.tempunp)) - 1)
+        )
+        # for i in range(self.pamset["lm"]):
+        #    dens1 = _density(self.press[i], (templ[i] + self.tempunp[i]))
+        #    deldens = dens1 - self.dens0[i]
+        #    deltsl[0] = deltsl[0] - deldens * self.dz[i] / dens1
 
         # Sea level rise from melting Ice sheets
         # Maybe outdated
