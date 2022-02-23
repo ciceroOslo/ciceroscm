@@ -142,6 +142,11 @@ class ConcentrationsEmissionsHandler:
         self.df_gas = read_components(cfg["gaspamfile"])
         self.conc = {}
         self.forc = {}
+        self.nat_emis_ch4 = read_natural_emissions(cfg["nat_ch4_file"], "CH4")
+        self.nat_emis_n2o = read_natural_emissions(cfg["nat_n2o_file"], "N2O")
+        self.pamset = check_pamset(pamset)
+        self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
+        years_tot = len(self.years)
         if "concentrations_file" in cfg:
             self.conc_in = read_inputfile(cfg["concentrations_file"])
         if "emissions_file" in cfg:
@@ -149,26 +154,22 @@ class ConcentrationsEmissionsHandler:
             for tracer in self.df_gas.index:
                 if tracer != "CO2.1":
                     self.conc[tracer] = {}
-                    self.forc[tracer] = []
-            self.forc["Total_forcing"] = []
+                    self.forc[tracer] = np.zeros(years_tot)
+            self.forc["Total_forcing"] = np.zeros(years_tot)
             self.emis.rename(
                 columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}, inplace=True
             )
-        self.nat_emis_ch4 = read_natural_emissions(cfg["nat_ch4_file"], "CH4")
-        self.nat_emis_n2o = read_natural_emissions(cfg["nat_n2o_file"], "N2O")
-        self.pamset = check_pamset(pamset)
         if "conc_run" in cfg:
             self.pamset["conc_run"] = cfg["conc_run"]
         else:
             self.pamset["conc_run"] = False
-        self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
 
         self.co2_hold = {
             "yCO2": 0.0,
             "xCO2": 278.0,
-            "sCO2": np.zeros(self.pamset["idtm"] * len(self.years)),
+            "sCO2": np.zeros(self.pamset["idtm"] * years_tot),
             "emCO2_prev": 0.0,
-            "dfnpp": np.zeros(self.pamset["idtm"] * len(self.years)),
+            "dfnpp": np.zeros(self.pamset["idtm"] * years_tot),
             "ss1": 0.0,
             "sums": 0.0,
         }
@@ -177,11 +178,11 @@ class ConcentrationsEmissionsHandler:
         )  # if speedup, get this to reflect number of years
         self.r_functions[0, :] = [
             _rs_function(it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * len(self.years))
+            for it in range(self.pamset["idtm"] * years_tot)
         ]
         self.r_functions[1, :] = [
             _rb_function(it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * len(self.years))
+            for it in range(self.pamset["idtm"] * years_tot)
         ]
 
     def calculate_strat_quantities(self, yr):
@@ -215,7 +216,7 @@ class ConcentrationsEmissionsHandler:
             sumbr = sumbr + (mult * self.conc[comp][yr])
         return sumcl, sumbr
 
-    def calculate_forc_three_main(self, yr):
+    def calculate_forc_three_main(self, yr):  # pylint: disable=too-many-locals
         """
         Calculate forcings for components CO2, N2O and CH4
         """
@@ -238,11 +239,12 @@ class ConcentrationsEmissionsHandler:
         # c2 = -4.9e-6
         # a3 = -1.3e-6
         # b3 = -8.2e-6
-        c0_n2o = self.conc["N2O"][self.years[0]]
+        yr_0 = self.years[0]
+        c0_n2o = self.conc["N2O"][yr_0]
         c_n2o = self.conc["N2O"][yr]
-        c0_co2 = self.conc["CO2"][self.years[0]]
+        c0_co2 = self.conc["CO2"][yr_0]
         c_co2 = self.conc["CO2"][yr]
-        c0_ch4 = self.conc["CH4"][self.years[0]]
+        c0_ch4 = self.conc["CH4"][yr_0]
         c_ch4 = self.conc["CH4"][yr]
         q_co2 = (
             co2_n2o_ch4_coeff[0, 0] * (c_co2 - c0_co2) ** 2
@@ -268,9 +270,9 @@ class ConcentrationsEmissionsHandler:
         ) * (np.sqrt(c_ch4) - np.sqrt(c0_ch4))
         # Feedback factor: Smith et al 2018
         q_ch4 = 1.0 / 1.14 * q_ch4  # + FORC_PERT(yr_ix,trc_ix))
-        self.forc["CO2"].append(q_co2)
-        self.forc["CH4"].append(q_ch4)
-        self.forc["N2O"].append(q_n2o)
+        self.forc["CO2"][yr - yr_0] = q_co2
+        self.forc["CH4"][yr - yr_0] = q_ch4
+        self.forc["N2O"][yr - yr_0] = q_n2o
         tot_forc = q_co2 + q_n2o + q_ch4
         forc_nh, forc_sh = calculate_hemispheric_forcing(
             "three_main", tot_forc, 0.0, 0.0
@@ -283,16 +285,17 @@ class ConcentrationsEmissionsHandler:
         Calculate tropospheric ozone forcing
         """
         emstart = self.pamset["emstart"]
-        yr_emstart = emstart - self.years[0]
-        yr_ix = yr - self.years[0]
+        yr_0 = self.years[0]
+        yr_emstart = emstart - yr_0
+        yr_ix = yr - yr_0
         tracer = "TROP_O3"
         if self.pamset["conc_run"] or yr_ix < yr_emstart:
             # Uses change in CO2_FF emissions
             q = (
-                (self.emis["CO2_FF"][yr] - self.emis["CO2_FF"][self.years[0]])
+                (self.emis["CO2_FF"][yr] - self.emis["CO2_FF"][yr_0])
                 / (
                     self.emis["CO2_FF"][self.pamset["ref_yr"]]
-                    - self.emis["CO2_FF"][self.years[0]]
+                    - self.emis["CO2_FF"][yr_0]
                 )
                 * self.pamset["qo3"]
             )
@@ -332,6 +335,7 @@ class ConcentrationsEmissionsHandler:
         }
         # Intialising with the combined values from CO2, N2O and CH4
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
+        yr_0 = self.years[0]
         # Finish per tracer calculations, add per tracer to printable df and sum the total
         for tracer in self.df_gas.index:
             if tracer in ["CO2", "N2O", "CH4"]:
@@ -359,7 +363,7 @@ class ConcentrationsEmissionsHandler:
                 and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
             ):
                 q = (
-                    (self.conc[tracer][yr] - self.conc[tracer][self.years[0]])
+                    (self.conc[tracer][yr] - self.conc[tracer][yr_0])
                     * self.df_gas["ALPHA"][tracer]
                 )  # +forc_pert
             elif tracer == "TROP_O3":
@@ -369,13 +373,13 @@ class ConcentrationsEmissionsHandler:
                 q = -(0.287737 * (0.000552 * (sumcl) + 3.048 * sumbr)) / 1000.0
             elif tracer == "STRAT_H2O":
                 q = (
-                    0.15 * 1.14 * self.forc["CH4"][yr - self.years[0]]
+                    0.15 * 1.14 * self.forc["CH4"][yr - yr_0]
                 )  # + FORC_PERT(yr_ix,trc_ix)
             elif tracer == "OTHER":
                 # Possible with forcing perturbations for other
                 # components such as contrails, cirrus etc...
                 pass
-            self.forc[tracer].append(q)  # + FORC_PERT(yr_ix,trc_ix)
+            self.forc[tracer][yr - yr_0] = q  # + FORC_PERT(yr_ix,trc_ix)
             # Calculating hemispheric forcing:
             forc_nh, forc_sh = calculate_hemispheric_forcing(
                 tracer, q, forc_nh, forc_sh
@@ -384,7 +388,7 @@ class ConcentrationsEmissionsHandler:
             # print("Forcer: %s, tot_forc: %f, FN: %f, FS: %f, q: %f"%(tracer, tot_forc, forc_nh, forc_sh, q))
         # Adding solar forcing
         # tot_forc = tot_forc + rf_sun
-        self.forc["Total_forcing"].append(tot_forc)
+        self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun
         # print("yr: %d, tot_forc: %f, FN: %f, FS: %f "%(yr, tot_forc, forc_nh, forc_sh))
@@ -512,11 +516,13 @@ class ConcentrationsEmissionsHandler:
                     60 * beta_f * np.log(self.co2_hold["xCO2"] / 278.0)
                 )
             if it > 0:
-                for j in range(1, it):
-                    sumf = (
-                        sumf
-                        + self.co2_hold["dfnpp"][j] * self.r_functions[1, it - 1 - j]
+                sumf = float(
+                    np.dot(
+                        self.co2_hold["dfnpp"][1:it],
+                        np.flip(self.r_functions[1, : it - 1]),
                     )
+                )
+
             ffer = self.co2_hold["dfnpp"][it] - dt * sumf
             em_co2 = (em_co2_common - ffer) / 2.123
 
@@ -537,9 +543,13 @@ class ConcentrationsEmissionsHandler:
                 self.co2_hold["sums"] + self.co2_hold["ss1"] + ss2
             )
             self.co2_hold["emCO2_prev"] = em_co2
-            sumz = 0.0
-            for j in range(it - 1):
-                sumz = sumz + self.co2_hold["sCO2"][j] * self.r_functions[0, it - 1 - j]
+            if it > 0:
+                sumz = np.dot(
+                    self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
+                )
+            else:
+                sumz = 0.0
+
             z_co2 = (
                 conv_factor
                 * coeff

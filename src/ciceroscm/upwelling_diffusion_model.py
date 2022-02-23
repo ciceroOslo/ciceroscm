@@ -42,7 +42,12 @@ def check_pamset(pamset):
     htcpty = 0.955
     cnvrt = 0.485
     pamset["c1"] = rho * htcpty * cnvrt * 100.0 * SEC_DAY
-
+    pamset["fnx"] = (
+        pamset["rlamda"] + pamset["foan"] * pamset["rlamdo"] + pamset["ebbeta"]
+    )
+    pamset["fsx"] = (
+        pamset["rlamda"] + pamset["foas"] * pamset["rlamdo"] + pamset["ebbeta"]
+    )
     return pamset
 
 
@@ -111,6 +116,9 @@ def _density(p0, t0):
     """
     s = 35.0
     return _denso(s, t0) / (1.0 - p0 / _coefic(s, t0, p0))
+
+
+_density_vec = np.vectorize(_density)
 
 
 class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
@@ -203,9 +211,10 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         """
         Calculate a, b c coefficient arrays for hemisphere
         """
-        a = np.zeros(self.pamset["lm"])
-        b = np.zeros(self.pamset["lm"])
-        c = np.zeros(self.pamset["lm"])
+        lm = self.pamset["lm"]
+        a = np.zeros(lm)
+        b = np.zeros(lm)
+        c = np.zeros(lm)
         rakapafac = 2 * self.pamset["rakapa"] * self.pamset["dt"]
 
         b[0] = -rakapafac / (
@@ -213,24 +222,14 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         )  # Can the 0.*dz(0) term be dropped here?
         a[0] = 1.0 - b[0] + gam_fro_fac - wcfac / self.dz[0]
         a[1] = -rakapafac / (self.dz[1] ** 2) + wcfac / self.dz[1]
-        c[1] = (
-            -rakapafac / (self.dz[1] * (self.dz[1] + self.dz[2])) - wcfac / self.dz[1]
+        a[2:] = -rakapafac / (self.dz[2:] * (self.dz[1 : lm - 1] + self.dz[2:]))
+        c[1 : lm - 1] = (
+            -rakapafac / (self.dz[1 : lm - 1] * (self.dz[1 : lm - 1] + self.dz[2:]))
+            - wcfac / self.dz[1 : lm - 1]
         )
-        b[1] = 1.0 - a[1] - c[1]
-        for i in range(2, self.pamset["lm"] - 1):
-            a[i] = -rakapafac / (self.dz[i] * (self.dz[i - 1] + self.dz[i]))
-            c[i] = (
-                -rakapafac / (self.dz[i] * (self.dz[i] + self.dz[i + 1]))
-                - wcfac / self.dz[i]
-            )
-            b[i] = 1.0 - a[i] - c[i]
-
-        a[self.pamset["lm"] - 1] = -rakapafac / (
-            self.dz[self.pamset["lm"] - 1]
-            * (self.dz[self.pamset["lm"] - 2] + self.dz[self.pamset["lm"] - 1])
-        )
-        b[self.pamset["lm"] - 1] = (
-            1.0 - a[self.pamset["lm"] - 1] + wcfac / self.dz[self.pamset["lm"] - 1]
+        b[1 : lm - 1] = 1.0 - a[1 : lm - 1] - c[1 : lm - 1]
+        b[lm - 1] = (
+            1.0 - a[lm - 1] + wcfac / self.dz[lm - 1]
         )  # Her var det brukt i selvom vi var utenfor loekka, litt uklart hva som er ment...
         return a, b, c
 
@@ -356,13 +355,24 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         self.tempunp[0] = 19.5
         self.dens0 = np.zeros(self.pamset["lm"])
         self.dens0[0] = _density(self.press[0], self.tempunp[0])
+        self.press[1:] = np.array(
+            [12.0 + 10.0 * (i - 1) for i in range(1, self.pamset["lm"])]
+        )
+        self.tempunp[1:] = np.array(
+            [
+                125.98 * (120.0 + 100.0 * (i - 1)) ** (-0.45952)
+                for i in range(1, self.pamset["lm"])
+            ]
+        )
 
-        for i in range(1, self.pamset["lm"]):
-            z = 120.0 + 100.0 * (i - 1)  # Skulle 120. = mixed?
-            self.press[i] = z * 1.0e4  # Units=Pa
-            self.press[i] = self.press[i] * 1.0e-5  # Units=bar
-            self.tempunp[i] = 125.98 * z ** (-0.45952)
-            self.dens0[i] = _density(self.press[i], self.tempunp[i])
+        self.dens0[1:] = _density_vec(self.press[1:], self.tempunp[1:])
+        # self.dens0[1:] = np.array([])
+        # for i in range(1, self.pamset["lm"]):
+        #    z = 120.0 + 100.0 * (i - 1)  # Skulle 120. = mixed?
+        #    self.press[i] = z * 1.0e4  # Units=Pa
+        #    self.press[i] = self.press[i] * 1.0e-5  # Units=bar
+        #    self.tempunp[i] = 125.98 * z ** (-0.45952)
+        #    self.dens0[i] = _density(self.press[i], self.tempunp[i])
 
     def compute_sea_level_rise(self, templ, dtemp):
         """
@@ -376,10 +386,14 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         deltsl = np.zeros(2)
 
         # Sea level rise from temperature change
-        for i in range(self.pamset["lm"]):
-            dens1 = _density(self.press[i], (templ[i] + self.tempunp[i]))
-            deldens = dens1 - self.dens0[i]
-            deltsl[0] = deltsl[0] - deldens * self.dz[i] / dens1
+        deltsl[0] = np.sum(
+            self.dz
+            * (self.dens0 / _density_vec(self.press, (templ + self.tempunp)) - 1)
+        )
+        # for i in range(self.pamset["lm"]):
+        #    dens1 = _density(self.press[i], (templ[i] + self.tempunp[i]))
+        #    deldens = dens1 - self.dens0[i]
+        #    deltsl[0] = deltsl[0] - deldens * self.dz[i] / dens1
 
         # Sea level rise from melting Ice sheets
         # Maybe outdated
@@ -418,12 +432,12 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         temps_air = 0.0
         tempn_sea = 0.0
         temps_sea = 0.0
-
-        templ = np.zeros(self.pamset["lm"])
+        lm = self.pamset["lm"]
+        templ = np.zeros(lm)
 
         dtyear = 1.0 / self.pamset["ldtime"]
-        dn = np.zeros(self.pamset["lm"])
-        ds = np.zeros(self.pamset["lm"])
+        dn = np.zeros(lm)
+        ds = np.zeros(lm)
 
         for im in range(self.pamset["ldtime"]):
 
@@ -452,26 +466,26 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
                 + self.varrying["dtrm3s"] * dqs
                 + self.varrying["dtrm4s"] * dqn
             )
-
-            for i in range(1, self.pamset["lm"] - 1):
-                dn[i] = self.tn[i] + self.pamset["beto"] * self.pamset["dt"] / (
-                    self.pamset["c1"] * self.dz[i]
-                ) * (self.ts[i] - self.tn[i])
-                ds[i] = self.ts[i] + self.pamset["fnso"] * self.pamset[
-                    "beto"
-                ] * self.pamset["dt"] / (self.pamset["c1"] * self.dz[i]) * (
-                    self.tn[i] - self.ts[i]
-                )
-
-            dn[self.pamset["lm"] - 1] = (
-                self.varrying["dtmnl1"] * self.tn[self.pamset["lm"] - 1]
-                + self.varrying["dtmnl2"] * self.tn[0]
-                + self.varrying["dtmnl3"] * self.ts[self.pamset["lm"] - 1]
+            dn[1 : lm - 1] = self.tn[1 : lm - 1] + self.pamset["beto"] * self.pamset[
+                "dt"
+            ] / (self.pamset["c1"] * self.dz[1 : lm - 1]) * (
+                self.ts[1 : lm - 1] - self.tn[1 : lm - 1]
             )
-            ds[self.pamset["lm"] - 1] = (
-                self.varrying["dtmsl1"] * self.ts[self.pamset["lm"] - 1]
+            ds[1 : lm - 1] = self.ts[1 : lm - 1] + self.pamset["fnso"] * self.pamset[
+                "beto"
+            ] * self.pamset["dt"] / (self.pamset["c1"] * self.dz[1 : lm - 1]) * (
+                self.tn[1 : lm - 1] - self.ts[1 : lm - 1]
+            )
+
+            dn[lm - 1] = (
+                self.varrying["dtmnl1"] * self.tn[lm - 1]
+                + self.varrying["dtmnl2"] * self.tn[0]
+                + self.varrying["dtmnl3"] * self.ts[lm - 1]
+            )
+            ds[lm - 1] = (
+                self.varrying["dtmsl1"] * self.ts[lm - 1]
                 + self.varrying["dtmsl2"] * self.ts[0]
-                + self.varrying["dtmsl3"] * self.tn[self.pamset["lm"] - 1]
+                + self.varrying["dtmsl3"] * self.tn[lm - 1]
             )
 
             #
@@ -493,37 +507,30 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             temp1n = self.tn[0]
             temp1s = self.ts[0]
             # print("temp1n: %.5e temp1s %.5e"%(temp1n, temp1s))
-            for i in range(self.pamset["lm"]):
-                templ[i] = (
-                    templ[i] + 0.5 * (self.tn[i] + self.ts[i]) / 12.0
-                )  # skulle 12 her vrt ldtime?
+            templ = (
+                templ + 0.5 * (self.tn + self.ts) / 12.0
+            )  # skulle 12 her vrt ldtime?
 
-            fnx = (
-                self.pamset["rlamda"]
-                + self.pamset["foan"] * self.pamset["rlamdo"]
-                + self.pamset["ebbeta"]
-            )
-            fsx = (
-                self.pamset["rlamda"]
-                + self.pamset["foas"] * self.pamset["rlamdo"]
-                + self.pamset["ebbeta"]
-            )
             tempan = (
                 dqn
                 + self.pamset["foan"] * self.pamset["rlamdo"] * temp1n
                 + self.pamset["ebbeta"]
                 * (dqs + self.pamset["foas"] * self.pamset["rlamdo"] * temp1s)
-                / fsx
+                / self.pamset["fsx"]
             )
-            tempan = tempan / (fnx - self.pamset["ebbeta"] ** 2 / fsx)
+            tempan = tempan / (
+                self.pamset["fnx"] - self.pamset["ebbeta"] ** 2 / self.pamset["fsx"]
+            )
             tempas = (
                 dqs
                 + self.pamset["foas"] * self.pamset["rlamdo"] * temp1s
                 + self.pamset["ebbeta"]
                 * (dqn + self.pamset["foan"] * self.pamset["rlamdo"] * temp1n)
-                / fnx
+                / self.pamset["fnx"]
             )
-            tempas = tempas / (fsx - self.pamset["ebbeta"] ** 2 / fnx)
+            tempas = tempas / (
+                self.pamset["fsx"] - self.pamset["ebbeta"] ** 2 / self.pamset["fnx"]
+            )
             tmpn = self.pamset["foan"] * temp1n + (1.0 - self.pamset["foan"]) * tempan
             tmps = self.pamset["foas"] * temp1s + (1.0 - self.pamset["foas"]) * tempas
 
