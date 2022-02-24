@@ -46,7 +46,7 @@ The concentration and emission parameterset (which is needed for emission runs) 
 * ref_yr (2010)
 * idtm (24)
 
-## Developement
+## Development
 * To start developing make sure you have a github account and that you are part of the ciceroOslo team.
 * If you haven't already, [setup your github account with an ssh key](https://docs.github.com/en/enterprise-server@3.0/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
 * Find a suitable place where you want to start your developement either on windows or under /div/nobakcup/users/yourusername/ and change to that directory
