@@ -13,7 +13,7 @@ The output data will be placed in a folder called output_test in the
 folder from which you run the script.
 More input data on the appropriate format (at least for emission runs) can be found in <code>/div/amoc/CSCM/SCM_Linux_v2019/RCMIP/input/</code> on amoc for internal use.
 
-## Paramters
+## Parameters
 Physical parameters to the model is divided in two parametersets
 * One parameterset pamset_udm for the upwelling diffusion model
 * One parameterset pamset_emiconc for emissions and concentrations
@@ -34,6 +34,7 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 * fnso (0.7531)
 * lm (40)
 * ldtime (12)
+
 The concentration and emission parameterset (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
 * lamb (0.8)
 * qbmb (0.03)
