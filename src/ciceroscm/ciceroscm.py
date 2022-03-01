@@ -287,9 +287,9 @@ class CICEROSCM:
         """
         Write results to files after run
         """
-        if "output_prefix" in pamset:
+        if "output_folder" in pamset:
             # Make os independent?
-            outdir = os.path.join(os.getcwd(), pamset["output_prefix"])
+            outdir = os.path.join(os.getcwd(), pamset["output_folder"])
         else:
             outdir = os.path.join(os.getcwd(), "output")
 
@@ -320,22 +320,26 @@ class CICEROSCM:
             "dSL_ice(m)",
         ]
         df_temp = pd.DataFrame(data={"Year": indices})
+        if "output_prefix" in pamset:
+            filename_start = pamset["output_prefix"]
+        else:
+            filename_start = "output"
         for vari in list_temp:
             df_temp[vari] = self.results[vari]
         df_ohc.to_csv(
-            os.path.join(outdir, "output_ohc.txt"),
+            os.path.join(outdir, f"{filename_start}_ohc.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
         )
         df_rib.to_csv(
-            os.path.join(outdir, "output_rib.txt"),
+            os.path.join(outdir, f"{filename_start}_rib.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
         )
         df_temp.to_csv(
-            os.path.join(outdir, "output_temp.txt"),
+            os.path.join(outdir, f"{filename_start}_temp.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
@@ -345,7 +349,7 @@ class CICEROSCM:
                 data={"Year": indices, "Total_forcing": self.results["Total_forcing"]}
             )
             df_forc.to_csv(
-                os.path.join(outdir, "output_forc.txt"),
+                os.path.join(outdir, f"{filename_start}_forc.txt"),
                 sep="\t",
                 index=False,
                 float_format="%.5e",

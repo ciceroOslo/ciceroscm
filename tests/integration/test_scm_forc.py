@@ -76,12 +76,13 @@ def test_ciceroscm_zero_run(test_data_dir):
 def test_ciceroscm_run(tmpdir, test_data_dir):
     cscm = CICEROSCM()
     outdir = str(tmpdir)
+    # outdir = os.path.join(os.getcwd(), "output")
     # One year forcing:
 
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir,
+            "output_folder": outdir,
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "test_forcing.txt"),
         },
@@ -94,7 +95,7 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir,
+            "output_folder": outdir,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
         },
     )
@@ -105,7 +106,7 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir,
+            "output_folder": outdir,
             "sunvolc": 1,
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
@@ -117,7 +118,7 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir,
+            "output_folder": outdir,
             "sunvolc": 1,
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
