@@ -19,7 +19,7 @@ cscm = CICEROSCM()
 cscm._run(
     {
         "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
-        "output_prefix": outdir,
+        "output_folder": outdir,
         "sunvolc": 1,
         "nyend": 2100,
         "forc_file": os.path.join(data_dir, "CO2_1pros.txt"),

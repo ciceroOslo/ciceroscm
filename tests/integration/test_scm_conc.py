@@ -69,7 +69,7 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir,
+            "output_folder": outdir,
             "nyend": 2100,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),

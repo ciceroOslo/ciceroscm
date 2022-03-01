@@ -76,6 +76,10 @@ Repeat this for all the files that you would want to commit the changes for
 
 > <code>git merge main</code>
 
+If all goes well this will fill your terminal with a merge message in your default editor, which is likely vim. The message there is likely ok as it is, so to just use that as a commit message for the merge type: <code>:wq</code> which will just save and quit vim and complete the merge with the original commit message.
+
+Then finally just push your code to the web.
+
 > <code>git push</code>
 
 The last part is just to pushed this new version of your branch again
