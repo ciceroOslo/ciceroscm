@@ -65,7 +65,7 @@ for i,comp in enumerate(complist_ar6):
         df_rf['o3'].plot(ax=axs[i],label=scen)
     elif comp == 'h2o_stratospheric':
         df_rf['STRAT_H2O'].plot(ax=axs[i],label=scen)
-    elif comp == 'landuse':
+    elif comp == 'land_use':
         df_rf['LANDUSE'].plot(ax=axs[i],label=scen)
     elif comp == 'aerosol':
         complist_aerosols = ['SO2','SO4_IND','BMB_AEROS_BC',
@@ -78,6 +78,29 @@ for i,comp in enumerate(complist_ar6):
     axs[i].legend()
     axs[i].axhline(y=0,color='k',linestyle=':',linewidth=0.5)
     
+
+    
+fig, axs = plt.subplots(nrows=1, ncols=1,sharex=True,figsize=(6,6))
+fig.suptitle('CICERO SCM simulation, Aerosol Radiative Forcing')
+
+
+comp = 'aerosol-radiation_interactions'
+df_rf_ar6[comp].plot(ylabel='RF [Wm$^{-2}$ ]',
+                     ax=axs,color='green',label='IPCC AR6 '+comp)
+
+comp = 'aerosol-cloud_interactions'
+df_rf_ar6[comp].plot(ylabel='RF [Wm$^{-2}$ ]',
+                     ax=axs,color='blue',label='IPCC AR6 '+comp)
+
+complist_aerosols_direct = ['SO2','BMB_AEROS_BC',
+                            'BMB_AEROS_OC','BMB_AEROS', 'BC', 'OC']
+df_rf['aerosol_direct'] = df_rf[complist_aerosols_direct].sum(axis=1, skipna=True)
+df_rf['aerosol_direct'].plot(ax=axs,color='purple',label='SCM ' + scen + ' sum aerosols direct')
+df_rf['SO4_IND'].plot(ax=axs,color='orange',label='SCM ' + scen + ' SO4 indirect')
+
+
+
+axs.legend()
 
 plt.show()
 exit()
