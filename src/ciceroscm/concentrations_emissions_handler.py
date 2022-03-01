@@ -595,9 +595,9 @@ class ConcentrationsEmissionsHandler:
         """
         Write results to files after run
         """
-        if "output_prefix" in cfg:
+        if "output_folder" in cfg:
             # Make os independent?
-            outdir = os.path.join(os.getcwd(), cfg["output_prefix"])
+            outdir = os.path.join(os.getcwd(), cfg["output_folder"])
         else:
             outdir = os.path.join(os.getcwd(), "output")
 
@@ -624,21 +624,25 @@ class ConcentrationsEmissionsHandler:
         for tracer in self.df_gas.index:
             if tracer not in df_emis.columns.tolist():
                 df_emis[tracer] = np.zeros(len(self.years))
+        if "output_prefix" in cfg:
+            filename_start = cfg["output_prefix"]
+        else:
+            filename_start = "output"
         df_forc.to_csv(
-            os.path.join(outdir, "output_forc.txt"),
+            os.path.join(outdir, f"{filename_start}_forc.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
         )
         df_conc.to_csv(
-            os.path.join(outdir, "output_conc.txt"),
+            os.path.join(outdir, f"{filename_start}_conc.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
         )
 
         df_emis.to_csv(
-            os.path.join(outdir, "output_em.txt"),
+            os.path.join(outdir, f"{filename_start}_em.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
