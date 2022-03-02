@@ -1,0 +1,10 @@
+component,unit,source,year,emission
+CO2,Pg_C,src,2000,-4.0
+CO2,Pg_C,src,2001,-4.0
+CO2,Pg_C,src,2002,-4.0
+CH4,Tg_C,src,2000,-4.0
+CH4,Tg_C,src,2001,-4.0
+CH4,Tg_C,src,2002,-5.0
+N2O,Tg_C,src,2000,8.0
+N2O,Tg_C,src,2001,-4.0
+N2O,Tg_C,src,2002,-4.0

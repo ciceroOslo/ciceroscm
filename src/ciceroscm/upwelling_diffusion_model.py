@@ -554,7 +554,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         self.prev_values["dtemp"] = dtemp
 
         # Getting Ocean temperature:
-        ocean_res = self.compute_ocean_temperature()
+        ocean_res = self.ocean_temperature()
         ribn = (
             forc_nh
             + np.sum(fn_volc) / self.pamset["ldtime"]
@@ -584,7 +584,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             "OHCTOT": ocean_res["OHCTOT"],
         }
 
-    def compute_ocean_temperature(self):
+    def ocean_temperature(self):
         """
         Compute the ocean temperature total and at 700 m depth
         """
