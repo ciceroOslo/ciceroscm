@@ -8,6 +8,11 @@ import numpy as np
 import pandas as pd
 
 from ._utils import check_numeric_pamset
+from .perturbations import (
+    ForcingPerturbation,
+    calculate_hemispheric_forcing,
+    perturb_emissions,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -108,23 +113,6 @@ def read_inputfile(input_file):
     return df_input
 
 
-def calculate_hemispheric_forcing(tracer, q, forc_nh, forc_sh):
-    """
-    Calculate hemispheric forcing per tracer
-    """
-    if tracer in ("SO2", "SO4_IND"):
-        forc_nh = forc_nh + q * 1.6
-        forc_sh = forc_sh + q * 0.4
-    elif tracer == "TROP_O3":
-        # 1.29+0.74 != 2, update/check
-        forc_nh = forc_nh + q * 1.29  # 1.3
-        forc_sh = forc_sh + q * 0.74  # 0.7
-    else:
-        forc_nh = forc_nh + q
-        forc_sh = forc_sh + q
-    return forc_nh, forc_sh
-
-
 class ConcentrationsEmissionsHandler:
     """
     Class to handle concentrations
@@ -163,7 +151,12 @@ class ConcentrationsEmissionsHandler:
             self.pamset["conc_run"] = cfg["conc_run"]
         else:
             self.pamset["conc_run"] = False
-
+        if "perturb_em_file" in cfg:
+            perturb_emissions(cfg["perturb_em_file"], self.emis)
+        if "perturb_forc_file" in cfg:
+            self.pamset["forc_pert"] = ForcingPerturbation(
+                cfg["perturb_forc_file"], self.years[0]
+            )
         self.co2_hold = {
             "yCO2": 0.0,
             "xCO2": 278.0,
@@ -385,14 +378,21 @@ class ConcentrationsEmissionsHandler:
                 tracer, q, forc_nh, forc_sh
             )
             tot_forc = tot_forc + q
-            # print("Forcer: %s, tot_forc: %f, FN: %f, FS: %f, q: %f"%(tracer, tot_forc, forc_nh, forc_sh, q))
+            # print("Forcer: %s, tot_forc: %f, FN: %f, FS: %f, q: %f"%(tracer, tot_forc, forc_nh, forc_sh, q)
+
+        # Adding forcing perturbations if they exist:
+        if "forc_pert" in self.pamset:
+            if self.pamset["forc_pert"].check_if_year_in_pert(yr):
+                tot_forc, forc_nh, forc_sh, self.forc = self.pamset[
+                    "forc_pert"
+                ].add_forcing_pert(tot_forc, forc_nh, forc_sh, self.forc, yr)
+
         # Adding solar forcing
         # tot_forc = tot_forc + rf_sun
         self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun
         # print("yr: %d, tot_forc: %f, FN: %f, FS: %f "%(yr, tot_forc, forc_nh, forc_sh))
-
         return tot_forc, forc_nh, forc_sh
 
     def emi2conc(self, yr):

@@ -13,8 +13,26 @@ The output data will be placed in a folder called output_test in the
 folder from which you run the script.
 More input data on the appropriate format (at least for emission runs) can be found in <code>/div/amoc/CSCM/SCM_Linux_v2019/RCMIP/input/</code> on amoc for internal use.
 
+## Configurations
+When a run is started the dictionary cfg needs to be sent as a parameter, detailing the configurations of the run. Configuration options are:
+* nystart - the start year of the run
+* nyend - the end year of the run
+* emstart - the year to start the run with emissions
+* sunvolc - an optional parameter to include solar an volcanic forcing. If included and equal to 1 a set of such forcing series will be included. Eventually, support for giving a custom set of solar and volcanic forcing files might be added
+* gaspamfile - path to file of gases to include with units, forcing factors etc.
+* concentrations_file - path to file with concentrations time series
+* emissions_file - path to file with emissions time series
+* nat_ch4_file- optional path to file where natural emissions for methane can be found. Default will be used if not given
+* nat_n2o_file- optional path to file where natural emissions for n2o can be found. Default will be used if not given
+* forc_file - path to file with forcing time series, if this is sent the run will be a forcing run, and none of the emission and concentration related options will be relevant
+* conc_run - Eventually you should be able to set this parameter to True and have a concentration driven run. However, this is not supported at the moment.
+* perturb_em_file - path to file with emission perturbations to be added to the emissions from the emissions file, the format for this file is shown in the file in test/test_data/pertem_test.txt
+* perturb_forc_file - path to file with forcings to be added after forcings from emissions and concentrations have been calculated, the format for this file is shown in the file in test/test_data/pertforc_test.txt
+* output_folder - name of or path of file wher output from the run is stored (at the moment this will always be assumed to be laying under the directory from which the code is run)
+* output_prefix - prefix to output filenames
+
 ## Parameters
-Physical parameters to the model is divided in two parametersets
+Physical parameters to the model is divided in two parametersets each of which are sent as two seperate dictionaries to the run call.
 * One parameterset pamset_udm for the upwelling diffusion model
 * One parameterset pamset_emiconc for emissions and concentrations
 If the parametersets are not provided, a default parameterset is used
