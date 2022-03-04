@@ -28,9 +28,10 @@ def perturb_emissions(perturbation_file, emissions_df):
     """
     pert_df = pd.read_csv(perturbation_file, index_col=None)
     for row in pert_df.itertuples(index=True, name="Pandas"):
-        emissions_df[row.component][row.year] = (
-            emissions_df[row.component][row.year] + row.emission
-        )
+        tracer = row.component
+        if row.component == "CO2" and "CO2" not in emissions_df:
+            tracer = "CO2_FF"
+        emissions_df[tracer][row.year] = emissions_df[tracer][row.year] + row.emission
     # might not need to return, as the pandas should change itself
     return emissions_df
 
