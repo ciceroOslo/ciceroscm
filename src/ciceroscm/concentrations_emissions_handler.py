@@ -103,13 +103,18 @@ def check_pamset(pamset):
     return pamset
 
 
-def read_inputfile(input_file):
+def read_inputfile(input_file, cut_years=False, year_start=1750, year_end=2100):
     """
     Read input from emissions or concentrations file
     """
     df_input = pd.read_csv(
         input_file, delim_whitespace=True, index_col=0, skiprows=[1, 2, 3]
     )
+    if cut_years:
+        min_year = df_input.index[0]
+        max_year = df_input.index[0]
+        cut_rows = [*range(min_year, year_start), *range(year_end + 1, max_year + 1)]
+        df_input.drop(index=cut_rows, inplace=True)
     return df_input
 
 
@@ -136,9 +141,19 @@ class ConcentrationsEmissionsHandler:
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
         years_tot = len(self.years)
         if "concentrations_file" in cfg:
-            self.conc_in = read_inputfile(cfg["concentrations_file"])
+            self.conc_in = read_inputfile(
+                cfg["concentrations_file"],
+                cut_years=True,
+                year_start=self.pamset["nystart"],
+                year_end=self.pamset["nyend"],
+            )
         if "emissions_file" in cfg:
-            self.emis = read_inputfile(cfg["emissions_file"])
+            self.emis = read_inputfile(
+                cfg["emissions_file"],
+                cut_years=True,
+                year_start=self.pamset["nystart"],
+                year_end=self.pamset["nyend"],
+            )
             for tracer in self.df_gas.index:
                 if tracer != "CO2.1":
                     self.conc[tracer] = {}
@@ -167,7 +182,7 @@ class ConcentrationsEmissionsHandler:
             "sums": 0.0,
         }
         self.r_functions = np.empty(
-            (2, self.pamset["idtm"] * 351)
+            (2, self.pamset["idtm"] * years_tot)
         )  # if speedup, get this to reflect number of years
         self.r_functions[0, :] = [
             _rs_function(it, self.pamset["idtm"])

@@ -1,6 +1,7 @@
 import os
 import shutil
 
+import numpy as np
 import pandas as pd
 import pandas.testing as pdt
 
@@ -91,6 +92,34 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
         files=["output_temp.txt"],
         lines=16,
     )
+
+
+def test_ciceroscm_short_run(tmpdir, test_data_dir):
+    cscm = CICEROSCM()
+    # outdir_save = os.path.join(os.getcwd(), "output")
+    outdir = str(tmpdir)
+    # One year forcing:
+    nystart = 1900
+    nyend = 2050
+    emstart = 1950
+    cscm._run(
+        {
+            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "output_folder": outdir,
+            "nystart": nystart,
+            "emstart": emstart,
+            "nyend": nyend,
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
+            "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
+            "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
+            "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+        },
+    )
+
+    file_results = os.path.join(outdir, "output_em.txt")
+    exp_index = np.arange(nystart, nyend + 1)
+    res = pd.read_csv(file_results, delim_whitespace=True)
+    np.testing.assert_equal(res.Year.to_numpy(), exp_index)
     # Put this in again, find out what is happening with CF4
     # check_output(
     #    outdir_save,
