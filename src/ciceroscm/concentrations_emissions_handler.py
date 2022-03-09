@@ -297,7 +297,7 @@ class ConcentrationsEmissionsHandler:
         yr_emstart = emstart - yr_0
         yr_ix = yr - yr_0
         tracer = "TROP_O3"
-        if self.pamset["conc_run"] or yr_ix < yr_emstart:
+        if yr_ix < yr_emstart:
             # Uses change in CO2_FF emissions
             q = (
                 (self.emis["CO2_FF"][yr] - self.emis["CO2_FF"][yr_0])

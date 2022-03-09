@@ -72,6 +72,8 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "output_folder": outdir,
             "nyend": 2100,
+            "nystart": 1750,
+            "emstart": 1850,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
@@ -136,24 +138,31 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     # )
 
 
-"""
 def test_ciceroscm_run_conc(tmpdir, test_data_dir):
     cscm = CICEROSCM()
-    outdir_save = os.path.join(os.getcwd(), "output")
     outdir = str(tmpdir)
-    #One year forcing:
+    # One year forcing:
 
     cscm._run(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir_save,
+            "output_folder": outdir,
             "nyend": 2100,
+            "conc_run": True,
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
+            "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
+            "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
+            "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
         },
-        {"concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"), "conc_run":True, "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"), "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"), "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt")},
     )
 
-    check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
+    check_output(
+        outdir,
+        os.path.join(test_data_dir, "ssp245_conc"),
+        files=["output_conc.txt", "output_em.txt", "output_forc.txt", "output_ohc.txt"],
+    )
 
+    """
     # 1pct CO2 without sunvolc
 
     cscm._run(
