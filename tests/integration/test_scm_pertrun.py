@@ -61,15 +61,9 @@ def check_output_just_some_lines(
 
 
 def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
-    cscm = CICEROSCM()
-    # outdir_save = os.path.join(os.getcwd(), "output")
-    outdir = str(tmpdir)
-    # One year forcing:
-
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
             "nyend": 2100,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
@@ -78,6 +72,11 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
             "perturb_forc_file": os.path.join(test_data_dir, "pertforc_test.txt"),
         },
     )
+    # outdir_save = os.path.join(os.getcwd(), "output")
+    outdir = str(tmpdir)
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
 
     check_output(
         outdir, os.path.join(test_data_dir, "pert_tests"), files=["output_forc.txt"]
@@ -85,15 +84,9 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
 
 
 def test_ciceroscm_run_pert_emis(tmpdir, test_data_dir):
-    cscm = CICEROSCM()
-    # outdir_save = os.path.join(os.getcwd(), "output")
-    outdir = str(tmpdir)
-    # One year forcing:
-
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
             "nyend": 2100,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
@@ -102,6 +95,11 @@ def test_ciceroscm_run_pert_emis(tmpdir, test_data_dir):
             "perturb_em_file": os.path.join(test_data_dir, "pertem_test.txt"),
         },
     )
+    # outdir_save = os.path.join(os.getcwd(), "output")
+    outdir = str(tmpdir)
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
 
     check_output(
         outdir, os.path.join(test_data_dir, "pert_tests"), files=["output_em.txt"],

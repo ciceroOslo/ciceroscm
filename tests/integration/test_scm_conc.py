@@ -62,15 +62,9 @@ def check_output_just_some_lines(
 
 
 def test_ciceroscm_run_emi(tmpdir, test_data_dir):
-    cscm = CICEROSCM()
-    # outdir_save = os.path.join(os.getcwd(), "output")
-    outdir = str(tmpdir)
-    # One year forcing:
-
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
             "nyend": 2100,
             "nystart": 1750,
             "emstart": 1850,
@@ -80,6 +74,11 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
         },
     )
+    # outdir_save = os.path.join(os.getcwd(), "output")
+    outdir = str(tmpdir)
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
 
     check_output(outdir, os.path.join(test_data_dir, "ssp245_emis"))
     check_output_just_some_lines(
@@ -97,17 +96,15 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
 
 
 def test_ciceroscm_short_run(tmpdir, test_data_dir):
-    cscm = CICEROSCM()
     # outdir_save = os.path.join(os.getcwd(), "output")
     outdir = str(tmpdir)
     # One year forcing:
     nystart = 1900
     nyend = 2050
     emstart = 1950
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
             "nystart": nystart,
             "emstart": emstart,
             "nyend": nyend,
@@ -117,6 +114,8 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
         },
     )
+
+    cscm._run({"output_folder": outdir})
 
     file_results = os.path.join(outdir, "output_em.txt")
     exp_index = np.arange(nystart, nyend + 1)
@@ -139,14 +138,9 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
 
 
 def test_ciceroscm_run_conc(tmpdir, test_data_dir):
-    cscm = CICEROSCM()
-    outdir = str(tmpdir)
-    # One year forcing:
-
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
             "nyend": 2100,
             "conc_run": True,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
@@ -155,6 +149,10 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
         },
     )
+    outdir = str(tmpdir)
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
 
     check_output(
         outdir,

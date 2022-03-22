@@ -103,6 +103,23 @@ def check_pamset(pamset):
     return pamset
 
 
+def check_pamset_consistency(pamset_old, pamset_new):
+    """
+    Make sure new pamset is consistent with existing instance
+    """
+    pams_cant_change = ["idtm", "nystart", "nyend", "emstart", "conc_run"]
+    for pam in pams_cant_change:
+        if pam in pamset_new and pamset_new[pam] != pamset_old[pam]:
+            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
+                f"{pam} can not be changed for same instance of ConcentrationsEmisssionsHandler. Resetting with old value {pamset_old[pam]}. If you want to run with a different value, please create a separate instance",
+            )
+            pamset_new[pam] = pamset_old[pam]
+    for pam, value in pamset_old.items():
+        if pam not in pamset_new:
+            pamset_new[pam] = value
+    return pamset_new
+
+
 def read_inputfile(input_file, cut_years=False, year_start=1750, year_end=2100):
     """
     Read input from emissions or concentrations file
@@ -154,11 +171,6 @@ class ConcentrationsEmissionsHandler:
                 year_start=self.pamset["nystart"],
                 year_end=self.pamset["nyend"],
             )
-            for tracer in self.df_gas.index:
-                if tracer != "CO2.1":
-                    self.conc[tracer] = {}
-                    self.forc[tracer] = np.zeros(years_tot)
-            self.forc["Total_forcing"] = np.zeros(years_tot)
             self.emis.rename(
                 columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}, inplace=True
             )
@@ -172,15 +184,6 @@ class ConcentrationsEmissionsHandler:
             self.pamset["forc_pert"] = ForcingPerturbation(
                 cfg["perturb_forc_file"], self.years[0]
             )
-        self.co2_hold = {
-            "yCO2": 0.0,
-            "xCO2": 278.0,
-            "sCO2": np.zeros(self.pamset["idtm"] * years_tot),
-            "emCO2_prev": 0.0,
-            "dfnpp": np.zeros(self.pamset["idtm"] * years_tot),
-            "ss1": 0.0,
-            "sums": 0.0,
-        }
         self.r_functions = np.empty(
             (2, self.pamset["idtm"] * years_tot)
         )  # if speedup, get this to reflect number of years
@@ -192,6 +195,31 @@ class ConcentrationsEmissionsHandler:
             _rb_function(it, self.pamset["idtm"])
             for it in range(self.pamset["idtm"] * years_tot)
         ]
+        # not really needed, but I guess the linter will complain...
+        self.reset_with_new_pams(pamset, preexisting=False)
+
+    def reset_with_new_pams(self, pamset, preexisting=True):
+        """
+        Reset to run again with same emissions etc.
+        """
+        if preexisting:
+            new_pamset = check_pamset(pamset)
+            self.pamset = check_pamset_consistency(self.pamset, new_pamset)
+        years_tot = len(self.years)
+        for tracer in self.df_gas.index:
+            if tracer != "CO2.1":
+                self.conc[tracer] = {}
+                self.forc[tracer] = np.zeros(years_tot)
+        self.forc["Total_forcing"] = np.zeros(years_tot)
+        self.co2_hold = {
+            "yCO2": 0.0,
+            "xCO2": 278.0,
+            "sCO2": np.zeros(self.pamset["idtm"] * years_tot),
+            "emCO2_prev": 0.0,
+            "dfnpp": np.zeros(self.pamset["idtm"] * years_tot),
+            "ss1": 0.0,
+            "sums": 0.0,
+        }
 
     def calculate_strat_quantities(self, yr):
         """

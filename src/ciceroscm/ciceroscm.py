@@ -7,6 +7,7 @@ import os
 import numpy as np
 import pandas as pd
 
+from ._utils import cut_and_check_pamset
 from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
 from .upwelling_diffusion_model import UpwellingDiffusionModel
 
@@ -83,27 +84,44 @@ class CICEROSCM:
     # pylint: disable=too-many-instance-attributes
     # Consider whether this can be cut back later
 
-    def __init__(self):
+    def __init__(self, cfg):
         """
         Intialise CICEROSCM
         """
-        self.nystart = 1750
-        self.nyend = 2100
-        self.emstart = 1850
-        self.rf = None
-        self.results = {}
+        self.cfg = cut_and_check_pamset(
+            {"nystart": 1750, "nyend": 2100, "emstart": 1850}, cfg
+        )
+        rf_run = False
+        if "forc_file" in cfg:
+            rf_run = True
+            if not os.path.exists(cfg["forc_file"]):
+                raise FileNotFoundError(
+                    f"Forcing input file {cfg['forc_file']} not found"
+                )
+            self.rf = read_forc(cfg["forc_file"])
+        else:
+            cfg = check_inputfiles(cfg)
+            pamset_emiconc = {}
+            pamset_emiconc["emstart"] = self.cfg["emstart"]
+            pamset_emiconc["nystart"] = self.cfg["nystart"]
+            pamset_emiconc["nyend"] = self.cfg["nyend"]
+            self.ce_handler = ConcentrationsEmissionsHandler(cfg, pamset_emiconc)
 
-    def initialise_output_arrays(self, cfg):
+        self.cfg["rf_run"] = rf_run
+        self.results = {}
+        # Reading in solar and volcanic forcing
+        self.rf_volc_sun = self.read_in_volc_and_sun(cfg)
+
+        # Add support for sending filename in cfg
+        self.rf_luc = self.read_data_on_year_row(
+            os.path.join(default_data_dir, "IPCC_LUCalbedo.txt")
+        )
+        self.initialise_output_arrays()
+
+    def initialise_output_arrays(self):
         """
         Initialise dict with arrays to hold data for run
         """
-        # Add test to check that nystart and nyend are numbers
-        if "nystart" in cfg:
-            self.nystart = int(cfg["nystart"])
-        if "nyend" in cfg:
-            self.nyend = int(cfg["nyend"])
-        if "emstart" in cfg:
-            self.emstart = int(cfg["emstart"])
         output_variables = [
             "OHC700",
             "OHCTOT",
@@ -125,7 +143,7 @@ class CICEROSCM:
             "Total_forcing",
         ]
         for output in output_variables:
-            self.results[output] = np.zeros(self.nyend - self.nystart + 1)
+            self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
 
     def read_data_on_year_row(self, volc_datafile):
         """
@@ -133,10 +151,10 @@ class CICEROSCM:
         and each year being a row. Typically the format for
         volcano and solar data
         """
-        indices = np.arange(self.nystart, self.nyend + 1)
+        indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
         nrows = len(indices)
-        if self.nystart > 1750:
-            skiprows = self.nystart - 1750
+        if self.cfg["nystart"] > 1750:
+            skiprows = self.cfg["nystart"] - 1750
             df_data = pd.read_csv(
                 volc_datafile,
                 header=None,
@@ -172,21 +190,23 @@ class CICEROSCM:
             )
         # Add support for sending filename in cfg
         else:
-            indices = np.arange(self.nystart, self.nyend + 1)
+            indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
             rf_volc_n = pd.DataFrame(
-                data=np.zeros((self.nyend - self.nystart + 1, 12)),
+                data=np.zeros((self.cfg["nyend"] - self.cfg["nystart"] + 1, 12)),
                 index=indices,
                 columns=range(12),
             )
             rf_volc_s = rf_volc_n
-            rf_sun = pd.DataFrame(data={0: np.zeros(self.nyend - self.nystart + 1)})
+            rf_sun = pd.DataFrame(
+                data={0: np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)}
+            )
         return {"volc_n": rf_volc_n, "volc_s": rf_volc_s, "sun": rf_sun}
 
     def forc_set(self, yr, rf_sun):
         """
         Read the forcing for this year
         """
-        row_index = yr - self.nystart
+        row_index = yr - self.cfg["nystart"]
         # Add support for other forcing formats
         if isinstance(self.rf, np.ndarray):
             # Add luc albedo later
@@ -230,60 +250,41 @@ class CICEROSCM:
         """
         Run CICEROSCM
         """
-        # Add something to adjust start and end of simulation
-        self.initialise_output_arrays(cfg)
+        self.initialise_output_arrays()
         # Setting up UDM
         udm = UpwellingDiffusionModel(pamset_udm)
-
-        # Reading in solar and volcanic forcing
-        rf_volc_sun = self.read_in_volc_and_sun(cfg)
-
-        # Add support for sending filename in cfg
-        rf_luc = self.read_data_on_year_row(
-            os.path.join(default_data_dir, "IPCC_LUCalbedo.txt")
-        )
-
-        rf_run = False
-        if "forc_file" in cfg:
-            rf_run = True
-            if not os.path.exists(cfg["forc_file"]):
-                raise FileNotFoundError(
-                    f"Forcing input file {cfg['forc_file']} not found"
-                )
-            self.rf = read_forc(cfg["forc_file"])
-        else:
-
-            cfg = check_inputfiles(cfg)
-            pamset_emiconc["emstart"] = self.emstart
-            pamset_emiconc["nystart"] = self.nystart
-            pamset_emiconc["nyend"] = self.nyend
-            ce_handler = ConcentrationsEmissionsHandler(cfg, pamset_emiconc,)
-
-        for yr in range(self.nystart, self.nyend + 1):
-            if not rf_run:
-                ce_handler.emi2conc(yr)
-                forc, fn, fs = ce_handler.conc2forc(
-                    yr, rf_luc.loc[yr, 0], rf_volc_sun["sun"].loc[yr - self.nystart, 0]
+        if not self.cfg["rf_run"]:
+            pamset_emiconc["emstart"] = self.cfg["emstart"]
+            pamset_emiconc["nystart"] = self.cfg["nystart"]
+            pamset_emiconc["nyend"] = self.cfg["nyend"]
+            self.ce_handler.reset_with_new_pams(pamset_emiconc)
+        for yr in range(self.cfg["nystart"], self.cfg["nyend"] + 1):
+            if not self.cfg["rf_run"]:
+                self.ce_handler.emi2conc(yr)
+                forc, fn, fs = self.ce_handler.conc2forc(
+                    yr,
+                    self.rf_luc.loc[yr, 0],
+                    self.rf_volc_sun["sun"].loc[yr - self.cfg["nystart"], 0],
                 )
 
             else:
-                forc = self.forc_set(yr, rf_volc_sun["sun"])
+                forc = self.forc_set(yr, self.rf_volc_sun["sun"])
                 fs = forc
                 fn = forc
             values = udm.energy_budget(
                 fn,
                 fs,
-                rf_volc_sun["volc_n"].iloc[yr - self.nystart, :],
-                rf_volc_sun["volc_s"].iloc[yr - self.nystart, :],
+                self.rf_volc_sun["volc_n"].iloc[yr - self.cfg["nystart"], :],
+                self.rf_volc_sun["volc_s"].iloc[yr - self.cfg["nystart"], :],
             )
-            self.add_year_data_to_output(values, forc, yr - self.nystart)
+            self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 
-        if not rf_run:
-            ce_handler.write_output_to_files(cfg)
+        if not self.cfg["rf_run"]:
+            self.ce_handler.write_output_to_files(cfg)
 
-        self.write_data_to_file(cfg, rf_run)
+        self.write_data_to_file(cfg)
 
-    def write_data_to_file(self, pamset, rf_run=True):
+    def write_data_to_file(self, pamset):
         """
         Write results to files after run
         """
@@ -293,7 +294,7 @@ class CICEROSCM:
         else:
             outdir = os.path.join(os.getcwd(), "output")
 
-        indices = np.arange(self.nystart, self.nyend + 1)
+        indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
         df_ohc = pd.DataFrame(
             data={
                 "Year": indices,
@@ -344,7 +345,7 @@ class CICEROSCM:
             index=False,
             float_format="%.5e",
         )
-        if rf_run:
+        if self.cfg["rf_run"]:
             df_forc = pd.DataFrame(
                 data={"Year": indices, "Total_forcing": self.results["Total_forcing"]}
             )
