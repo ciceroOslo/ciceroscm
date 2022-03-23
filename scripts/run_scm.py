@@ -11,14 +11,9 @@ from ciceroscm import CICEROSCM
 
 data_dir = os.path.join(os.path.dirname(__file__), "../", "tests", "test-data")
 
-cscm = CICEROSCM()
-
-outdir = os.path.join(os.getcwd(), "output_test")
-
-cscm._run(
+cscm = CICEROSCM(
     {
         "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
-        "output_folder": outdir,
         "nystart": 1900,
         "emstart": 1950,
         "nyend": 2050,
@@ -28,3 +23,7 @@ cscm._run(
         "nat_n2o_file": os.path.join(data_dir, "natemis_n2o.txt"),
     },
 )
+
+outdir = os.path.join(os.getcwd(), "output_test")
+
+cscm._run({"output_folder": outdir})

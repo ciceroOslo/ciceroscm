@@ -14,17 +14,16 @@ outdir = os.path.join(os.getcwd(), "output_test")
 pr = cProfile.Profile()
 pr.enable()
 
-cscm = CICEROSCM()
-
-cscm._run(
+cscm = CICEROSCM(
     {
         "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
-        "output_folder": outdir,
         "sunvolc": 1,
         "nyend": 2100,
         "forc_file": os.path.join(data_dir, "CO2_1pros.txt"),
     },
 )
+
+cscm._run({"output_folder": outdir})
 
 pr.disable()
 s = io.StringIO()
