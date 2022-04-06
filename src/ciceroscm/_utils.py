@@ -24,3 +24,25 @@ def check_numeric_pamset(required, pamset):
             )
             pamset[pam] = value
     return pamset
+
+
+def cut_non_required(required, pamset):
+    """
+    Cut elements from pamset that are not required
+    Returns updated pamset
+    """
+    new_pamset = {}
+    for pam in required:
+        if pam in pamset:
+            new_pamset[pam] = pamset[pam]
+    return new_pamset
+
+
+def cut_and_check_pamset(required, pamset):
+    """
+    Combine cutting pamset to required subset and
+    checking the resulting subset has required values
+    Returns updated pamset
+    """
+    pamset = cut_non_required(required, pamset)
+    return check_numeric_pamset(required, pamset)

@@ -74,56 +74,50 @@ def test_ciceroscm_zero_run(test_data_dir):
 
 
 def test_ciceroscm_run(tmpdir, test_data_dir):
-    cscm = CICEROSCM()
-    outdir = str(tmpdir)
-    # outdir = os.path.join(os.getcwd(), "output")
-    # One year forcing:
-
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "test_forcing.txt"),
         },
     )
+    outdir = str(tmpdir)
+    # outdir = os.path.join(os.getcwd(), "output")
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
 
     check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
 
     # 1pct CO2 without sunvolc
-
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
+            "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
         },
     )
+
+    cscm._run({"output_folder": outdir})
 
     check_output(outdir, os.path.join(test_data_dir, "1pct_CO2_no_sunvolc"))
 
     # 1 ppct CO2 with sunvolc
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
-            "sunvolc": 1,
             "nyend": 2100,
+            "sunvolc": 1,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
         },
     )
 
+    cscm._run({"output_folder": outdir})
+
     check_output(outdir, os.path.join(test_data_dir, "1pct_CO2"))
     # check_output(outdir, os.path.join(test_data_dir,"1pct_CO2_no_sunvolc"))
     cscm._run(
-        {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
-            "sunvolc": 1,
-            "nyend": 2100,
-            "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
-        },
-        pamset_udm={"threstemp": 0},
+        {"output_folder": outdir}, pamset_udm={"threstemp": 0},
     )
 
     check_output_subset(outdir, os.path.join(test_data_dir, "nr_test_1pct_CO2"))

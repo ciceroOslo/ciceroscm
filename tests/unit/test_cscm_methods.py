@@ -7,7 +7,12 @@ from ciceroscm import ciceroscm
 
 
 def test_read_volc_sun(test_data_dir):
-    cscm = ciceroscm.CICEROSCM()
+    cscm = ciceroscm.CICEROSCM(
+        {
+            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
+        }
+    )
 
     # Testing volcano rf reading
     df_volc = cscm.read_data_on_year_row(
