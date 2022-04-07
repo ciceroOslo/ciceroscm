@@ -163,8 +163,8 @@ def check_pamset_consistency(pamset_old, pamset_new):
 
     This method is meant to ensure consistency when rerunning
     with the same class instance. Changing to old values
-    if they are different, or setting to old values if none are
-    given
+    if they are different for a few values that can't change,
+    or setting to old values if none are given
 
     Parameters
     ----------
@@ -331,6 +331,8 @@ class ConcentrationsEmissionsHandler:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
         years_tot = len(self.years)
+        self.conc = {}
+        self.forc = {}
         for tracer in self.df_gas.index:
             if tracer != "CO2.1":
                 self.conc[tracer] = {}
@@ -854,6 +856,21 @@ class ConcentrationsEmissionsHandler:
     ):  # pylint: disable=dangerous-default-value
         """
         Fill in one row of concentrations in conc_dict
+
+        Fill in a row of zeros in concentrations dictionary
+        from prescribed concentrations. If some traces are
+        to be avoided (typically CO2 calculated from emissions)
+        a list of them can be sent as inputs
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to add concentrations from prescribed
+        avoid : list
+             optional list of tracers for which not to read
+             presecribed concentrations. Typically CO2 when CO2
+             is calculated from emissions, while other compounds
+             are read from prescribed data.
         """
         for tracer, value_dict in self.conc.items():
             if tracer in avoid:
@@ -946,3 +963,39 @@ class ConcentrationsEmissionsHandler:
             index=False,
             float_format="%.5e",
         )
+
+    def add_results_to_dict(self):
+        """
+        Adding results to results dictionary
+
+        Returns
+        -------
+        dict
+            Containing run emissions, concentrations and forcings
+            in the form of pandas.Dataframe with years and tracers
+        """
+        df_forc = pd.DataFrame(data=self.forc, index=self.years)
+        df_forc["Year"] = self.years
+
+        cols = df_forc.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        df_forc = df_forc[cols]
+        df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis=1).drop(
+            labels=np.arange(self.years[-1] + 1, self.emis.index[-1] + 1), axis=0
+        )
+        df_emis["Year"] = self.years
+        df_emis["CO2"] = self.emis["CO2_FF"] + self.emis["CO2_AFOLU"]
+        cols = df_emis.columns.tolist()
+        cols = cols[-2:] + cols[:-2]
+        df_emis = df_emis[cols]
+        self.conc["Year"] = self.years
+
+        df_conc = pd.DataFrame(data=self.conc, index=self.years)
+        cols = df_conc.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        df_conc = df_conc[cols]
+        results = {}
+        results["emissions"] = df_emis
+        results["concentrations"] = df_conc
+        results["forcing"] = df_forc
+        return results

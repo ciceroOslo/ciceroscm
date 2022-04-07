@@ -127,6 +127,32 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     exp_index = np.arange(nystart, nyend + 1)
     res = pd.read_csv(file_results, delim_whitespace=True)
     np.testing.assert_equal(res.Year.to_numpy(), exp_index)
+
+    cscm._run({"results_as_dict": True})
+    expected_keys = [
+        "emissions",
+        "concentrations",
+        "forcing",
+        "OHC700",
+        "OHCTOT",
+        "RIB_glob",
+        "RIB_N",
+        "RIB_S",
+        "dT_glob",
+        "dT_NH",
+        "dT_SH",
+        "dT_glob_air",
+        "dT_NH_air",
+        "dT_SH_air",
+        "dT_glob_sea",
+        "dT_NH_sea",
+        "dT_SHsea",
+        "dSL(m)",
+        "dSL_thermal(m)",
+        "dSL_ice(m)",
+    ]
+    for key in expected_keys:
+        assert key in cscm.results
     # Put this in again, find out what is happening with CF4
     # check_output(
     #    outdir_save,
