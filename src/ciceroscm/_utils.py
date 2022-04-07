@@ -8,9 +8,25 @@ LOGGER = logging.getLogger(__name__)
 
 def check_numeric_pamset(required, pamset):
     """
+    Check numeric pamset conforms
+
     Check that pamset has required inputs
     If not insert defaults from required dict
-    Returns updated pamset
+
+    Parameters
+    ----------
+    required : dict
+            Dictionary containing the required keys
+            with default values
+    pamset : dict
+          Dictionary to be checked and filled in from
+          required where necessary
+
+    Returns
+    -------
+    dict
+         pamset augmented with necessary default values
+         from required
     """
     for pam, value in required.items():
         if pam not in pamset:
@@ -29,7 +45,21 @@ def check_numeric_pamset(required, pamset):
 def cut_non_required(required, pamset):
     """
     Cut elements from pamset that are not required
-    Returns updated pamset
+
+    Take out elements of pamset that are not used
+
+    Parameters
+    ----------
+    required : dict
+            Dictionary containing the required keys
+            with default values
+    pamset : dict
+          Dictionary to be checked and cut from
+
+    Returns
+    -------
+    dict
+         pamset where unnecessary elements have been cut
     """
     new_pamset = {}
     for pam in required:
@@ -40,9 +70,25 @@ def cut_non_required(required, pamset):
 
 def cut_and_check_pamset(required, pamset):
     """
-    Combine cutting pamset to required subset and
-    checking the resulting subset has required values
-    Returns updated pamset
+    Combine cut and check of parameters
+
+    Calling other methods to first cut unnecessary
+    elements and afterwords put in missing elements
+
+    Parameters
+    ----------
+    required : dict
+            Dictionary containing the required keys
+            with default values
+    pamset : dict
+          Dictionary to be checked and cut from
+
+    Returns
+    -------
+    dict
+         pamset where unnecessary elements have been cut
+         and missing necessary elements have been added
+         or augmented if not of numeric type.
     """
     pamset = cut_non_required(required, pamset)
     return check_numeric_pamset(required, pamset)

@@ -8,6 +8,27 @@ import pandas as pd
 def calculate_hemispheric_forcing(tracer, q, forc_nh, forc_sh):
     """
     Calculate hemispheric forcing per tracer
+
+    Particular hemisperic factors ar applied for
+    SO2, SO4_IND and TROP_O3
+    For other compounds the split is equal
+
+    Parameters
+    ----------
+    tracer : str
+          Name of tracer for which to do the split
+    q : float
+      Global tracer forcing
+    forc_nh : float
+           Northern hemispheric forcing
+    forc_sh : float
+           Southern hemispheric forcing
+
+    Returns
+    -------
+    list
+        Containing the two updated hemispheric forcings
+        forc_nh, forc_sh
     """
     if tracer in ("SO2", "SO4_IND"):
         forc_nh = forc_nh + q * 1.6
@@ -25,6 +46,22 @@ def calculate_hemispheric_forcing(tracer, q, forc_nh, forc_sh):
 def perturb_emissions(perturbation_file, emissions_df):
     """
     Add emission perturbations to emissions_df
+
+    Read in emissions perturbations file and add
+    perturbations to existing emissions
+
+    Parameters
+    ----------
+    perturbation_file : str
+                     Path of perturbation file
+    emissions_df : pandas.Dataframe
+                Dataframe of emissions
+
+    Returns
+    -------
+    pandas.Dataframe
+                    Dataframe of emissions with perturbed
+                    emissions added in
     """
     pert_df = pd.read_csv(perturbation_file, index_col=None)
     for row in pert_df.itertuples(index=True, name="Pandas"):
@@ -42,6 +79,20 @@ class ForcingPerturbation:
     """
 
     def __init__(self, perturbation_file, year0):
+        """
+        Initialse forcing perturbation instance
+
+        Reading in the perturbations and the years for
+        which they apply, also which compounds they apply
+        for
+
+        Parameters
+        ----------
+        perturbation_file : str
+                         Path of perturbation file
+        year0 : int
+             First year of perturbations
+        """
         self.perturb_raw = pd.read_csv(perturbation_file)
         self.years = np.unique(self.perturb_raw["year"].values)
         self.compounds = pd.unique(self.perturb_raw["component"].values)
@@ -50,12 +101,38 @@ class ForcingPerturbation:
     def check_if_year_in_pert(self, year):
         """
         Check if year has perturbations
+
+        Method to check if there are perturbations for a
+        given year
+
+        Parameters
+        ----------
+        year : int
+            year to check
+
+        Returns
+        -------
+        bool
+            Truth value of if the year has perturbations
+
         """
         return bool(year in self.years)
 
     def check_if_compound_in_pert(self, compound):
         """
         Check if compound is perturbed at some point
+
+        Method to check if a certain compound has perturbations
+
+        Parameters
+        ----------
+        compound : str
+                Name of compound to check
+
+        Returns
+        -------
+        bool
+            Truth value of if the compound has perturbations
         """
         return bool(compound in self.compounds)
 
@@ -64,6 +141,28 @@ class ForcingPerturbation:
     ):  # pylint: disable=too-many-arguments
         """
         Add forcing perturbations to precalculated forcing
+
+        Method to add perturbations to forcing
+
+        Parameters
+        ----------
+        totforc : float
+               Total forcing for current year
+        forc_nh : float
+                Northern hemispheric forcing
+        forc_sh : float
+                Southern hemispheric forcing
+        forc : dict
+            Of forcing per compound and year
+        yr : int
+          Year for which to calculate
+
+        Returns
+        -------
+        list
+            Containing updated total and forcing dict and
+            hemispheric forcings
+            Like this: totforc, forc_nh, forc_sh, forc
         """
         perturb_here = self.perturb_raw[self.perturb_raw.year == yr]
         for row in perturb_here.itertuples(index=True, name="Pandas"):

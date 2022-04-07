@@ -21,6 +21,29 @@ default_data_dir = os.path.join(
 def check_inputfiles(cfg):
     """
     Check whether input files are present or not
+
+    Checking configuration dictionary to see whether
+    it necessary files for concentrations or
+    emissions run are present.
+    If natural emissions files are not found in cfg,
+    standard file location is used.
+
+    Parameters
+    ----------
+    cfg : dict
+       Configurations dictionary which should contain
+       locations of necessary files.
+
+    Returns
+    -------
+    dict
+        cfg possible augmented with standard locations
+        for natural emissions files
+
+    Raises
+    ------
+    FileNotFoundError
+         If files are not found
     """
     if not os.path.exists(cfg["gaspamfile"]):
         raise FileNotFoundError(
@@ -61,7 +84,22 @@ def check_inputfiles(cfg):
 
 def read_forc(forc_file):
     """
-    Read in forcing from forc
+    Read in forcing from forc_file
+
+    Read in forcing file to dataframe, couple of options
+    depending on file formatting
+
+    Parameters
+    ----------
+    forc_file : str
+             Full path of forcing file to be read
+
+    Returns
+    -------
+    ndarray
+           Forcing data, or possibly a  pandas.Dataframe if
+           data is organized in several components
+
     """
     components = False
     with open(forc_file, "r", encoding="utf8") as fread:
@@ -87,6 +125,29 @@ class CICEROSCM:
     def __init__(self, cfg):
         """
         Intialise CICEROSCM
+
+        Starting by picking out the part of cfg that
+        are needed as the class cfgs.
+        Then we either read in forc_file for forcing
+        run, or check file availability and set start,
+        end and emissions start for concentrations or
+        emissions run.
+        Then make empty dictionary for results, read in
+        solar and volcanic forcing and initialise other
+        output arrays
+
+        Parameters
+        ----------
+        cfg : dict
+           Configurations containing inputs about class
+           such as a forcing file for forcing run,
+           locations of files to use for concentration
+           or emission runs, and start and end of run etc.
+
+        Raises
+        ------
+        FileNotFoundError
+            If forcing file is not found when forcing run is chosen
         """
         self.cfg = cut_and_check_pamset(
             {"nystart": 1750, "nyend": 2100, "emstart": 1850}, cfg
@@ -121,6 +182,9 @@ class CICEROSCM:
     def initialise_output_arrays(self):
         """
         Initialise dict with arrays to hold data for run
+
+        Dictionary for all results from upwelling diffusion
+        model outputs is initialised with empty arrays
         """
         output_variables = [
             "OHC700",
@@ -148,8 +212,23 @@ class CICEROSCM:
     def read_data_on_year_row(self, volc_datafile):
         """
         Read in data from file with no headers
-        and each year being a row. Typically the format for
-        volcano and solar data
+
+
+        Read in data from file with no headers where
+        each year is a row. Typically this is the format for
+        volcano and solar data. The years are taken to be
+        the years from the defined startyear and endyear
+
+        Parameters
+        ----------
+        volc_datafile : str
+                     Path of file to be read
+
+        Returns
+        -------
+        pandas.Dataframe
+                        Dataframe containing the data with the years as
+                        indices
         """
         indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
         nrows = len(indices)
@@ -173,6 +252,24 @@ class CICEROSCM:
     def read_in_volc_and_sun(self, cfg):
         """
         Read in solar and volcanic forcing and return them
+
+        Read in solar or volcanic forcing if this is chosen
+        otherwise produce empty dataframes that can be used
+        instead. If solar and volcanic forcing is added, a
+        hemispherically dependent addition is added to the
+        volcanic part, to adjust for lack of spin up.
+
+        Parameters
+        ----------
+        cfg : dict
+           Dictionary containing configurations on whether to use
+           solar and volcanic forcing or not.
+
+        Returns
+        -------
+        dict
+            Containing the dataframes for hemispheric volcanic
+            forcings and solar forcing
         """
         if "sunvolc" in cfg and cfg["sunvolc"] == 1:
             # Possibly change to allow for other files
@@ -205,6 +302,23 @@ class CICEROSCM:
     def forc_set(self, yr, rf_sun):
         """
         Read the forcing for this year
+
+        Getting a year, getting the forcung for this year and
+        adding solar forcing.
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to read out data
+        rf_sun : pandas.Dataframe
+              Dataframe with solar forcing to  add to the other
+              forcings.
+
+        Returns
+        -------
+        float
+             The total forcing for the year, including solar
+             forcing is added.
         """
         row_index = yr - self.cfg["nystart"]
         # Add support for other forcing formats
@@ -219,6 +333,18 @@ class CICEROSCM:
     def add_year_data_to_output(self, values, forc, index):
         """
         Add single year output to output arrays
+
+        Add all the outputs from a single year run
+        of upwelling diffusion model to output arrays
+
+        Parameters
+        ----------
+        values : dict
+              Output from upwelling diffusion model
+        forc : float
+            Total forcing for this year
+        index : int
+             Index equalling year number in the possible years
         """
         simple_outputs = ["OHC700", "OHCTOT"]
         for output in simple_outputs:
@@ -249,6 +375,24 @@ class CICEROSCM:
     ):  # pylint: disable=dangerous-default-value
         """
         Run CICEROSCM
+
+        Setting off a full model run. Starting by
+        intialising output arrays, and udm_model and
+        resetting ConcentrationEmissionsHandler for a new run
+        Then looping over year by year converting emissions
+        and concnetrations to forcings if applicable
+        and then running the upwelling diffusion model
+        Finally writing results to file
+
+        Parameters
+        ----------
+        cfg : dict
+           Dictionary with run specific configurations
+        pamset_udm : dict
+                  Parameter set for udm model
+        pamset_emiconc : dict
+                      Parameter set for concentrations
+                      emissions handler
         """
         self.initialise_output_arrays()
         # Setting up UDM
@@ -287,6 +431,20 @@ class CICEROSCM:
     def write_data_to_file(self, pamset):
         """
         Write results to files after run
+
+        Writing results from upwelling diffusion model to file
+        Formatting and organising in ocean heat content (ohc),
+        radiative imbalance (rib), temperature related (temp),
+        and forcing (forc) files are as in original fortran
+        implementation. Forcing file is only outputted here
+        if the run is a forcing run. Otherwise the forcing results
+        writing is handled by the ConcentrationsEmissionsHandler
+
+        Parameters
+        ----------
+        pamset : dict
+              parameterset with details on where to write results
+
         """
         if "output_folder" in pamset:
             # Make os independent?

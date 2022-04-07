@@ -26,7 +26,10 @@ def check_output(
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
-                res.T, exp.T, check_like=True, rtol=rtol,
+                res.T,
+                exp.T,
+                check_like=True,
+                rtol=rtol,
             )
 
 
@@ -51,7 +54,10 @@ def check_output_subset(
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
-                res.T, exp.T, check_like=True, rtol=rtol,
+                res.T,
+                exp.T,
+                check_like=True,
+                rtol=rtol,
             )
 
 
@@ -117,7 +123,8 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     check_output(outdir, os.path.join(test_data_dir, "1pct_CO2"))
     # check_output(outdir, os.path.join(test_data_dir,"1pct_CO2_no_sunvolc"))
     cscm._run(
-        {"output_folder": outdir}, pamset_udm={"threstemp": 0},
+        {"output_folder": outdir},
+        pamset_udm={"threstemp": 0},
     )
 
     check_output_subset(outdir, os.path.join(test_data_dir, "nr_test_1pct_CO2"))
