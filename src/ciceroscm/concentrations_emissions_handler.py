@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from ._utils import check_numeric_pamset
+from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
     calculate_hemispheric_forcing,
@@ -606,7 +607,7 @@ class ConcentrationsEmissionsHandler:
         for value_dict in self.conc.values():
             value_dict[yr] = 0
 
-    def write_output_to_files(self, cfg):
+    def write_output_to_files(self, cfg, make_plot=False):
         """
         Write results to files after run
         """
@@ -662,3 +663,7 @@ class ConcentrationsEmissionsHandler:
             index=False,
             float_format="%.5e",
         )
+        if make_plot:
+            plot_output2("forc", df_forc, outdir)
+            plot_output2("emis", df_emis, outdir)
+            plot_output2("conc", df_conc, outdir)

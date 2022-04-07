@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
+from .make_plots import plot_output1
 from .upwelling_diffusion_model import UpwellingDiffusionModel
 
 LOGGER = logging.getLogger(__name__)
@@ -225,7 +226,7 @@ class CICEROSCM:
         self.results["Total_forcing"][index] = forc
 
     def _run(
-        self, cfg, pamset_udm={}, pamset_emiconc={}
+        self, cfg, pamset_udm={}, pamset_emiconc={}, make_plot=False
     ):  # pylint: disable=dangerous-default-value
         """
         Run CICEROSCM
@@ -279,9 +280,11 @@ class CICEROSCM:
             self.add_year_data_to_output(values, forc, yr - self.nystart)
 
         if not rf_run:
-            ce_handler.write_output_to_files(cfg)
+            ce_handler.write_output_to_files(cfg, make_plot)
 
         self.write_data_to_file(cfg, rf_run)
+        if make_plot:
+            plot_output1(cfg, self.results, self.nystart, self.nyend)
 
     def write_data_to_file(self, pamset, rf_run=True):
         """
