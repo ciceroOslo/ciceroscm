@@ -16,7 +16,20 @@ LOGGER = logging.getLogger(__name__)
 def check_pamset(pamset):
     """
     Check that parameterset has necessary values for run
-    Otherwise set to default values
+
+    Check that parameterset has necessary values for run
+    Otherwise set to default values which are defined here
+
+    Parameters
+    ----------
+    pamset : dict
+          Dictionary of parameters to define the physics
+          of the run
+
+    Returns
+    -------
+    dict
+        Updated pamset with default values used where necessary
     """
     required = {
         "rlamdo": 16.0,
@@ -54,34 +67,52 @@ def check_pamset(pamset):
 def _coefic(s, t, p):
     """
     Calculate denisty coefficients
+
+    Coefficient depends on various combinations of
+    s, t and p which are temperature and pressure
+    respectively
+
+    Parameters
+    ----------
+    s : float
+      salinity
+    t : float
+     temperature
+    p : float
+     pressure
+
+    Returns
+    -------
+    float
+         Calculated coefficients
     """
     coefic = (
         19652.21
         + 148.4206 * t
-        - 2.327105 * t ** 2
-        + 1.360477e-2 * t ** 3
-        - 5.155288e-5 * t ** 4
+        - 2.327105 * t**2
+        + 1.360477e-2 * t**3
+        - 5.155288e-5 * t**4
         + 3.239908 * p
         + 1.43713e-3 * t * p
-        + 1.16092e-4 * t ** 2 * p
-        - 5.77905e-7 * t ** 3 * p
-        + 8.50935e-5 * p ** 2
-        - 6.12293e-6 * t * p ** 2
-        + 5.2787e-8 * t ** 2 * p ** 2
+        + 1.16092e-4 * t**2 * p
+        - 5.77905e-7 * t**3 * p
+        + 8.50935e-5 * p**2
+        - 6.12293e-6 * t * p**2
+        + 5.2787e-8 * t**2 * p**2
         + 54.6746 * s
         - 0.603459 * t * s
-        + 1.09987e-2 * t ** 2 * s
-        - 6.1670e-5 * t ** 3 * s
-        + 7.944e-2 * s ** 1.5
-        + 1.6483e-2 * t * s ** 1.5
-        - 5.3009e-4 * t ** 2 * s ** 1.5
+        + 1.09987e-2 * t**2 * s
+        - 6.1670e-5 * t**3 * s
+        + 7.944e-2 * s**1.5
+        + 1.6483e-2 * t * s**1.5
+        - 5.3009e-4 * t**2 * s**1.5
         + 2.2838e-3 * p * s
         - 1.0981e-5 * t * p * s
-        - 1.6078e-6 * t ** 2 * p * s
-        + 1.91075e-4 * p * s ** 1.5
-        - 9.9348e-7 * p ** 2 * s
-        + 2.0816e-8 * t * p ** 2 * s
-        + 9.1697e-10 * t ** 2 * p ** 2 * s
+        - 1.6078e-6 * t**2 * p * s
+        + 1.91075e-4 * p * s**1.5
+        - 9.9348e-7 * p**2 * s
+        + 2.0816e-8 * t * p**2 * s
+        + 9.1697e-10 * t**2 * p**2 * s
     )
     return coefic
 
@@ -89,23 +120,35 @@ def _coefic(s, t, p):
 def _denso(s, t):
     """
     Calculate density at p0=0
+
+    Parameters
+    ----------
+    s : float
+     salinity
+    t : float
+     temperature
+
+    Returns
+    -------
+    float
+         Calculated density
     """
     denso = (
         999.842594
         + 6.793952e-2 * t
-        - 9.095290e-3 * t ** 2
-        + 1.001685e-4 * t ** 3
-        - 1.120083e-6 * t ** 4
-        + 6.536332e-9 * t ** 5
+        - 9.095290e-3 * t**2
+        + 1.001685e-4 * t**3
+        - 1.120083e-6 * t**4
+        + 6.536332e-9 * t**5
         + 8.24493e-1 * s
         - 4.0899e-3 * t * s
-        + 7.6438e-5 * t ** 2 * s
-        - 8.2467e-7 * t ** 3 * s
-        + 5.3875e-9 * t ** 4 * s
-        - 5.72466e-3 * s ** 1.5
-        + 1.0227e-4 * t * s ** 1.5
-        - 1.6546e-6 * t ** 2 * s ** 1.5
-        + 4.8314e-4 * s ** 2
+        + 7.6438e-5 * t**2 * s
+        - 8.2467e-7 * t**3 * s
+        + 5.3875e-9 * t**4 * s
+        - 5.72466e-3 * s**1.5
+        + 1.0227e-4 * t * s**1.5
+        - 1.6546e-6 * t**2 * s**1.5
+        + 4.8314e-4 * s**2
     )
     return denso
 
@@ -113,6 +156,18 @@ def _denso(s, t):
 def _density(p0, t0):
     """
     Calculate water denisity from equation of state
+
+    Parameters
+    ----------
+    p0 : float
+      Pressure
+    t0 : float
+      Temperature
+
+    Returns
+    -------
+    float
+         Density from equation of state
     """
     s = 35.0
     return _denso(s, t0) / (1.0 - p0 / _coefic(s, t0, p0))
@@ -129,6 +184,14 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     def __init__(self, params):
         """
         Intialise
+
+        Setting up heights first, then starting up empty dict and
+        arrays , and some starting values
+
+        Parameters
+        ----------
+        params : dict
+              Physical parameters to define the instance
         """
         self.pamset = check_pamset(params)
 
@@ -157,6 +220,22 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     def _band(self, a_array, b_array, c_array, d_array):
         """
         Calculate band
+
+        Parameters
+        ----------
+        a_array : np.ndarray
+               a_array through ocean layers
+        b_array : np.ndarray
+               b_array through ocean layers
+        c_array : np.ndarray
+               c_array through ocean layers
+        d_array : np.ndarray
+               d_array through ocean layers
+
+        Returns
+        -------
+        np.ndarray
+                  band value through ocean layers
         """
         alfa = np.zeros(self.pamset["lm"] - 1)
         ans = np.zeros(self.pamset["lm"])
@@ -186,9 +265,22 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
     def get_gam_and_fro_factor_ns(self, northern_hemisphere):
         """
-        Get correct cam and fro variables depending on
-        whether Northern or Southern hemispher is
+        Get correct gam and fro variables
+
+        Get correct gam and fro variables depending on
+        whether Northern or Southern hemisphere is
         considered
+
+        Parameters
+        ----------
+        northern_hemisphere : bool
+                           Whether northern or southern hemisphere
+                           is being considered
+
+        Returns
+        -------
+        float
+             The correct gam_fro_factor
         """
         blm = self.pamset["ebbeta"] / self.pamset["rlamdo"]
         if northern_hemisphere:
@@ -210,6 +302,17 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     def coeff(self, wcfac, gam_fro_fac):
         """
         Calculate a, b c coefficient arrays for hemisphere
+
+        Parameters
+        ----------
+        wcfac : float
+             wc factor is W per fraction of the year
+        gam_fro_fac : float
+                      Is the factor combo of gam and fro
+        Returns
+        -------
+        list
+            Containing the a, b and c coefficients over the ocean layers
         """
         lm = self.pamset["lm"]
         a = np.zeros(lm)
@@ -236,7 +339,16 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     def setup_ebud2(self, temp_1n, temp_1s):
         """
         Set up coefficients and more for the two hemispheres
-        to be redone every timestep
+
+        Set up coefficients and various parameters
+        for the two hemispheres. To be redone every timestep
+
+        Parameters
+        ----------
+        temp_1n : float
+               Northern hemisphere surface temperature
+        temp_1s : float
+               Southern hemisphere surface temperature
         """
         # Northern hemisphere:
         if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
@@ -292,6 +404,9 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     def setup_ebud(self):
         """
         Set up energy budget before run
+
+        Find various paramaters at the start of the run,
+        to get the energy budget ready to run
         """
         fnsa = 1.0  # Can it be something else?
         c1fac = self.pamset["dt"] / (self.pamset["c1"] * self.dz[0])
@@ -311,13 +426,13 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             self.pamset["beto"]
             + self.pamset["foas"]
             * self.pamset["ebbeta"]
-            / (self.gams * self.gamn - fnsa * blm ** 2)
+            / (self.gams * self.gamn - fnsa * blm**2)
         ) * c1fac
         self.varrying["dtrm3n"] = (
-            self.gams / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+            self.gams / (self.gams * self.gamn - fnsa * blm**2) * c1fac
         )
         self.varrying["dtrm4n"] = (
-            blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+            blm / (self.gams * self.gamn - fnsa * blm**2) * c1fac
         )
 
         # Southern hemisphere
@@ -326,13 +441,13 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             + self.pamset["foan"]
             * fnsa
             * self.pamset["ebbeta"]
-            / (self.gams * self.gamn - fnsa * blm ** 2)
+            / (self.gams * self.gamn - fnsa * blm**2)
         ) * c1fac
         self.varrying["dtrm3s"] = (
-            self.gamn / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+            self.gamn / (self.gams * self.gamn - fnsa * blm**2) * c1fac
         )
         self.varrying["dtrm4s"] = (
-            fnsa * blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+            fnsa * blm / (self.gams * self.gamn - fnsa * blm**2) * c1fac
         )
 
         self.varrying["dtmnl3"] = (
@@ -348,6 +463,9 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     def setup_sealevel_rise(self):
         """
         Set up variables to be used in sea level rise calculations
+
+        Various arrays such as pressure, temperature and density
+        are set up do calculate sealevel rise during the run
         """
         self.press = np.zeros(self.pamset["lm"])
         self.tempunp = np.zeros(self.pamset["lm"])
@@ -377,6 +495,18 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     def compute_sea_level_rise(self, templ, dtemp):
         """
         Compute sea level rise associated with temperature change
+
+        Parameters
+        ----------
+        templ : np.ndarray
+             Temperature in the ocean layers
+        dtemp : float
+             Current global temperature change
+
+        Returns
+        -------
+        float
+             sea level rise
         """
         betag = 3.0e-4  # Make changeable parameter?
         betaa = -2.0e-4  # Make changeable parameter?
@@ -422,6 +552,37 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     ):  # pylint: disable=too-many-locals
         """
         Do energy budget calculation for single year
+
+        Parameters
+        ----------
+        forc_nh : float
+               Northern hemispheric forcing
+        forc_sh : float
+               Southern hemispheric forcing
+        fn_volc : float
+               Northern hemispheric volcanic forcing
+        fs_volc : float
+               Northern hemispheric volcanic forcing
+
+        Returns
+        -------
+        dict
+            Containing all results including
+            Global temperature change dtemp,
+            Northern hemisphere temperature change dtempnh,
+            Southern hemisphere temperature change dtempsh,
+            Global air temperature change dtemp_air,
+            Northern hemisphere air temperature change dtempnh_air,
+            Southern hemisphere temperature change dtempsh_air,
+            Global sea temperature change dtemp_sea,
+            Northern hemisphere sea temperature change dtempnh_sea,
+            Southern hemisphere sea temperature change dtempsh_sea,
+            Northern hemisphere radiative imbalance RIBN,
+            Southern hemisphere radiative imbalance RIBS,
+            Global radiative imbalance RIB,
+            Global sea level rise deltsl,
+            Ocean heat content change down to 700 m OHC700,
+            Ocean heat content change total OHCTOT
         """
         temp1n = 0.0
         temp1s = 0.0
@@ -587,6 +748,15 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     def ocean_temperature(self):
         """
         Compute the ocean temperature total and at 700 m depth
+
+        Compute the ocean temperature total and at 700 m depth
+        to get ocean heat content for total and down to 700 m
+
+        Returns
+        -------
+        dict
+            Containing the ocean heat content to 700 m and total
+            with keys OHC700 and OHCTOT
         """
         area_hemisphere = 2.55e14
 
