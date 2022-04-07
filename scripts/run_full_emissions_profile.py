@@ -13,9 +13,7 @@ outdir = os.path.join(os.getcwd(), "output_test")
 pr = cProfile.Profile()
 pr.enable()
 
-cscm = CICEROSCM()
-
-cscm._run(
+cscm = CICEROSCM(
     {
         "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
         "nyend": 2100,
@@ -23,11 +21,11 @@ cscm._run(
         "emissions_file": os.path.join(data_dir, "ssp245_em_RCMIP.txt"),
         "nat_ch4_file": os.path.join(data_dir, "natemis_ch4.txt"),
         "nat_n2o_file": os.path.join(data_dir, "natemis_n2o.txt"),
-    },make_plot=True
+    }
 )
 
 
-cscm._run({"output_folder": outdir})
+cscm._run({"output_folder": outdir}, make_plot=True)
 
 pr.disable()
 s = io.StringIO()

@@ -428,7 +428,7 @@ class CICEROSCM:
             self.ce_handler.write_output_to_files(cfg, make_plot)
 
         if make_plot:
-            plot_output1(cfg, self.results, self.nystart, self.nyend)
+            plot_output1(cfg, self.results, self.cfg["nystart"], self.cfg["nyend"])
             
         self.write_data_to_file(cfg)
 
