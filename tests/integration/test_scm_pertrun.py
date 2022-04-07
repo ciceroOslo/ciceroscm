@@ -27,7 +27,10 @@ def check_output(
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
-                res.T, exp.T, check_like=True, rtol=rtol,
+                res.T,
+                exp.T,
+                check_like=True,
+                rtol=rtol,
             )
 
 
@@ -56,7 +59,10 @@ def check_output_just_some_lines(
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
-                res.T, exp.T, check_like=True, rtol=rtol,
+                res.T,
+                exp.T,
+                check_like=True,
+                rtol=rtol,
             )
 
 
@@ -102,5 +108,7 @@ def test_ciceroscm_run_pert_emis(tmpdir, test_data_dir):
     cscm._run({"output_folder": outdir})
 
     check_output(
-        outdir, os.path.join(test_data_dir, "pert_tests"), files=["output_em.txt"],
+        outdir,
+        os.path.join(test_data_dir, "pert_tests"),
+        files=["output_em.txt"],
     )

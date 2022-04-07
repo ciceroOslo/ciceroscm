@@ -235,7 +235,9 @@ class ConcentrationsEmissionsHandler:
     # CO2-handling in its own class
 
     def __init__(
-        self, cfg, pamset,
+        self,
+        cfg,
+        pamset,
     ):
         """
         Intialising concentrations emissions handler
@@ -595,10 +597,11 @@ class ConcentrationsEmissionsHandler:
                 tracer in self.df_gas.index
                 and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
             ):
-                q = (
-                    (self.conc[tracer][yr] - self.conc[tracer][yr_0])
-                    * self.df_gas["ALPHA"][tracer]
-                )  # +forc_pert
+                q = (self.conc[tracer][yr] - self.conc[tracer][yr_0]) * self.df_gas[
+                    "ALPHA"
+                ][
+                    tracer
+                ]  # +forc_pert
             elif tracer == "TROP_O3":
                 q = self.tropospheric_ozone_forcing(yr)
             elif tracer == "STRAT_O3":
@@ -835,10 +838,10 @@ class ConcentrationsEmissionsHandler:
             )
             self.co2_hold["yCO2"] = (
                 1.3021 * z_co2
-                + 3.7929e-3 * (z_co2 ** 2)
-                + 9.1193e-6 * (z_co2 ** 3)
-                + 1.488e-8 * (z_co2 ** 4)
-                + 1.2425e-10 * (z_co2 ** 5)
+                + 3.7929e-3 * (z_co2**2)
+                + 9.1193e-6 * (z_co2**3)
+                + 1.488e-8 * (z_co2**4)
+                + 1.2425e-10 * (z_co2**5)
             )
             self.co2_hold["xCO2"] = (
                 self.co2_hold["sCO2"][it] + self.co2_hold["yCO2"] + 278.0

@@ -28,7 +28,10 @@ def check_output(
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
-                res.T, exp.T, check_like=True, rtol=rtol,
+                res.T,
+                exp.T,
+                check_like=True,
+                rtol=rtol,
             )
 
 
@@ -57,7 +60,10 @@ def check_output_just_some_lines(
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
-                res.T, exp.T, check_like=True, rtol=rtol,
+                res.T,
+                exp.T,
+                check_like=True,
+                rtol=rtol,
             )
 
 

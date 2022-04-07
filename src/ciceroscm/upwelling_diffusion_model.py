@@ -75,7 +75,7 @@ def _coefic(s, t, p):
     Parameters
     ----------
     s : float
-      placeholder
+      salinity
     t : float
      temperature
     p : float
@@ -89,30 +89,30 @@ def _coefic(s, t, p):
     coefic = (
         19652.21
         + 148.4206 * t
-        - 2.327105 * t ** 2
-        + 1.360477e-2 * t ** 3
-        - 5.155288e-5 * t ** 4
+        - 2.327105 * t**2
+        + 1.360477e-2 * t**3
+        - 5.155288e-5 * t**4
         + 3.239908 * p
         + 1.43713e-3 * t * p
-        + 1.16092e-4 * t ** 2 * p
-        - 5.77905e-7 * t ** 3 * p
-        + 8.50935e-5 * p ** 2
-        - 6.12293e-6 * t * p ** 2
-        + 5.2787e-8 * t ** 2 * p ** 2
+        + 1.16092e-4 * t**2 * p
+        - 5.77905e-7 * t**3 * p
+        + 8.50935e-5 * p**2
+        - 6.12293e-6 * t * p**2
+        + 5.2787e-8 * t**2 * p**2
         + 54.6746 * s
         - 0.603459 * t * s
-        + 1.09987e-2 * t ** 2 * s
-        - 6.1670e-5 * t ** 3 * s
-        + 7.944e-2 * s ** 1.5
-        + 1.6483e-2 * t * s ** 1.5
-        - 5.3009e-4 * t ** 2 * s ** 1.5
+        + 1.09987e-2 * t**2 * s
+        - 6.1670e-5 * t**3 * s
+        + 7.944e-2 * s**1.5
+        + 1.6483e-2 * t * s**1.5
+        - 5.3009e-4 * t**2 * s**1.5
         + 2.2838e-3 * p * s
         - 1.0981e-5 * t * p * s
-        - 1.6078e-6 * t ** 2 * p * s
-        + 1.91075e-4 * p * s ** 1.5
-        - 9.9348e-7 * p ** 2 * s
-        + 2.0816e-8 * t * p ** 2 * s
-        + 9.1697e-10 * t ** 2 * p ** 2 * s
+        - 1.6078e-6 * t**2 * p * s
+        + 1.91075e-4 * p * s**1.5
+        - 9.9348e-7 * p**2 * s
+        + 2.0816e-8 * t * p**2 * s
+        + 9.1697e-10 * t**2 * p**2 * s
     )
     return coefic
 
@@ -124,7 +124,7 @@ def _denso(s, t):
     Parameters
     ----------
     s : float
-     placeholder
+     salinity
     t : float
      temperature
 
@@ -136,19 +136,19 @@ def _denso(s, t):
     denso = (
         999.842594
         + 6.793952e-2 * t
-        - 9.095290e-3 * t ** 2
-        + 1.001685e-4 * t ** 3
-        - 1.120083e-6 * t ** 4
-        + 6.536332e-9 * t ** 5
+        - 9.095290e-3 * t**2
+        + 1.001685e-4 * t**3
+        - 1.120083e-6 * t**4
+        + 6.536332e-9 * t**5
         + 8.24493e-1 * s
         - 4.0899e-3 * t * s
-        + 7.6438e-5 * t ** 2 * s
-        - 8.2467e-7 * t ** 3 * s
-        + 5.3875e-9 * t ** 4 * s
-        - 5.72466e-3 * s ** 1.5
-        + 1.0227e-4 * t * s ** 1.5
-        - 1.6546e-6 * t ** 2 * s ** 1.5
-        + 4.8314e-4 * s ** 2
+        + 7.6438e-5 * t**2 * s
+        - 8.2467e-7 * t**3 * s
+        + 5.3875e-9 * t**4 * s
+        - 5.72466e-3 * s**1.5
+        + 1.0227e-4 * t * s**1.5
+        - 1.6546e-6 * t**2 * s**1.5
+        + 4.8314e-4 * s**2
     )
     return denso
 
@@ -426,13 +426,13 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             self.pamset["beto"]
             + self.pamset["foas"]
             * self.pamset["ebbeta"]
-            / (self.gams * self.gamn - fnsa * blm ** 2)
+            / (self.gams * self.gamn - fnsa * blm**2)
         ) * c1fac
         self.varrying["dtrm3n"] = (
-            self.gams / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+            self.gams / (self.gams * self.gamn - fnsa * blm**2) * c1fac
         )
         self.varrying["dtrm4n"] = (
-            blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+            blm / (self.gams * self.gamn - fnsa * blm**2) * c1fac
         )
 
         # Southern hemisphere
@@ -441,13 +441,13 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             + self.pamset["foan"]
             * fnsa
             * self.pamset["ebbeta"]
-            / (self.gams * self.gamn - fnsa * blm ** 2)
+            / (self.gams * self.gamn - fnsa * blm**2)
         ) * c1fac
         self.varrying["dtrm3s"] = (
-            self.gamn / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+            self.gamn / (self.gams * self.gamn - fnsa * blm**2) * c1fac
         )
         self.varrying["dtrm4s"] = (
-            fnsa * blm / (self.gams * self.gamn - fnsa * blm ** 2) * c1fac
+            fnsa * blm / (self.gams * self.gamn - fnsa * blm**2) * c1fac
         )
 
         self.varrying["dtmnl3"] = (
