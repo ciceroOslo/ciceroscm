@@ -113,6 +113,26 @@ def _rb_function(it, idtm=24):
 def read_natural_emissions(filename, component, startyear=1750, endyear=2500):
     """
     Read in single column natural emissions file
+
+    A natural emissions file with data on a single column is read in
+    to a pandas Dataframe. A an index of corresponding years is
+    generated and added. Data in input is assumed to be yearly.
+
+    Parameters
+    ----------
+    filename : str
+               path to file with emissions
+    component : str
+                Name of component the emissions are for
+    startyear: int
+               Startyear for emissions
+    endyear : int
+              Endyear for emissions
+
+    Returns
+    -------
+    pd.Dataframe
+                Dataframe of natural emissions for component with years as index
     """
     df_natemis = pd.read_csv(filename, header=None, names=[component], index_col=False)
     df_natemis["year"] = np.arange(startyear, endyear + 1)
@@ -163,8 +183,8 @@ def check_pamset_consistency(pamset_old, pamset_new):
 
     This method is meant to ensure consistency when rerunning
     with the same class instance. Changing to old values
-    if they are different, or setting to old values if none are
-    given
+    if they are different for a few values that can't change,
+    or setting to old values if none are given
 
     Parameters
     ----------
@@ -227,6 +247,40 @@ class ConcentrationsEmissionsHandler:
     """
     Class to handle concentrations
     and emissions input for ciceroscm
+
+    Attributes
+    ----------
+    df_gas : pd.Dataframe
+             Dataframe containing names of the various components
+             units, possible natural emissions and emissions to
+             concentrations and concentrations to forcing conversion
+             factors
+    conc : dict
+           Dictionary with component keys and arrays with concentrations
+           for each year as values. These values are calculated
+           when emi2conc method is called. Before emissions start
+           or if a concentration run is used, they will be read
+           directly from conc_in
+    nat_emis_ch4 : pd.Dataframe
+                   Natural emissions for CH4 per year
+    nat_emis_n2o : pd.Dataframe
+                   Natural emissions for N2O per year
+    pamset : dict
+             Dictionary of parameters
+    years : np.ndarray
+            Array with all the years for the handler
+    conc_in : pd.Dataframe
+              Input concentrations read from file. These are used
+              before emissions start, or throughout the run if
+              a concentration run is used
+    emis : pd.Dataframe
+           Emissions dataframe read from input file
+    r_functions : np.ndarray
+                  2D array with precalculated values of pulse
+                  response and biotic decay functions for each
+                  of the idtm values of each year
+
+
     """
 
     # pylint: disable=too-many-instance-attributes
@@ -331,6 +385,8 @@ class ConcentrationsEmissionsHandler:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
         years_tot = len(self.years)
+        self.conc = {}
+        self.forc = {}
         for tracer in self.df_gas.index:
             if tracer != "CO2.1":
                 self.conc[tracer] = {}
@@ -854,6 +910,21 @@ class ConcentrationsEmissionsHandler:
     ):  # pylint: disable=dangerous-default-value
         """
         Fill in one row of concentrations in conc_dict
+
+        Fill in a row of zeros in concentrations dictionary
+        from prescribed concentrations. If some traces are
+        to be avoided (typically CO2 calculated from emissions)
+        a list of them can be sent as inputs
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to add concentrations from prescribed
+        avoid : list
+             optional list of tracers for which not to read
+             presecribed concentrations. Typically CO2 when CO2
+             is calculated from emissions, while other compounds
+             are read from prescribed data.
         """
         for tracer, value_dict in self.conc.items():
             if tracer in avoid:
@@ -946,3 +1017,39 @@ class ConcentrationsEmissionsHandler:
             index=False,
             float_format="%.5e",
         )
+
+    def add_results_to_dict(self):
+        """
+        Adding results to results dictionary
+
+        Returns
+        -------
+        dict
+            Containing run emissions, concentrations and forcings
+            in the form of pandas.Dataframe with years and tracers
+        """
+        df_forc = pd.DataFrame(data=self.forc, index=self.years)
+        df_forc["Year"] = self.years
+
+        cols = df_forc.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        df_forc = df_forc[cols]
+        df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis=1).drop(
+            labels=np.arange(self.years[-1] + 1, self.emis.index[-1] + 1), axis=0
+        )
+        df_emis["Year"] = self.years
+        df_emis["CO2"] = self.emis["CO2_FF"] + self.emis["CO2_AFOLU"]
+        cols = df_emis.columns.tolist()
+        cols = cols[-2:] + cols[:-2]
+        df_emis = df_emis[cols]
+        self.conc["Year"] = self.years
+
+        df_conc = pd.DataFrame(data=self.conc, index=self.years)
+        cols = df_conc.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        df_conc = df_conc[cols]
+        results = {}
+        results["emissions"] = df_emis
+        results["concentrations"] = df_conc
+        results["forcing"] = df_forc
+        return results

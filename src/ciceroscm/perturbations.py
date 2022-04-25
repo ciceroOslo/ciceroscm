@@ -76,6 +76,18 @@ def perturb_emissions(perturbation_file, emissions_df):
 class ForcingPerturbation:
     """
     Class to handle  forcing perturbations
+
+    Attributes
+    ----------
+    perturb_raw : pandas.Dataframe
+                  Dataframe storing the perturbations
+    years : np.ndarray
+            Array of years for which perturbations exist
+    compounds : np.ndarray
+                Array of components for which perturbations
+                exist
+    year0 : int
+            First year of perturbations
     """
 
     def __init__(self, perturbation_file, year0):
