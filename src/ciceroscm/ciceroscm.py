@@ -117,6 +117,42 @@ def read_forc(forc_file):
 class CICEROSCM:
     """
     Main ciceroscm class
+
+    Takes care of and routes calls to diffusion
+    model and concentrations emissions handler
+    Takes results, and should be the module
+    interacted with from other programs
+
+    Attributes
+    ----------
+    cfg : dict
+          Configurations dictionary with startyear,
+          endyear, emissions start plus optional
+          configs, like a forcing file path for pure
+          forcing runs, else input files needed for
+          concentrations and emission handler,
+          a parameter to include volcanic and solar
+          forcing, one to indicate a pure concentrations
+          run, perturbation files etc.
+    ce_handler : ciceroscm.ConcentrationsEmissionsHandler
+                     Concentrations emissions handler for the
+                     model. It can be reset for multiple runs
+                     but needs to be used with the same year range
+                     and with either Concentrations or emissions
+                     run consistently
+    results : dict
+                  Results dictionary which stores results from
+                  upwelling diffusion model. If a results_as_dict
+                  is sent as True to the run call, the results
+                  from the Concentrations emissions handler
+                  (emissions, componentwise forcings and concentrations)
+                  will also be added to this dictionary and can be
+                  accessed from there
+    rf_volc_sun : dict
+                  With solar and volcanic forcing read from standard files
+                  or set to zero according to configurations
+    rf_luc : pd.Dataframe
+             Dataframe of land use albedo forcing with years as index
     """
 
     # pylint: disable=too-many-instance-attributes
@@ -139,10 +175,10 @@ class CICEROSCM:
         Parameters
         ----------
         cfg : dict
-           Configurations containing inputs about class
-           such as a forcing file for forcing run,
-           locations of files to use for concentration
-           or emission runs, and start and end of run etc.
+              Configurations containing inputs about class
+              such as a forcing file for forcing run,
+              locations of files to use for concentration
+              or emission runs, and start and end of run etc.
 
         Raises
         ------
