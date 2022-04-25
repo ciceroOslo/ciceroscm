@@ -179,6 +179,36 @@ _density_vec = np.vectorize(_density)
 class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
     """
     Class to handle energy budget upwelling and downwelling
+
+    Attributes
+    ----------
+    pamset : dict
+             Dictionary of parameter values
+    dz : np.ndarray
+         Array of depth of ocean layers
+    varrying : dict
+               Dictionary of coefficient, temperature values
+               etc which varry over time, but do not need to
+               be stored apart from current value
+    tn : np.ndarray
+         Temperature change in the ocean layers of the
+         Northern hemisphere
+    ts : np.ndarray
+         Temperature change in the ocean layers of the
+         Southern hemisphere
+    prev_values : dict
+                  Dictionary with values from pervious time step
+                  needed in calculations, typically ice melted on
+                  Greenland and in Antarctica, previous temperature
+                  change etc
+    dtempprev : float
+                Temperature change in previous time step
+    press : np.ndarray
+            Pressure in ocean layers
+    tempunp : np.ndarray
+              Temperature in ocean layers
+    dens0 : np.ndarray
+            Density in ocean layers
     """
 
     def __init__(self, params):
