@@ -113,6 +113,26 @@ def _rb_function(it, idtm=24):
 def read_natural_emissions(filename, component, startyear=1750, endyear=2500):
     """
     Read in single column natural emissions file
+
+    A natural emissions file with data on a single column is read in
+    to a pandas Dataframe. A an index of corresponding years is
+    generated and added. Data in input is assumed to be yearly.
+
+    Parameters
+    ----------
+    filename : str
+               path to file with emissions
+    component : str
+                Name of component the emissions are for
+    startyear: int
+               Startyear for emissions
+    endyear : int
+              Endyear for emissions
+
+    Returns
+    -------
+    pd.Dataframe
+                Dataframe of natural emissions for component with years as index
     """
     df_natemis = pd.read_csv(filename, header=None, names=[component], index_col=False)
     df_natemis["year"] = np.arange(startyear, endyear + 1)
@@ -227,6 +247,40 @@ class ConcentrationsEmissionsHandler:
     """
     Class to handle concentrations
     and emissions input for ciceroscm
+
+    Attributes
+    ----------
+    df_gas : pd.Dataframe
+             Dataframe containing names of the various components
+             units, possible natural emissions and emissions to
+             concentrations and concentrations to forcing conversion
+             factors
+    conc : dict
+           Dictionary with component keys and arrays with concentrations
+           for each year as values. These values are calculated
+           when emi2conc method is called. Before emissions start
+           or if a concentration run is used, they will be read
+           directly from conc_in
+    nat_emis_ch4 : pd.Dataframe
+                   Natural emissions for CH4 per year
+    nat_emis_n2o : pd.Dataframe
+                   Natural emissions for N2O per year
+    pamset : dict
+             Dictionary of parameters
+    years : np.ndarray
+            Array with all the years for the handler
+    conc_in : pd.Dataframe
+              Input concentrations read from file. These are used
+              before emissions start, or throughout the run if
+              a concentration run is used
+    emis : pd.Dataframe
+           Emissions dataframe read from input file
+    r_functions : np.ndarray
+                  2D array with precalculated values of pulse
+                  response and biotic decay functions for each
+                  of the idtm values of each year
+
+
     """
 
     # pylint: disable=too-many-instance-attributes
