@@ -423,13 +423,13 @@ class CICEROSCM:
                 self.rf_volc_sun["volc_s"].iloc[yr - self.cfg["nystart"], :],
             )
             self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
-    
+
         if not self.cfg["rf_run"]:
             self.ce_handler.write_output_to_files(cfg, make_plot)
 
         if make_plot:
             plot_output1(cfg, self.results, self.cfg["nystart"], self.cfg["nyend"])
-            
+
         self.write_data_to_file(cfg)
 
     def write_data_to_file(self, pamset):
