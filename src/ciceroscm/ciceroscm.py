@@ -467,7 +467,7 @@ class CICEROSCM:
             self.results.update(self.ce_handler.add_results_to_dict())
         else:
             if not self.cfg["rf_run"]:
-                self.ce_handler.write_output_to_files(cfg,make_plot)
+                self.ce_handler.write_output_to_files(cfg, make_plot)
 
             self.write_data_to_file(cfg)
 

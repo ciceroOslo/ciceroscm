@@ -965,6 +965,8 @@ class ConcentrationsEmissionsHandler:
         cfg : dict
            Configurations to define where to put output
            files and what prefix to have for file name
+        make_plot : bool
+           Whether the output should be plottet or not
         """
         if "output_folder" in cfg:
             # Make os independent?
@@ -1018,7 +1020,7 @@ class ConcentrationsEmissionsHandler:
             index=False,
             float_format="%.5e",
         )
- 
+
         if make_plot:
             plot_output2("forc", df_forc, outdir)
             plot_output2("emis", df_emis, outdir)
@@ -1059,4 +1061,3 @@ class ConcentrationsEmissionsHandler:
         results["concentrations"] = df_conc
         results["forcing"] = df_forc
         return results
->>>>>>> main

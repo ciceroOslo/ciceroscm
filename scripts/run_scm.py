@@ -26,4 +26,4 @@ cscm = CICEROSCM(
 
 outdir = os.path.join(os.getcwd(), "output_test")
 
-cscm._run({"output_folder": outdir})
+cscm._run({"output_folder": outdir}, make_plot=True)
