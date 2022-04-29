@@ -18,6 +18,7 @@ When a new instance of the CICERO-SCM class is created the dictionary cfg needs 
 * nystart - the start year of the run
 * nyend - the end year of the run
 * emstart - the year to start the run with emissions
+* idtm - optional parameter to tune the number of subyearly steps in the concentrations_emissions_handler. Default is 24. Should probably not be the first parameter you want to start playing with.
 * sunvolc - an optional parameter to include solar an volcanic forcing. If included and equal to 1 a set of such forcing series will be included. Eventually, support for giving a custom set of solar and volcanic forcing files might be added.
 * gaspamfile - path to file of gases to include with units, forcing factors etc (mandatory).
 * concentrations_file - path to file with concentrations time series (mandatory if not forcing run)
@@ -61,7 +62,6 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 
 #### pamset_emiconc
 The concentration and emission parameterset (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
-* lamb (0.8)
 * qbmb (0.03)
 * qo3 (0.4)
 * qdirso2 (-0.457)
@@ -69,7 +69,6 @@ The concentration and emission parameterset (which is needed for emission runs) 
 * qbc (0.200)
 * qoc (-0.103)
 * ref_yr (2010)
-* idtm (24)
 
 ## Development
 * To start developing make sure you have a github account and that you are part of the ciceroOslo team.
