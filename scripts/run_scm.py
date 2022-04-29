@@ -13,7 +13,7 @@ data_dir = os.path.join(os.path.dirname(__file__), "../", "tests", "test-data")
 
 cscm = CICEROSCM()
 
-outdir = os.path.join(os.getcwd(), "output_test")
+outdir = os.path.join(os.getcwd(), "../output_test")
 
 cscm._run(
     {
