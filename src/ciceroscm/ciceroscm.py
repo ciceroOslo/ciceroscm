@@ -7,6 +7,7 @@ import os
 import numpy as np
 import pandas as pd
 
+from ._utils import cut_and_check_pamset
 from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
 from .upwelling_diffusion_model import UpwellingDiffusionModel
 
@@ -20,6 +21,29 @@ default_data_dir = os.path.join(
 def check_inputfiles(cfg):
     """
     Check whether input files are present or not
+
+    Checking configuration dictionary to see whether
+    it necessary files for concentrations or
+    emissions run are present.
+    If natural emissions files are not found in cfg,
+    standard file location is used.
+
+    Parameters
+    ----------
+    cfg : dict
+       Configurations dictionary which should contain
+       locations of necessary files.
+
+    Returns
+    -------
+    dict
+        cfg possible augmented with standard locations
+        for natural emissions files
+
+    Raises
+    ------
+    FileNotFoundError
+         If files are not found
     """
     if not os.path.exists(cfg["gaspamfile"]):
         raise FileNotFoundError(
@@ -60,7 +84,22 @@ def check_inputfiles(cfg):
 
 def read_forc(forc_file):
     """
-    Read in forcing from forc
+    Read in forcing from forc_file
+
+    Read in forcing file to dataframe, couple of options
+    depending on file formatting
+
+    Parameters
+    ----------
+    forc_file : str
+             Full path of forcing file to be read
+
+    Returns
+    -------
+    ndarray
+           Forcing data, or possibly a  pandas.Dataframe if
+           data is organized in several components
+
     """
     components = False
     with open(forc_file, "r", encoding="utf8") as fread:
@@ -78,32 +117,111 @@ def read_forc(forc_file):
 class CICEROSCM:
     """
     Main ciceroscm class
+
+    Takes care of and routes calls to diffusion
+    model and concentrations emissions handler
+    Takes results, and should be the module
+    interacted with from other programs
+
+    Attributes
+    ----------
+    cfg : dict
+          Configurations dictionary with startyear,
+          endyear, emissions start plus optional
+          configs, like a forcing file path for pure
+          forcing runs, else input files needed for
+          concentrations and emission handler,
+          a parameter to include volcanic and solar
+          forcing, one to indicate a pure concentrations
+          run, perturbation files etc.
+    ce_handler : ciceroscm.ConcentrationsEmissionsHandler
+                     Concentrations emissions handler for the
+                     model. It can be reset for multiple runs
+                     but needs to be used with the same year range
+                     and with either Concentrations or emissions
+                     run consistently
+    results : dict
+                  Results dictionary which stores results from
+                  upwelling diffusion model. If a results_as_dict
+                  is sent as True to the run call, the results
+                  from the Concentrations emissions handler
+                  (emissions, componentwise forcings and concentrations)
+                  will also be added to this dictionary and can be
+                  accessed from there
+    rf_volc_sun : dict
+                  With solar and volcanic forcing read from standard files
+                  or set to zero according to configurations
+    rf_luc : pd.Dataframe
+             Dataframe of land use albedo forcing with years as index
     """
 
     # pylint: disable=too-many-instance-attributes
     # Consider whether this can be cut back later
 
-    def __init__(self):
+    def __init__(self, cfg):
         """
         Intialise CICEROSCM
-        """
-        self.nystart = 1750
-        self.nyend = 2100
-        self.emstart = 1850
-        self.rf = None
-        self.results = {}
 
-    def initialise_output_arrays(self, cfg):
+        Starting by picking out the part of cfg that
+        are needed as the class cfgs.
+        Then we either read in forc_file for forcing
+        run, or check file availability and set start,
+        end and emissions start for concentrations or
+        emissions run.
+        Then make empty dictionary for results, read in
+        solar and volcanic forcing and initialise other
+        output arrays
+
+        Parameters
+        ----------
+        cfg : dict
+              Configurations containing inputs about class
+              such as a forcing file for forcing run,
+              locations of files to use for concentration
+              or emission runs, and start and end of run etc.
+
+        Raises
+        ------
+        FileNotFoundError
+            If forcing file is not found when forcing run is chosen
+        """
+        self.cfg = cut_and_check_pamset(
+            {"nystart": 1750, "nyend": 2100, "emstart": 1850}, cfg
+        )
+        rf_run = False
+        if "forc_file" in cfg:
+            rf_run = True
+            if not os.path.exists(cfg["forc_file"]):
+                raise FileNotFoundError(
+                    f"Forcing input file {cfg['forc_file']} not found"
+                )
+            self.rf = read_forc(cfg["forc_file"])
+        else:
+            cfg = check_inputfiles(cfg)
+            pamset_emiconc = {}
+            pamset_emiconc["emstart"] = self.cfg["emstart"]
+            pamset_emiconc["nystart"] = self.cfg["nystart"]
+            pamset_emiconc["nyend"] = self.cfg["nyend"]
+            self.ce_handler = ConcentrationsEmissionsHandler(cfg, pamset_emiconc)
+
+        self.cfg["rf_run"] = rf_run
+        self.results = {}
+        # Reading in solar and volcanic forcing
+        self.rf_volc_sun = self.read_in_volc_and_sun(cfg)
+
+        # Add support for sending filename in cfg
+        self.rf_luc = self.read_data_on_year_row(
+            os.path.join(default_data_dir, "IPCC_LUCalbedo.txt")
+        )
+        self.initialise_output_arrays()
+
+    def initialise_output_arrays(self):
         """
         Initialise dict with arrays to hold data for run
+
+        Dictionary for all results from upwelling diffusion
+        model outputs is initialised with empty arrays
         """
-        # Add test to check that nystart and nyend are numbers
-        if "nystart" in cfg:
-            self.nystart = int(cfg["nystart"])
-        if "nyend" in cfg:
-            self.nyend = int(cfg["nyend"])
-        if "emstart" in cfg:
-            self.emstart = int(cfg["emstart"])
         output_variables = [
             "OHC700",
             "OHCTOT",
@@ -125,18 +243,33 @@ class CICEROSCM:
             "Total_forcing",
         ]
         for output in output_variables:
-            self.results[output] = np.zeros(self.nyend - self.nystart + 1)
+            self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
 
     def read_data_on_year_row(self, volc_datafile):
         """
         Read in data from file with no headers
-        and each year being a row. Typically the format for
-        volcano and solar data
+
+
+        Read in data from file with no headers where
+        each year is a row. Typically this is the format for
+        volcano and solar data. The years are taken to be
+        the years from the defined startyear and endyear
+
+        Parameters
+        ----------
+        volc_datafile : str
+                     Path of file to be read
+
+        Returns
+        -------
+        pandas.Dataframe
+                        Dataframe containing the data with the years as
+                        indices
         """
-        indices = np.arange(self.nystart, self.nyend + 1)
+        indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
         nrows = len(indices)
-        if self.nystart > 1750:
-            skiprows = self.nystart - 1750
+        if self.cfg["nystart"] > 1750:
+            skiprows = self.cfg["nystart"] - 1750
             df_data = pd.read_csv(
                 volc_datafile,
                 header=None,
@@ -155,6 +288,24 @@ class CICEROSCM:
     def read_in_volc_and_sun(self, cfg):
         """
         Read in solar and volcanic forcing and return them
+
+        Read in solar or volcanic forcing if this is chosen
+        otherwise produce empty dataframes that can be used
+        instead. If solar and volcanic forcing is added, a
+        hemispherically dependent addition is added to the
+        volcanic part, to adjust for lack of spin up.
+
+        Parameters
+        ----------
+        cfg : dict
+           Dictionary containing configurations on whether to use
+           solar and volcanic forcing or not.
+
+        Returns
+        -------
+        dict
+            Containing the dataframes for hemispheric volcanic
+            forcings and solar forcing
         """
         if "sunvolc" in cfg and cfg["sunvolc"] == 1:
             # Possibly change to allow for other files
@@ -172,21 +323,40 @@ class CICEROSCM:
             )
         # Add support for sending filename in cfg
         else:
-            indices = np.arange(self.nystart, self.nyend + 1)
+            indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
             rf_volc_n = pd.DataFrame(
-                data=np.zeros((self.nyend - self.nystart + 1, 12)),
+                data=np.zeros((self.cfg["nyend"] - self.cfg["nystart"] + 1, 12)),
                 index=indices,
                 columns=range(12),
             )
             rf_volc_s = rf_volc_n
-            rf_sun = pd.DataFrame(data={0: np.zeros(self.nyend - self.nystart + 1)})
+            rf_sun = pd.DataFrame(
+                data={0: np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)}
+            )
         return {"volc_n": rf_volc_n, "volc_s": rf_volc_s, "sun": rf_sun}
 
     def forc_set(self, yr, rf_sun):
         """
         Read the forcing for this year
+
+        Getting a year, getting the forcung for this year and
+        adding solar forcing.
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to read out data
+        rf_sun : pandas.Dataframe
+              Dataframe with solar forcing to  add to the other
+              forcings.
+
+        Returns
+        -------
+        float
+             The total forcing for the year, including solar
+             forcing is added.
         """
-        row_index = yr - self.nystart
+        row_index = yr - self.cfg["nystart"]
         # Add support for other forcing formats
         if isinstance(self.rf, np.ndarray):
             # Add luc albedo later
@@ -199,6 +369,18 @@ class CICEROSCM:
     def add_year_data_to_output(self, values, forc, index):
         """
         Add single year output to output arrays
+
+        Add all the outputs from a single year run
+        of upwelling diffusion model to output arrays
+
+        Parameters
+        ----------
+        values : dict
+              Output from upwelling diffusion model
+        forc : float
+            Total forcing for this year
+        index : int
+             Index equalling year number in the possible years
         """
         simple_outputs = ["OHC700", "OHCTOT"]
         for output in simple_outputs:
@@ -229,63 +411,79 @@ class CICEROSCM:
     ):  # pylint: disable=dangerous-default-value
         """
         Run CICEROSCM
+
+        Setting off a full model run. Starting by
+        intialising output arrays, and udm_model and
+        resetting ConcentrationEmissionsHandler for a new run
+        Then looping over year by year converting emissions
+        and concnetrations to forcings if applicable
+        and then running the upwelling diffusion model
+        Finally writing results to file
+
+        Parameters
+        ----------
+        cfg : dict
+           Dictionary with run specific configurations
+        pamset_udm : dict
+                  Parameter set for udm model
+        pamset_emiconc : dict
+                      Parameter set for concentrations
+                      emissions handler
         """
-        # Add something to adjust start and end of simulation
-        self.initialise_output_arrays(cfg)
+        self.initialise_output_arrays()
         # Setting up UDM
         udm = UpwellingDiffusionModel(pamset_udm)
-
-        # Reading in solar and volcanic forcing
-        rf_volc_sun = self.read_in_volc_and_sun(cfg)
-
-        # Add support for sending filename in cfg
-        rf_luc = self.read_data_on_year_row(
-            os.path.join(default_data_dir, "IPCC_LUCalbedo.txt")
-        )
-
-        rf_run = False
-        if "forc_file" in cfg:
-            rf_run = True
-            if not os.path.exists(cfg["forc_file"]):
-                raise FileNotFoundError(
-                    f"Forcing input file {cfg['forc_file']} not found"
-                )
-            self.rf = read_forc(cfg["forc_file"])
-        else:
-
-            cfg = check_inputfiles(cfg)
-            pamset_emiconc["emstart"] = self.emstart
-            pamset_emiconc["nystart"] = self.nystart
-            pamset_emiconc["nyend"] = self.nyend
-            ce_handler = ConcentrationsEmissionsHandler(cfg, pamset_emiconc,)
-
-        for yr in range(self.nystart, self.nyend + 1):
-            if not rf_run:
-                ce_handler.emi2conc(yr)
-                forc, fn, fs = ce_handler.conc2forc(
-                    yr, rf_luc.loc[yr, 0], rf_volc_sun["sun"].loc[yr - self.nystart, 0]
+        if not self.cfg["rf_run"]:
+            pamset_emiconc["emstart"] = self.cfg["emstart"]
+            pamset_emiconc["nystart"] = self.cfg["nystart"]
+            pamset_emiconc["nyend"] = self.cfg["nyend"]
+            self.ce_handler.reset_with_new_pams(pamset_emiconc)
+        for yr in range(self.cfg["nystart"], self.cfg["nyend"] + 1):
+            if not self.cfg["rf_run"]:
+                self.ce_handler.emi2conc(yr)
+                forc, fn, fs = self.ce_handler.conc2forc(
+                    yr,
+                    self.rf_luc.loc[yr, 0],
+                    self.rf_volc_sun["sun"].loc[yr - self.cfg["nystart"], 0],
                 )
 
             else:
-                forc = self.forc_set(yr, rf_volc_sun["sun"])
+                forc = self.forc_set(yr, self.rf_volc_sun["sun"])
                 fs = forc
                 fn = forc
             values = udm.energy_budget(
                 fn,
                 fs,
-                rf_volc_sun["volc_n"].iloc[yr - self.nystart, :],
-                rf_volc_sun["volc_s"].iloc[yr - self.nystart, :],
+                self.rf_volc_sun["volc_n"].iloc[yr - self.cfg["nystart"], :],
+                self.rf_volc_sun["volc_s"].iloc[yr - self.cfg["nystart"], :],
             )
-            self.add_year_data_to_output(values, forc, yr - self.nystart)
+            self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 
-        if not rf_run:
-            ce_handler.write_output_to_files(cfg)
+        if "results_as_dict" in cfg and cfg["results_as_dict"]:
+            self.results.update(self.ce_handler.add_results_to_dict())
+        else:
+            if not self.cfg["rf_run"]:
+                self.ce_handler.write_output_to_files(cfg)
 
-        self.write_data_to_file(cfg, rf_run)
+            self.write_data_to_file(cfg)
 
-    def write_data_to_file(self, pamset, rf_run=True):
+    def write_data_to_file(self, pamset):
         """
         Write results to files after run
+
+        Writing results from upwelling diffusion model to file
+        Formatting and organising in ocean heat content (ohc),
+        radiative imbalance (rib), temperature related (temp),
+        and forcing (forc) files are as in original fortran
+        implementation. Forcing file is only outputted here
+        if the run is a forcing run. Otherwise the forcing results
+        writing is handled by the ConcentrationsEmissionsHandler
+
+        Parameters
+        ----------
+        pamset : dict
+              parameterset with details on where to write results
+
         """
         if "output_folder" in pamset:
             # Make os independent?
@@ -293,7 +491,7 @@ class CICEROSCM:
         else:
             outdir = os.path.join(os.getcwd(), "output")
 
-        indices = np.arange(self.nystart, self.nyend + 1)
+        indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
         df_ohc = pd.DataFrame(
             data={
                 "Year": indices,
@@ -344,7 +542,7 @@ class CICEROSCM:
             index=False,
             float_format="%.5e",
         )
-        if rf_run:
+        if self.cfg["rf_run"]:
             df_forc = pd.DataFrame(
                 data={"Year": indices, "Total_forcing": self.results["Total_forcing"]}
             )

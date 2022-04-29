@@ -12,13 +12,9 @@ data_dir = os.path.join(os.path.dirname(__file__), "../", "tests", "test-data")
 outdir = os.path.join(os.getcwd(), "output_test") 
 pr = cProfile.Profile()
 pr.enable()
-cscm = CICEROSCM()
-
-
-cscm._run(
+cscm = CICEROSCM(
     {
         "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
-        "output_folder": outdir,
         "nyend": 2100,
         "concentrations_file": os.path.join(data_dir, "ssp245_conc_RCMIP.txt"),
         "emissions_file": os.path.join(data_dir, "ssp245_em_RCMIP.txt"),
@@ -26,6 +22,9 @@ cscm._run(
         "nat_n2o_file": os.path.join(data_dir, "natemis_n2o.txt"),
     },
 )
+
+
+cscm._run({"output_folder": outdir})
 
 pr.disable()
 s = io.StringIO()

@@ -20,6 +20,19 @@ LOGGER = logging.getLogger(__name__)
 def read_components(filename):
     """
     Read in components to be considered
+
+    Read the gas_pam files and rename a few headers to
+    make it easier to use
+
+    Parameters
+    ----------
+    filename : int
+            path to gaspamfile
+
+    Returns
+    -------
+    pandas.Dataframe
+        Dataframe with gases, and various info on them
     """
     df_gas = pd.read_csv(filename, delim_whitespace=True, index_col=0)
     df_gas.rename(
@@ -31,7 +44,21 @@ def read_components(filename):
 def _rs_function(it, idtm=24):
     """
     Calculate pulse response function for mixed layer
+
+    Calculate pulse response function for mixed layer
     time is the year index*idtm + i, i.e. the month number
+
+    Parameters
+    ----------
+    it : int
+      is the time index, there are idtm time points per yer
+    idtm : int
+        Number of time points per year, default is 24
+
+    Returns
+    -------
+    float
+         The pulse_response function for this time
     """
     time = it / idtm
     if time < 2.0:
@@ -57,7 +84,21 @@ def _rs_function(it, idtm=24):
 def _rb_function(it, idtm=24):
     """
     Calculate biotic decay function
+
+    Calculate biotic decay function
     time is the year index*idtm + i, i.e. the month number
+
+    Parameters
+    ----------
+    it : int
+      is the time index, there are idtm time points per yer
+    idtm : int
+        Number of time points per year, default is 24
+
+    Returns
+    -------
+    float
+        The biotic decay function value for this time
     """
     time = it / idtm
     biotic_decay = (
@@ -72,6 +113,26 @@ def _rb_function(it, idtm=24):
 def read_natural_emissions(filename, component, startyear=1750, endyear=2500):
     """
     Read in single column natural emissions file
+
+    A natural emissions file with data on a single column is read in
+    to a pandas Dataframe. A an index of corresponding years is
+    generated and added. Data in input is assumed to be yearly.
+
+    Parameters
+    ----------
+    filename : str
+               path to file with emissions
+    component : str
+                Name of component the emissions are for
+    startyear: int
+               Startyear for emissions
+    endyear : int
+              Endyear for emissions
+
+    Returns
+    -------
+    pd.Dataframe
+                Dataframe of natural emissions for component with years as index
     """
     df_natemis = pd.read_csv(filename, header=None, names=[component], index_col=False)
     df_natemis["year"] = np.arange(startyear, endyear + 1)
@@ -82,7 +143,20 @@ def read_natural_emissions(filename, component, startyear=1750, endyear=2500):
 def check_pamset(pamset):
     """
     Check that parameterset has necessary values for run
-    Otherwise set to default values
+
+    Check that parameterset has necessary values for run
+    Otherwise set to default values which are defined here
+
+    Parameters
+    ----------
+    pamset : dict
+          Dictionary of parameters to define the physics
+          of the run
+
+    Returns
+    -------
+    dict
+        Updated pamset with default values used where necessary
     """
     required = {
         "lamb": 0.8,
@@ -103,13 +177,69 @@ def check_pamset(pamset):
     return pamset
 
 
-def read_inputfile(input_file):
+def check_pamset_consistency(pamset_old, pamset_new):
+    """
+    Make sure new pamset is consistent with existing instance
+
+    This method is meant to ensure consistency when rerunning
+    with the same class instance. Changing to old values
+    if they are different for a few values that can't change,
+    or setting to old values if none are given
+
+    Parameters
+    ----------
+    pamset_old : dict
+              Original parameterset for instance
+    pamset_new : dict
+              New pamset for new run
+    Returns
+    -------
+    dict
+        The new pamset, augmented to fit the old one
+    """
+    pams_cant_change = ["idtm", "nystart", "nyend", "emstart", "conc_run"]
+    for pam in pams_cant_change:
+        if pam in pamset_new and pamset_new[pam] != pamset_old[pam]:
+            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
+                f"{pam} can not be changed for same instance of ConcentrationsEmisssionsHandler. Resetting with old value {pamset_old[pam]}. If you want to run with a different value, please create a separate instance",
+            )
+            pamset_new[pam] = pamset_old[pam]
+    for pam, value in pamset_old.items():
+        if pam not in pamset_new:
+            pamset_new[pam] = value
+    return pamset_new
+
+
+def read_inputfile(input_file, cut_years=False, year_start=1750, year_end=2100):
     """
     Read input from emissions or concentrations file
+
+    Parameters
+    ----------
+    input_file : str
+              Path to file to be read in
+    cut_years : bool
+             If unused years are to be cut, this option should
+             be set to True, default is False
+    year_start : int
+             Start year for relevant input, default is 1750
+    year_end : int
+             End year for relevant input, default is 2100
+
+    Returns
+    -------
+    pandas.Dataframe
+        Dataframe with the intput from the file, possibly cut
+        to relevant years
     """
     df_input = pd.read_csv(
         input_file, delim_whitespace=True, index_col=0, skiprows=[1, 2, 3]
     )
+    if cut_years:
+        min_year = df_input.index[0]
+        max_year = df_input.index[0]
+        cut_rows = [*range(min_year, year_start), *range(year_end + 1, max_year + 1)]
+        df_input.drop(index=cut_rows, inplace=True)
     return df_input
 
 
@@ -117,6 +247,40 @@ class ConcentrationsEmissionsHandler:
     """
     Class to handle concentrations
     and emissions input for ciceroscm
+
+    Attributes
+    ----------
+    df_gas : pd.Dataframe
+             Dataframe containing names of the various components
+             units, possible natural emissions and emissions to
+             concentrations and concentrations to forcing conversion
+             factors
+    conc : dict
+           Dictionary with component keys and arrays with concentrations
+           for each year as values. These values are calculated
+           when emi2conc method is called. Before emissions start
+           or if a concentration run is used, they will be read
+           directly from conc_in
+    nat_emis_ch4 : pd.Dataframe
+                   Natural emissions for CH4 per year
+    nat_emis_n2o : pd.Dataframe
+                   Natural emissions for N2O per year
+    pamset : dict
+             Dictionary of parameters
+    years : np.ndarray
+            Array with all the years for the handler
+    conc_in : pd.Dataframe
+              Input concentrations read from file. These are used
+              before emissions start, or throughout the run if
+              a concentration run is used
+    emis : pd.Dataframe
+           Emissions dataframe read from input file
+    r_functions : np.ndarray
+                  2D array with precalculated values of pulse
+                  response and biotic decay functions for each
+                  of the idtm values of each year
+
+
     """
 
     # pylint: disable=too-many-instance-attributes
@@ -125,8 +289,32 @@ class ConcentrationsEmissionsHandler:
     # CO2-handling in its own class
 
     def __init__(
-        self, cfg, pamset,
+        self,
+        cfg,
+        pamset,
     ):
+        """
+        Intialising concentrations emissions handler
+
+        Starting by reading in gasparameter file, making
+        empty dicts for concentrations and forcing,
+        reading in natural emissions, checking the pamset,
+        and making an array of years to look at.
+        Then reading in concentrations and emissions,
+        perturbations if relevant.
+        Then initialising pulse and biotic functions,
+        finally intialising empty arrays and setting
+        CO2 start values.
+
+        Parameters
+        ----------
+        cfg : dict
+           configurations such as input file locations
+           Whether run is concentration run, if perturbations
+           should be included etc.
+        pamset : dict
+           list of physical parameters to define the run
+        """
         self.df_gas = read_components(cfg["gaspamfile"])
         self.conc = {}
         self.forc = {}
@@ -136,14 +324,19 @@ class ConcentrationsEmissionsHandler:
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
         years_tot = len(self.years)
         if "concentrations_file" in cfg:
-            self.conc_in = read_inputfile(cfg["concentrations_file"])
+            self.conc_in = read_inputfile(
+                cfg["concentrations_file"],
+                cut_years=True,
+                year_start=self.pamset["nystart"],
+                year_end=self.pamset["nyend"],
+            )
         if "emissions_file" in cfg:
-            self.emis = read_inputfile(cfg["emissions_file"])
-            for tracer in self.df_gas.index:
-                if tracer != "CO2.1":
-                    self.conc[tracer] = {}
-                    self.forc[tracer] = np.zeros(years_tot)
-            self.forc["Total_forcing"] = np.zeros(years_tot)
+            self.emis = read_inputfile(
+                cfg["emissions_file"],
+                cut_years=True,
+                year_start=self.pamset["nystart"],
+                year_end=self.pamset["nyend"],
+            )
             self.emis.rename(
                 columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}, inplace=True
             )
@@ -157,17 +350,8 @@ class ConcentrationsEmissionsHandler:
             self.pamset["forc_pert"] = ForcingPerturbation(
                 cfg["perturb_forc_file"], self.years[0]
             )
-        self.co2_hold = {
-            "yCO2": 0.0,
-            "xCO2": 278.0,
-            "sCO2": np.zeros(self.pamset["idtm"] * years_tot),
-            "emCO2_prev": 0.0,
-            "dfnpp": np.zeros(self.pamset["idtm"] * years_tot),
-            "ss1": 0.0,
-            "sums": 0.0,
-        }
         self.r_functions = np.empty(
-            (2, self.pamset["idtm"] * 351)
+            (2, self.pamset["idtm"] * years_tot)
         )  # if speedup, get this to reflect number of years
         self.r_functions[0, :] = [
             _rs_function(it, self.pamset["idtm"])
@@ -177,12 +361,65 @@ class ConcentrationsEmissionsHandler:
             _rb_function(it, self.pamset["idtm"])
             for it in range(self.pamset["idtm"] * years_tot)
         ]
+        # not really needed, but I guess the linter will complain...
+        self.reset_with_new_pams(pamset, preexisting=False)
+
+    def reset_with_new_pams(self, pamset, preexisting=True):
+        """
+        Reset to run again with same emissions etc.
+
+        Resetting arrays and co2 start values also
+        making sure parameterset conforms with previously
+        existing set if new run is being run
+
+        Parameters
+        ----------
+        pamset : dict
+              Dictionary of physical parameters
+        preexisting : bool
+                   Defining whether this is the first use of the class
+                   or a new run with the same instance, that has to
+                   conform to old values
+        """
+        if preexisting:
+            new_pamset = check_pamset(pamset)
+            self.pamset = check_pamset_consistency(self.pamset, new_pamset)
+        years_tot = len(self.years)
+        self.conc = {}
+        self.forc = {}
+        for tracer in self.df_gas.index:
+            if tracer != "CO2.1":
+                self.conc[tracer] = {}
+                self.forc[tracer] = np.zeros(years_tot)
+        self.forc["Total_forcing"] = np.zeros(years_tot)
+        self.co2_hold = {
+            "yCO2": 0.0,
+            "xCO2": 278.0,
+            "sCO2": np.zeros(self.pamset["idtm"] * years_tot),
+            "emCO2_prev": 0.0,
+            "dfnpp": np.zeros(self.pamset["idtm"] * years_tot),
+            "ss1": 0.0,
+            "sums": 0.0,
+        }
 
     def calculate_strat_quantities(self, yr):
         """
         Calculate sumcl and sumbr in stratosphere
-        sums of effects on stratospheric ozone from
-        chlorinated gases and halons
+
+        Calculating sum of stratospheric effects of
+        chlorinated gase and sum of stratospheric effects
+        of halon quantities.
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to calculate
+
+        Returns
+        -------
+        list
+            Containing the sumcl, value for chlorinated gases
+            and the sumbr value for halon gases.
         """
         if yr < self.years[0]:
             return 0.0, 0.0
@@ -212,6 +449,21 @@ class ConcentrationsEmissionsHandler:
     def calculate_forc_three_main(self, yr):  # pylint: disable=too-many-locals
         """
         Calculate forcings for components CO2, N2O and CH4
+
+        Method to calculate the forcing from the main three componenents
+        as these three are a bit intertwined. Using a coefficient matrix
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to calculate
+
+        Returns
+        -------
+        list
+            Containing the total forcing from the three, and the
+            combinded forcing value on each hemisphere
+            tot_forc, forc_nh, forc_sh
         """
         # Setting some constants. What are they? Should they be parametrisable?
         # (Etminan I guess...)
@@ -276,13 +528,30 @@ class ConcentrationsEmissionsHandler:
     def tropospheric_ozone_forcing(self, yr):
         """
         Calculate tropospheric ozone forcing
+
+        Using the emissions of various other gases
+        Before emissions start, the fossil fuel CO2
+        change from the start is used
+        After emissions start, concentrations of
+        methane are combined with emissions of NOx, CO and NMVOC
+        to calculate a total troposperic ozone forcing
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to calculate
+
+        Returns
+        -------
+        float
+             tropospheric ozone forcing
         """
         emstart = self.pamset["emstart"]
         yr_0 = self.years[0]
         yr_emstart = emstart - yr_0
         yr_ix = yr - yr_0
         tracer = "TROP_O3"
-        if self.pamset["conc_run"] or yr_ix < yr_emstart:
+        if yr_ix < yr_emstart:
             # Uses change in CO2_FF emissions
             q = (
                 (self.emis["CO2_FF"][yr] - self.emis["CO2_FF"][yr_0])
@@ -319,6 +588,35 @@ class ConcentrationsEmissionsHandler:
     def conc2forc(self, yr, rf_luc, rf_sun):
         """
         Calculate forcing from concentrations
+
+        Looping through all species and getting the
+        forcing from their concentrations. First calling
+        a method to calculate intial forcing for three main
+        species, CO2, N2O and CH4. This will also initialise
+        total forcing and hemispherically split forcing.
+        Then looping over species
+        calculated dirctly from emissions (SO2, SO4_IND, OC and BC)
+        Then looping over other gases with alpha factor,
+        then ozone in troposphere and stratosphere, and stratospheric water
+        vapour, finally other species, and adding perturbations if
+        present. For every species add to total forcing and hemispherically
+        split forcings, finally add solar forcing.
+
+        Parameters
+        ----------
+        yr : int
+          Year fro which to calculate
+        rf_luc : float
+              Land use change forcing
+        rf_sun : float
+              Solar forcing
+
+        Returns
+        -------
+        list
+            Consisting of total forcing and hemispherically split
+            forcing for the year.
+            In this way: tot_forc, forc_nh, forc_sh
         """
         ref_emission_species = {
             "SO2": ["SO2", self.pamset["qdirso2"]],
@@ -355,10 +653,11 @@ class ConcentrationsEmissionsHandler:
                 tracer in self.df_gas.index
                 and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
             ):
-                q = (
-                    (self.conc[tracer][yr] - self.conc[tracer][yr_0])
-                    * self.df_gas["ALPHA"][tracer]
-                )  # +forc_pert
+                q = (self.conc[tracer][yr] - self.conc[tracer][yr_0]) * self.df_gas[
+                    "ALPHA"
+                ][
+                    tracer
+                ]  # +forc_pert
             elif tracer == "TROP_O3":
                 q = self.tropospheric_ozone_forcing(yr)
             elif tracer == "STRAT_O3":
@@ -398,6 +697,17 @@ class ConcentrationsEmissionsHandler:
     def emi2conc(self, yr):
         """
         Calculate concentrations from emissions
+
+        If conc_run or prior to emissions start, concentrations
+        are simply read in from existing data frame, after that
+        all tracers are looped over to calculate concentrations
+        from emissions. For CO2 this is doen in a separate method.
+        For CH4 and N2O, natural emissions are added.
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to calculate
         """
         # Do per tracer emissions to concentrations, update concentrations df
         # NBNB! Remember to move calculation of  Trop_O3 concentration
@@ -456,6 +766,22 @@ class ConcentrationsEmissionsHandler:
     def methane_lifetime(self, q, conc_local, yr):
         """
         Calculate methane concentrations from emissions
+
+        Calculate methane concentrations from emissions
+        using different liftetime modes to calculate
+
+        Parameters
+        ----------
+        q : float
+         Forcing without feedbacks
+        conc_local : float
+                  Concentration of methane in previous timestep
+        yr : int
+          Year for which to calculate
+        Returns
+        -------
+        float
+             Concentrations adjusted for lifetime / feedback
         """
         ch4_wigley_exp = -0.238
         if self.pamset["lifetime_mode"] == "TAR":
@@ -479,6 +805,15 @@ class ConcentrationsEmissionsHandler:
     def co2em2conc(self, yr):  # pylint: disable=too-many-locals
         """
         Calculate co2 concentrations from emissions
+
+        Method to calculate co2 concentrations from emissions
+        Implementing a rudimentary carbon cycle which loops over
+        idtm (usually 24) timesteps a year
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to calculate
         """
         # Fertilisation factor
         beta_f = 0.287
@@ -559,10 +894,10 @@ class ConcentrationsEmissionsHandler:
             )
             self.co2_hold["yCO2"] = (
                 1.3021 * z_co2
-                + 3.7929e-3 * (z_co2 ** 2)
-                + 9.1193e-6 * (z_co2 ** 3)
-                + 1.488e-8 * (z_co2 ** 4)
-                + 1.2425e-10 * (z_co2 ** 5)
+                + 3.7929e-3 * (z_co2**2)
+                + 9.1193e-6 * (z_co2**3)
+                + 1.488e-8 * (z_co2**4)
+                + 1.2425e-10 * (z_co2**5)
             )
             self.co2_hold["xCO2"] = (
                 self.co2_hold["sCO2"][it] + self.co2_hold["yCO2"] + 278.0
@@ -575,6 +910,21 @@ class ConcentrationsEmissionsHandler:
     ):  # pylint: disable=dangerous-default-value
         """
         Fill in one row of concentrations in conc_dict
+
+        Fill in a row of zeros in concentrations dictionary
+        from prescribed concentrations. If some traces are
+        to be avoided (typically CO2 calculated from emissions)
+        a list of them can be sent as inputs
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to add concentrations from prescribed
+        avoid : list
+             optional list of tracers for which not to read
+             presecribed concentrations. Typically CO2 when CO2
+             is calculated from emissions, while other compounds
+             are read from prescribed data.
         """
         for tracer, value_dict in self.conc.items():
             if tracer in avoid:
@@ -587,6 +937,14 @@ class ConcentrationsEmissionsHandler:
     def add_row_of_zeros_conc(self, yr):
         """
         Fill in one row of concentrations in conc_dict
+
+        Fill in a row of zeros in concentrations dictionary
+        for a single year
+
+        Parameters
+        ----------
+        yr : int
+          Year for which to add zeros
         """
         for value_dict in self.conc.values():
             value_dict[yr] = 0
@@ -594,6 +952,18 @@ class ConcentrationsEmissionsHandler:
     def write_output_to_files(self, cfg):
         """
         Write results to files after run
+
+        Write results for emissions, concentrations
+        and forcings to files. Format is as in the
+        fortran implementation, with separate files for
+        emissions (emis), concentrations (conc) and
+        forcing (forc)
+
+        Parameters
+        ----------
+        cfg : dict
+           Configurations to define where to put output
+           files and what prefix to have for file name
         """
         if "output_folder" in cfg:
             # Make os independent?
@@ -647,3 +1017,39 @@ class ConcentrationsEmissionsHandler:
             index=False,
             float_format="%.5e",
         )
+
+    def add_results_to_dict(self):
+        """
+        Adding results to results dictionary
+
+        Returns
+        -------
+        dict
+            Containing run emissions, concentrations and forcings
+            in the form of pandas.Dataframe with years and tracers
+        """
+        df_forc = pd.DataFrame(data=self.forc, index=self.years)
+        df_forc["Year"] = self.years
+
+        cols = df_forc.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        df_forc = df_forc[cols]
+        df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis=1).drop(
+            labels=np.arange(self.years[-1] + 1, self.emis.index[-1] + 1), axis=0
+        )
+        df_emis["Year"] = self.years
+        df_emis["CO2"] = self.emis["CO2_FF"] + self.emis["CO2_AFOLU"]
+        cols = df_emis.columns.tolist()
+        cols = cols[-2:] + cols[:-2]
+        df_emis = df_emis[cols]
+        self.conc["Year"] = self.years
+
+        df_conc = pd.DataFrame(data=self.conc, index=self.years)
+        cols = df_conc.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        df_conc = df_conc[cols]
+        results = {}
+        results["emissions"] = df_emis
+        results["concentrations"] = df_conc
+        results["forcing"] = df_forc
+        return results

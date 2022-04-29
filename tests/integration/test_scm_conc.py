@@ -1,6 +1,7 @@
 import os
 import shutil
 
+import numpy as np
 import pandas as pd
 import pandas.testing as pdt
 
@@ -27,7 +28,10 @@ def check_output(
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
-                res.T, exp.T, check_like=True, rtol=rtol,
+                res.T,
+                exp.T,
+                check_like=True,
+                rtol=rtol,
             )
 
 
@@ -56,27 +60,31 @@ def check_output_just_some_lines(
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
-                res.T, exp.T, check_like=True, rtol=rtol,
+                res.T,
+                exp.T,
+                check_like=True,
+                rtol=rtol,
             )
 
 
 def test_ciceroscm_run_emi(tmpdir, test_data_dir):
-    cscm = CICEROSCM()
-    # outdir_save = os.path.join(os.getcwd(), "output")
-    outdir = str(tmpdir)
-    # One year forcing:
-
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_folder": outdir,
             "nyend": 2100,
+            "nystart": 1750,
+            "emstart": 1850,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
         },
     )
+    # outdir_save = os.path.join(os.getcwd(), "output")
+    outdir = str(tmpdir)
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
 
     check_output(outdir, os.path.join(test_data_dir, "ssp245_emis"))
     check_output_just_some_lines(
@@ -91,6 +99,60 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
         files=["output_temp.txt"],
         lines=16,
     )
+
+
+def test_ciceroscm_short_run(tmpdir, test_data_dir):
+    # outdir_save = os.path.join(os.getcwd(), "output")
+    outdir = str(tmpdir)
+    # One year forcing:
+    nystart = 1900
+    nyend = 2050
+    emstart = 1950
+    cscm = CICEROSCM(
+        {
+            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "nystart": nystart,
+            "emstart": emstart,
+            "nyend": nyend,
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
+            "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
+            "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
+            "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+        },
+    )
+
+    cscm._run({"output_folder": outdir})
+
+    file_results = os.path.join(outdir, "output_em.txt")
+    exp_index = np.arange(nystart, nyend + 1)
+    res = pd.read_csv(file_results, delim_whitespace=True)
+    np.testing.assert_equal(res.Year.to_numpy(), exp_index)
+
+    cscm._run({"results_as_dict": True})
+    expected_keys = [
+        "emissions",
+        "concentrations",
+        "forcing",
+        "OHC700",
+        "OHCTOT",
+        "RIB_glob",
+        "RIB_N",
+        "RIB_S",
+        "dT_glob",
+        "dT_NH",
+        "dT_SH",
+        "dT_glob_air",
+        "dT_NH_air",
+        "dT_SH_air",
+        "dT_glob_sea",
+        "dT_NH_sea",
+        "dT_SHsea",
+        "dSL(m)",
+        "dSL_thermal(m)",
+        "dSL_ice(m)",
+    ]
+    for key in expected_keys:
+        assert key in cscm.results
     # Put this in again, find out what is happening with CF4
     # check_output(
     #    outdir_save,
@@ -107,24 +169,30 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     # )
 
 
-"""
 def test_ciceroscm_run_conc(tmpdir, test_data_dir):
-    cscm = CICEROSCM()
-    outdir_save = os.path.join(os.getcwd(), "output")
-    outdir = str(tmpdir)
-    #One year forcing:
-
-    cscm._run(
+    cscm = CICEROSCM(
         {
             "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir_save,
             "nyend": 2100,
+            "conc_run": True,
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
+            "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
+            "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
+            "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
         },
-        {"concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"), "conc_run":True, "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"), "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"), "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt")},
+    )
+    outdir = str(tmpdir)
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
+
+    check_output(
+        outdir,
+        os.path.join(test_data_dir, "ssp245_conc"),
+        files=["output_conc.txt", "output_em.txt", "output_forc.txt", "output_ohc.txt"],
     )
 
-    check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
-
+    """
     # 1pct CO2 without sunvolc
 
     cscm._run(
