@@ -170,7 +170,6 @@ def check_pamset(pamset):
         "idtm": 24,
     }
     
-    
     pamset = check_numeric_pamset(required, pamset)
     if "lifetime_mode" not in pamset:
         pamset["lifetime_mode"] = "TAR"
