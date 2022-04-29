@@ -71,6 +71,15 @@ The concentration and emission parameterset (which is needed for emission runs) 
 * ref_yr (2010)
 * idtm (24)
 
+## Example scripts
+The scripts folder contains various example scripts that can be used to see how to set up various types of runs. The start of all of them adds the necessary parts for the file to run with the module. If you want to run from somewhere else you will need to edit the <code>sys.path.append</code> command so it points to where you've stored the src directory of this repository.
+* <code>run_scm.py</code> runs a simple emissions run with ssp245 data from 1900 to 2050
+* <code>run_full_forcing.py</code> runs a 1 percent CO2 increase forcing with default solar and volcanic forcing from 1750 to 2100
+* <code>run_perturbations.py</code> shows runs like that in <code>run_scm.py</code> with emissions and forcing perturbations
+* <code>run_full_emissions_profile.py</code> runs an ssp245 emissions run from 1750 to 2100 with a profiler, so you can see what parts of the code is more time consuming
+* <code>run_full_forcing_profile.py</code> is like <code>run_full_emissions_profile.py</code> but for a pure forcing run
+* <code>run_full_change_all_pams.py</code> is an emissions ssp245 run from 1750 to 2100 which shows how to set all the parameters for both the upwelling diffusion model and for the concentrations emissions handler.
+
 ## Development
 * To start developing make sure you have a github account and that you are part of the ciceroOslo team.
 * If you haven't already, [setup your github account with an ssh key](https://docs.github.com/en/enterprise-server@3.0/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
