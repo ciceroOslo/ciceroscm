@@ -169,7 +169,8 @@ def check_pamset(pamset):
         "ref_yr": 2010,
         "idtm": 24,
     }
-
+    
+    
     pamset = check_numeric_pamset(required, pamset)
     if "lifetime_mode" not in pamset:
         pamset["lifetime_mode"] = "TAR"
@@ -320,7 +321,8 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = read_natural_emissions(cfg["nat_ch4_file"], "CH4")
         self.nat_emis_n2o = read_natural_emissions(cfg["nat_n2o_file"], "N2O")
-        self.pamset = check_pamset(pamset)
+        print(pamset)
+        self.pamset = check_numeric_pamset({'idtm':24, 'nystart': 1750, 'nyend': 2100},pamset)
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
         years_tot = len(self.years)
         if "concentrations_file" in cfg:
