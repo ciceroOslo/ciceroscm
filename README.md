@@ -45,30 +45,46 @@ If the parametersets are not provided, a default parameterset is used
 If one or more parameters are not provided as part of the parameterset, these parameters will be set to the default values
 #### pamset_udm
 The upwelling diffusion model (which is needed for all runs) takes the following parameters.(Default value in paranthesis):
-* rlamdo (16.0)
-* akapa (0.634)
-* cpi (0.4)
-* W (4.0)
-* beto (3.5)
-* threstemp (7.0)
-* lambda (0.540)
-* mixed (60.0)
-* foan (0.61)
-* foas (0.81)
-* ebbeta (0.0)
-* fnso (0.7531)
-* lm (40)
-* ldtime (12)
+* rlamdo (16.0) - Air-sea heat exchange parameter $\frac{W}{m^2K}$, valid range 5-25
+* akapa (0.634) - Vertical heat diffusicity $\frac{cm^2}{s}$, valid range 0.06-0.8
+* cpi (0.4) - Polar parameter, temperature change ratio polar to nonpolar region, unitless, valid range 0.161-0.569
+* W (4.0) - Vertical velocity, upwelling rate $\frac{m}{yr}$, valid range 0.55-2.55
+* beto (3.5) - Ocean interhemispheric heat exchange coefficient $\frac{W}{m^2K}$, valid range 0-7
+* threstemp (7.0) - Scales vertical velocity as a function of mixed layer temperature, unitless
+* lambda (0.540) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing (2.71$\frac{W}{m^2}$)
+* mixed (60.0) - Mixed layer depth, m, valid range 25-125
+* foan (0.61) - Fraction of Northern hemisphere covered by ocean
+* foas (0.81) - Fraction of Southern hemisphere covered by ocean
+* ebbeta (0.0) - Atmospheric interhemispheric heat exchange (not currently used)
+* fnso (0.7531) - Ratio between ocean areas in Northern and Southern hemispheress
+* lm (40) - Number of vertical layers (below the mixed layer each layer is at each 100 m depth)
+* ldtime (12) - Number of subyearly timesteps
 
 #### pamset_emiconc
 The concentration and emission parameterset (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
-* qbmb (0.03)
-* qo3 (0.4)
-* qdirso2 (-0.457)
-* qindso2 (-0.514)
-* qbc (0.200)
-* qoc (-0.103)
-* ref_yr (2010)
+
+* qbmb (0.03) - Biomass burning aerosol RF in ref_yr, $\frac{W}{m^2}$
+* qo3 (0.4) - Tropospheric ozone RF in ref_yr, $\frac{W}{m^2}$
+* qdirso2 (-0.457) - Direct RF sulphate in ref_yr, $\frac{W}{m^2}$
+* qindso2 (-0.514) - Indirect RF sulphate in ref_yr, $\frac{W}{m^2}$
+* qbc (0.200) - BC (fossil fuel + biofuel) RF in ref_yr, $\frac{W}{m^2}$
+* qoc (-0.103) - OC (fossil fuel + biofuel) RF in ref_yr, $\frac{W}{m^2}$
+* ref_yr (2010) - Reference year for the above forcing values. To construct radiative forcing time series, these forcing values are scaled using emssions. The forcing in the reference year is equal to the forcing value set by the above parameters
+* idtm (24) - Number of subyearly timesteps for calculation of CO2 concentrations from emissions.
+
+## Example scripts
+The scripts folder contains various example scripts that can be used to see how to set up various types of runs. The start of all of them adds the necessary parts for the file to run with the module. If you want to run from somewhere else you will need to edit the <code>sys.path.append</code> command so it points to where you've stored the src directory of this repository.
+* <code>run_scm.py</code> runs a simple emissions run with ssp245 data from 1900 to 2050
+* <code>run_full_forcing.py</code> runs a 1 percent CO2 increase forcing with default solar and volcanic forcing from 1750 to 2100
+* <code>run_perturbations.py</code> shows runs like that in <code>run_scm.py</code> with emissions and forcing perturbations
+* <code>run_full_emissions_profile.py</code> runs an ssp245 emissions run from 1750 to 2100 with a profiler, so you can see what parts of the code is more time consuming
+* <code>run_full_forcing_profile.py</code> is like <code>run_full_emissions_profile.py</code> but for a pure forcing run
+* <code>run_full_change_all_pams.py</code> is an emissions ssp245 run from 1750 to 2100 which shows how to set all the parameters for both the upwelling diffusion model and for the concentrations emissions handler.
+* <code>run_ssps_local.py</code> runs through all scenarios on on amoc, this script will only work on amoc or qbo, but can show how to loop through elsewhere, just remember to change paths.
+
+
+### prescripts
+Inside the scripts folder is a folder called prescripts. It contains scripts that show how to prepare perturbation files for a run and two example datafiles.
 
 ## Development
 * To start developing make sure you have a github account and that you are part of the ciceroOslo team.
