@@ -159,7 +159,6 @@ def check_pamset(pamset):
         Updated pamset with default values used where necessary
     """
     required = {
-        "lamb": 0.8,
         "qbmb": 0.03,
         "qo3": 0.4,
         "qdirso2": -0.457,
