@@ -63,7 +63,7 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 #### pamset_emiconc
 The concentration and emission parameterset (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
 
-* qbmb (0.03) - Biomass burning aerosol RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\frac{W}{m^2}">
+* qbmb (0.03) - Biomass burning aerosol RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{W}{m^2}">
 * qo3 (0.4) - Tropospheric ozone RF in ref_yr, $\frac{W}{m^2}$
 * qdirso2 (-0.457) - Direct RF sulphate in ref_yr, $\frac{W}{m^2}$
 * qindso2 (-0.514) - Indirect RF sulphate in ref_yr, $\frac{W}{m^2}$
