@@ -45,13 +45,13 @@ If the parametersets are not provided, a default parameterset is used
 If one or more parameters are not provided as part of the parameterset, these parameters will be set to the default values
 #### pamset_udm
 The upwelling diffusion model (which is needed for all runs) takes the following parameters.(Default value in paranthesis):
-* rlamdo (16.0) - Air-sea heat exchange parameter $\frac{W}{m^2K}$, valid range 5-25
-* akapa (0.634) - Vertical heat diffusicity $\frac{cm^2}{s}$, valid range 0.06-0.8
+* rlamdo (16.0) - Air-sea heat exchange parameter $ \frac{W}{m^2K} $, valid range 5-25
+* akapa (0.634) - Vertical heat diffusicity $ \frac{cm^2}{s} $, valid range 0.06-0.8
 * cpi (0.4) - Polar parameter, temperature change ratio polar to nonpolar region, unitless, valid range 0.161-0.569
-* W (4.0) - Vertical velocity, upwelling rate $\frac{m}{yr}$, valid range 0.55-2.55
-* beto (3.5) - Ocean interhemispheric heat exchange coefficient $\frac{W}{m^2K}$, valid range 0-7
+* W (4.0) - Vertical velocity, upwelling rate $ \frac{m}{yr} $, valid range 0.55-2.55
+* beto (3.5) - Ocean interhemispheric heat exchange coefficient $ \frac{W}{m^2K} $, valid range 0-7
 * threstemp (7.0) - Scales vertical velocity as a function of mixed layer temperature, unitless
-* lambda (0.540) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing (2.71$\frac{W}{m^2}$)
+* lambda (0.540) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing ($ 2.71\frac{W}{m^2} $)
 * mixed (60.0) - Mixed layer depth, m, valid range 25-125
 * foan (0.61) - Fraction of Northern hemisphere covered by ocean
 * foas (0.81) - Fraction of Southern hemisphere covered by ocean
