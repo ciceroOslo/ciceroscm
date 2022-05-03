@@ -51,7 +51,7 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 * W (4.0) - Vertical velocity, upwelling rate <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{m}}{\mathrm{yr}}">, valid range 0.55-2.55
 * beto (3.5) - Ocean interhemispheric heat exchange coefficient <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 0-7
 * threstemp (7.0) - Scales vertical velocity as a function of mixed layer temperature, unitless
-* lambda (0.540) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing (<img src="https://render.githubusercontent.com/render/math?math=\large 2.71 \frac{\mathrm{W}}{\mathrm{m}^2}">)
+* lambda (0.540) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing <img src="https://render.githubusercontent.com/render/math?math=\large \left( 2.71 \frac{\mathrm{W}}{\mathrm{m}^2} \right)">)
 * mixed (60.0) - Mixed layer depth, m, valid range 25-125
 * foan (0.61) - Fraction of Northern hemisphere covered by ocean
 * foas (0.81) - Fraction of Southern hemisphere covered by ocean
