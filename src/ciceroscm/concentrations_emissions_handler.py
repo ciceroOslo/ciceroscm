@@ -1023,8 +1023,8 @@ class ConcentrationsEmissionsHandler:
 
         if make_plot:
             plot_output2("forc", df_forc, outdir)
-            plot_output2("emis", df_emis, outdir)
-            plot_output2("conc", df_conc, outdir)
+            plot_output2("emis", df_emis, outdir, self.df_gas["EM_UNIT"])
+            plot_output2("conc", df_conc, outdir, self.df_gas["CONC_UNIT"])
 
     def add_results_to_dict(self):
         """

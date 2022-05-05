@@ -95,16 +95,11 @@ def plot_output1(pamset, results, nystart, nyend):
     plt.savefig(os.path.join(plotdir, "temp.png"))
 
 
-def plot_output2(var, df_in, outdir=None):
+def plot_output2(var, df_in, outdir, unit=None):
     """
     Plot concentration, emission and forcing
     """
-    if os.path.exists(outdir):
-        plotdir = os.path.join(outdir, "plots")
-        if not os.path.exists(plotdir):
-            os.makedirs(plotdir)
-    else:
-        return
+    plotdir = os.path.join(outdir, "plots")
     years = df_in["Year"]
     comps = df_in.columns[1:]
     for c, comp in enumerate(comps):
@@ -123,7 +118,6 @@ def plot_output2(var, df_in, outdir=None):
                     "CICERO SCM simulation, Emissions " + str(int(c / 16 + 1)) + " of 3"
                 )
                 fname = "em_" + str(int(c / 16 + 1)) + ".png"
-                fig.supylabel("Emissions [Gg?]")
             else:
                 title = (
                     "CICERO SCM simulation, Concentrations "
@@ -131,7 +125,6 @@ def plot_output2(var, df_in, outdir=None):
                     + " of 3"
                 )
                 fname = "conc_" + str(int(c / 16 + 1)) + ".png"
-                fig.supylabel("Concentration [?]")
             fig.suptitle(title)
             i = 0
             j = 0
@@ -139,6 +132,7 @@ def plot_output2(var, df_in, outdir=None):
         axs[i, j].set_title(comp)
         if var != "forc":
             axs[i, j].set_ylim(ymin=0)
+            axs[i, j].set_ylabel("[" + unit.loc[comp] + "]")
         if c in [15, 31, len(comps) - 1]:
             if c == len(comps) - 1:
                 fig.delaxes(axs[3, 3])
