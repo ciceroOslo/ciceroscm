@@ -56,7 +56,7 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 * foan (0.61) - Fraction of Northern hemisphere covered by ocean
 * foas (0.81) - Fraction of Southern hemisphere covered by ocean
 * ebbeta (0.0) - Atmospheric interhemispheric heat exchange (not currently used)
-* fnso (0.7531) - Ratio between ocean areas in Northern and Southern hemispheress
+* fnso (0.7531) - Ratio between ocean areas in Northern and Southern hemispheres
 * lm (40) - Number of vertical layers (below the mixed layer each layer is at each 100 m depth)
 * ldtime (12) - Number of subyearly timesteps
 
