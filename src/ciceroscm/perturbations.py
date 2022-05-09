@@ -43,7 +43,7 @@ def calculate_hemispheric_forcing(tracer, q, forc_nh, forc_sh):
     return forc_nh, forc_sh
 
 
-def perturb_emissions(perturbation_file, emissions_df):
+def perturb_emissions(input_handler, emissions_df):
     """
     Add emission perturbations to emissions_df
 
@@ -52,8 +52,9 @@ def perturb_emissions(perturbation_file, emissions_df):
 
     Parameters
     ----------
-    perturbation_file : str
-                     Path of perturbation file
+    input_handler : ciceroscm.InputHandler
+                    InputHandler that takes care of
+                    input data
     emissions_df : pandas.Dataframe
                 Dataframe of emissions
 
@@ -63,7 +64,7 @@ def perturb_emissions(perturbation_file, emissions_df):
                     Dataframe of emissions with perturbed
                     emissions added in
     """
-    pert_df = pd.read_csv(perturbation_file, index_col=None)
+    pert_df = input_handler.get_data("perturb_em")
     for row in pert_df.itertuples(index=True, name="Pandas"):
         tracer = row.component
         if row.component == "CO2" and "CO2" not in emissions_df:
@@ -90,7 +91,7 @@ class ForcingPerturbation:
             First year of perturbations
     """
 
-    def __init__(self, perturbation_file, year0):
+    def __init__(self, input_handler, year0):
         """
         Initialse forcing perturbation instance
 
@@ -105,7 +106,7 @@ class ForcingPerturbation:
         year0 : int
              First year of perturbations
         """
-        self.perturb_raw = pd.read_csv(perturbation_file)
+        self.perturb_raw = input_handler.get_data("perturb_forc")
         self.years = np.unique(self.perturb_raw["year"].values)
         self.compounds = pd.unique(self.perturb_raw["component"].values)
         self.year0 = year0

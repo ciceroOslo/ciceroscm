@@ -69,7 +69,7 @@ def check_output_just_some_lines(
 def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
@@ -92,7 +92,7 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
 def test_ciceroscm_run_pert_emis(tmpdir, test_data_dir):
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),

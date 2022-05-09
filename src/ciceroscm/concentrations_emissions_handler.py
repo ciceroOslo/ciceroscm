@@ -17,30 +17,6 @@ from .perturbations import (
 LOGGER = logging.getLogger(__name__)
 
 
-def read_components(filename):
-    """
-    Read in components to be considered
-
-    Read the gas_pam files and rename a few headers to
-    make it easier to use
-
-    Parameters
-    ----------
-    filename : int
-            path to gaspamfile
-
-    Returns
-    -------
-    pandas.Dataframe
-        Dataframe with gases, and various info on them
-    """
-    df_gas = pd.read_csv(filename, delim_whitespace=True, index_col=0)
-    df_gas.rename(
-        columns={"TAU1(YEARS)": "TAU1", "NATURAL_EMISSIONS": "NAT_EM"}, inplace=True
-    )
-    return df_gas
-
-
 def _rs_function(it, idtm=24):
     """
     Calculate pulse response function for mixed layer
@@ -108,36 +84,6 @@ def _rb_function(it, idtm=24):
         + 2.9323e-3 * np.exp(-time / 100.0)
     )
     return biotic_decay
-
-
-def read_natural_emissions(filename, component, startyear=1750, endyear=2500):
-    """
-    Read in single column natural emissions file
-
-    A natural emissions file with data on a single column is read in
-    to a pandas Dataframe. A an index of corresponding years is
-    generated and added. Data in input is assumed to be yearly.
-
-    Parameters
-    ----------
-    filename : str
-               path to file with emissions
-    component : str
-                Name of component the emissions are for
-    startyear: int
-               Startyear for emissions
-    endyear : int
-              Endyear for emissions
-
-    Returns
-    -------
-    pd.Dataframe
-                Dataframe of natural emissions for component with years as index
-    """
-    df_natemis = pd.read_csv(filename, header=None, names=[component], index_col=False)
-    df_natemis["year"] = np.arange(startyear, endyear + 1)
-    df_natemis = df_natemis.set_index("year")
-    return df_natemis
 
 
 def check_pamset(pamset):
@@ -209,39 +155,6 @@ def check_pamset_consistency(pamset_old, pamset_new):
     return pamset_new
 
 
-def read_inputfile(input_file, cut_years=False, year_start=1750, year_end=2100):
-    """
-    Read input from emissions or concentrations file
-
-    Parameters
-    ----------
-    input_file : str
-              Path to file to be read in
-    cut_years : bool
-             If unused years are to be cut, this option should
-             be set to True, default is False
-    year_start : int
-             Start year for relevant input, default is 1750
-    year_end : int
-             End year for relevant input, default is 2100
-
-    Returns
-    -------
-    pandas.Dataframe
-        Dataframe with the intput from the file, possibly cut
-        to relevant years
-    """
-    df_input = pd.read_csv(
-        input_file, delim_whitespace=True, index_col=0, skiprows=[1, 2, 3]
-    )
-    if cut_years:
-        min_year = df_input.index[0]
-        max_year = df_input.index[0]
-        cut_rows = [*range(min_year, year_start), *range(year_end + 1, max_year + 1)]
-        df_input.drop(index=cut_rows, inplace=True)
-    return df_input
-
-
 class ConcentrationsEmissionsHandler:
     """
     Class to handle concentrations
@@ -289,7 +202,7 @@ class ConcentrationsEmissionsHandler:
 
     def __init__(
         self,
-        cfg,
+        input_handler,
         pamset,
     ):
         """
@@ -307,50 +220,30 @@ class ConcentrationsEmissionsHandler:
 
         Parameters
         ----------
-        cfg : dict
-           configurations such as input file locations
-           Whether run is concentration run, if perturbations
-           should be included etc.
+        input_handler : ciceroscm.InputHandler
+                       input_handler that takes care of
+                       configurations and reading in of
+                       data from user
         pamset : dict
            list of physical parameters to define the run
         """
-        self.df_gas = read_components(cfg["gaspamfile"])
+        self.df_gas = input_handler.get_data("gaspam")
         self.conc = {}
         self.forc = {}
-        self.nat_emis_ch4 = read_natural_emissions(cfg["nat_ch4_file"], "CH4")
-        self.nat_emis_n2o = read_natural_emissions(cfg["nat_n2o_file"], "N2O")
+        self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
+        self.nat_emis_n2o = input_handler.get_data("nat_n2o")
         self.pamset = check_numeric_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100}, pamset
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
         years_tot = len(self.years)
-        if "concentrations_file" in cfg:
-            self.conc_in = read_inputfile(
-                cfg["concentrations_file"],
-                cut_years=True,
-                year_start=self.pamset["nystart"],
-                year_end=self.pamset["nyend"],
-            )
-        if "emissions_file" in cfg:
-            self.emis = read_inputfile(
-                cfg["emissions_file"],
-                cut_years=True,
-                year_start=self.pamset["nystart"],
-                year_end=self.pamset["nyend"],
-            )
-            self.emis.rename(
-                columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}, inplace=True
-            )
-        if "conc_run" in cfg:
-            self.pamset["conc_run"] = cfg["conc_run"]
-        else:
-            self.pamset["conc_run"] = False
-        if "perturb_em_file" in cfg:
-            perturb_emissions(cfg["perturb_em_file"], self.emis)
-        if "perturb_forc_file" in cfg:
-            self.pamset["forc_pert"] = ForcingPerturbation(
-                cfg["perturb_forc_file"], self.years[0]
-            )
+        self.conc_in = input_handler.get_data("concentrations")
+        self.emis = input_handler.get_data("emissions")
+        self.pamset["conc_run"] = input_handler.conc_run()
+        if input_handler.optional_pam("perturb_em"):
+            perturb_emissions(input_handler, self.emis)
+        if input_handler.optional_pam("perturb_forc"):
+            self.pamset["forc_pert"] = ForcingPerturbation(input_handler, self.years[0])
         self.r_functions = np.empty(
             (2, self.pamset["idtm"] * years_tot)
         )  # if speedup, get this to reflect number of years

@@ -70,7 +70,7 @@ def check_output_just_some_lines(
 def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "nystart": 1750,
             "emstart": 1850,
@@ -110,7 +110,7 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     emstart = 1950
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nystart": nystart,
             "emstart": emstart,
             "nyend": nyend,
@@ -173,7 +173,7 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
 def test_ciceroscm_run_conc(tmpdir, test_data_dir):
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "conc_run": True,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
@@ -192,56 +192,3 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
         os.path.join(test_data_dir, "ssp245_conc"),
         files=["output_conc.txt", "output_em.txt", "output_forc.txt", "output_ohc.txt"],
     )
-
-    """
-    # 1pct CO2 without sunvolc
-
-    cscm._run(
-        {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir,
-        },
-        {"forc_file": os.path.join(test_data_dir, "CO2_1pros.txt")},
-    )
-
-    check_output(outdir, os.path.join(test_data_dir, "1pct_CO2_no_sunvolc"))
-
-    #1 ppct CO2 with sunvolc
-    cscm._run(
-        {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir, "sunvolc": 1,"nyend": 2100,
-        },
-        {"forc_file": os.path.join(test_data_dir, "CO2_1pros.txt")},
-    )
-
-    check_output(outdir, os.path.join(test_data_dir, "1pct_CO2"))
-    # check_output(outdir, os.path.join(test_data_dir,"1pct_CO2_no_sunvolc"))
-    cscm._run(
-        {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            "output_prefix": outdir_save, "sunvolc": 1,"nyend": 2100,
-            "threstemp": 0,
-        },
-        {"forc_file": os.path.join(test_data_dir, "CO2_1pros.txt")},
-    )
-
-    check_output_subset(outdir_save, os.path.join(test_data_dir, "nr_test_1pct_CO2"))
-    #Test NR-setup:
-    """
-
-
-"""
-def test_cfg(test_data_dir):
-    cscm = CICEROSCM()
-    # cscm._run(
-    #    {"gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),},
-    #    {"forc_file": os.path.join(test_data_dir, "CO2_1pros.txt")},
-    # )
-
-
-#    cscm._run(
-#        {"gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"), "sunvolc": 1},
-#        {"forc_file": os.path.join(test_data_dir, "CO2_1pros.txt")},
-#    )
-"""

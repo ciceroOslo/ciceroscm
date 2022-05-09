@@ -9,6 +9,7 @@ import pandas as pd
 
 from ._utils import cut_and_check_pamset
 from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
+from .input_handler import InputHandler
 from .upwelling_diffusion_model import UpwellingDiffusionModel
 
 LOGGER = logging.getLogger(__name__)
@@ -16,109 +17,6 @@ LOGGER = logging.getLogger(__name__)
 default_data_dir = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "default_data"
 )
-
-
-def check_inputfiles(cfg):
-    """
-    Check whether input files are present or not
-
-    Checking configuration dictionary to see whether
-    it necessary files for concentrations or
-    emissions run are present.
-    If natural emissions files are not found in cfg,
-    standard file location is used.
-
-    Parameters
-    ----------
-    cfg : dict
-       Configurations dictionary which should contain
-       locations of necessary files.
-
-    Returns
-    -------
-    dict
-        cfg possible augmented with standard locations
-        for natural emissions files
-
-    Raises
-    ------
-    FileNotFoundError
-         If files are not found
-    """
-    if not os.path.exists(cfg["gaspamfile"]):
-        raise FileNotFoundError(
-            f"Concentration input file {cfg['concentrations_file']} not found"
-        )
-    if not os.path.exists(cfg["concentrations_file"]):
-        raise FileNotFoundError(
-            f"Concentration input file {cfg['concentrations_file']} not found"
-        )
-    if not os.path.exists(cfg["emissions_file"]):
-        raise FileNotFoundError(
-            f"Emission input file {cfg['emissions_file']} not found"
-        )
-    if "nat_ch4_file" not in cfg:
-        LOGGER.warning(
-            "Did not find prescribed nat_ch4_file or none was given. Looking in standard path",
-        )
-        cfg["nat_ch4_file"] = os.path.join(
-            os.getcwd(), "input_OTHER", "NATEMIS", "natemis_ch4.txt"
-        )
-    if not os.path.exists(cfg["nat_ch4_file"]):
-        raise FileNotFoundError(
-            f"Natural emission input file {cfg['nat_ch4_file']} not found"
-        )
-    if "nat_n2o_file" not in cfg:
-        LOGGER.warning(
-            "Did not find prescribed nat_n2o_file or none was given. Looking in standard path",
-        )
-        cfg["nat_n2o_file"] = os.path.join(
-            os.getcwd(), "input_OTHER", "NATEMIS", "natemis_n2o.txt"
-        )
-    if not os.path.exists(cfg["nat_n2o_file"]):
-        raise FileNotFoundError(
-            f"Natural emission input file {cfg['nat_n2o_file']} not found"
-        )
-    return cfg
-
-
-def read_forc(forc_file):
-    """
-    Read in forcing from forc_file
-
-    Read in forcing file to dataframe, couple of options
-    depending on file formatting
-
-    Parameters
-    ----------
-    forc_file : str
-             Full path of forcing file to be read
-
-    Returns
-    -------
-    ndarray
-           Forcing data, or possibly a  pandas.Dataframe if
-           data is organized in several components
-
-    """
-    components = False
-    with open(forc_file, "r", encoding="utf8") as fread:
-        first_line = fread.readline()
-        if first_line[:4].lower() == "year":
-            components = True
-    if not components:
-        df_forc = np.loadtxt(forc_file)
-    else:
-        # Decide on formatting for this
-        df_forc = pd.read_csv(forc_file, index_col=0)
-        if "total" not in df_forc.columns:
-            if "FORC_NH" in df_forc.columns and "FORC_SH" in df_forc.columns:
-                df_forc["total"] = df_forc[["FORC_NH", "FORC_SH"]].mean()
-            else:
-                df_forc["total"] = df_forc[list(df_forc)].sum(axis=1)
-                df_forc["FORC_NH"] = df_forc["total"]
-                df_forc["FORC_SH"] = df_forc["total"]
-    return df_forc
 
 
 class CICEROSCM:
@@ -187,33 +85,25 @@ class CICEROSCM:
               locations of files to use for concentration
               or emission runs, and start and end of run etc.
 
-        Raises
-        ------
-        FileNotFoundError
-            If forcing file is not found when forcing run is chosen
         """
         self.cfg = cut_and_check_pamset(
             {"nystart": 1750, "nyend": 2100, "emstart": 1850}, cfg
         )
-        rf_run = False
-        if "forc_file" in cfg:
-            rf_run = True
-            if not os.path.exists(cfg["forc_file"]):
-                raise FileNotFoundError(
-                    f"Forcing input file {cfg['forc_file']} not found"
-                )
-            self.rf = read_forc(cfg["forc_file"])
+        input_handler = InputHandler(cfg)
+        self.cfg["rf_run"] = input_handler.optional_pam("forc")
+        if self.cfg["rf_run"]:
+            self.rf = input_handler.get_data("forc")
         else:
-            cfg = check_inputfiles(cfg)
+            # cfg = check_inputfiles(cfg)
             pamset_emiconc = {}
             pamset_emiconc["emstart"] = self.cfg["emstart"]
             pamset_emiconc["nystart"] = self.cfg["nystart"]
             pamset_emiconc["nyend"] = self.cfg["nyend"]
             if "idtm" in cfg:
                 pamset_emiconc["idtm"] = cfg["idtm"]
-            self.ce_handler = ConcentrationsEmissionsHandler(cfg, pamset_emiconc)
-
-        self.cfg["rf_run"] = rf_run
+            self.ce_handler = ConcentrationsEmissionsHandler(
+                input_handler, pamset_emiconc
+            )
         self.results = {}
         # Reading in solar and volcanic forcing
         self.rf_volc_sun = self.read_in_volc_and_sun(cfg)
