@@ -128,7 +128,36 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     )
 
     check_output_subset(outdir, os.path.join(test_data_dir, "nr_test_1pct_CO2"))
-    # Test NR-setup:
+    # Test hemispheric split:
+    cscm = CICEROSCM(
+        {
+            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "nyend": 2100,
+            "forc_file": os.path.join(test_data_dir, "test_forcing_hemisplit.txt"),
+        },
+    )
+    outdir = str(tmpdir)
+    # outdir = os.path.join(os.getcwd(), "output")
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
+
+    check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
+    # Test component split:
+    cscm = CICEROSCM(
+        {
+            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "nyend": 2100,
+            "forc_file": os.path.join(test_data_dir, "test_forcing_components.txt"),
+        },
+    )
+    outdir = str(tmpdir)
+    # outdir = os.path.join(os.getcwd(), "output")
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
+
+    check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
 
 
 """

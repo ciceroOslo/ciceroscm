@@ -112,6 +112,13 @@ def read_forc(forc_file):
     else:
         # Decide on formatting for this
         df_forc = pd.read_csv(forc_file, index_col=0)
+        if "total" not in df_forc.columns:
+            if "FORC_NH" in df_forc.columns and "FORC_SH" in df_forc.columns:
+                df_forc["total"] = df_forc[["FORC_NH", "FORC_SH"]].mean()
+            else:
+                df_forc["total"] = df_forc[list(df_forc)].sum(axis=1)
+                df_forc["FORC_NH"] = df_forc["total"]
+                df_forc["FORC_SH"] = df_forc["total"]
     return df_forc
 
 
@@ -364,10 +371,16 @@ class CICEROSCM:
         if isinstance(self.rf, np.ndarray):
             # Add luc albedo later
             forc = self.rf[row_index]  # + self.rf_luc.iloc[row_index][0]
+            fn = forc
+            fs = forc
         else:
-            forc = self.rf["total"][row_index]
+            forc = self.rf["total"][yr]
+            fn = self.rf["FORC_NH"][yr]
+            fs = self.rf["FORC_SH"][yr]
         forc = forc + rf_sun.iloc[row_index, 0]
-        return forc
+        fn = fn + rf_sun.iloc[row_index, 0]
+        fs = fs + rf_sun.iloc[row_index, 0]
+        return fn, fs, forc
 
     def add_year_data_to_output(self, values, forc, index):
         """
@@ -451,9 +464,7 @@ class CICEROSCM:
                 )
 
             else:
-                forc = self.forc_set(yr, self.rf_volc_sun["sun"])
-                fs = forc
-                fn = forc
+                fn, fs, forc = self.forc_set(yr, self.rf_volc_sun["sun"])
             values = udm.energy_budget(
                 fn,
                 fs,
