@@ -134,7 +134,8 @@ def check_inputfiles(cfg):
                 if key not in with_defaults:
                     raise FileNotFoundError(f"Input file {key} not found at {cfg[key]}")
 
-                LOGGER.warning(
+                LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
+
                     f"Did not find prescribed {key}. Looking in standard path",
                 )
                 fname = f"natemis_{key.split('_')[1]}.txt"
