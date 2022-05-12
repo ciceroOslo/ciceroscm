@@ -20,6 +20,7 @@ outdir = os.path.join(os.getcwd(), "output_test")
 # Starting profiler before starting run
 pr = cProfile.Profile()
 pr.enable()
+
 cscm = CICEROSCM(
     {
         "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
@@ -28,11 +29,11 @@ cscm = CICEROSCM(
         "emissions_file": os.path.join(data_dir, "ssp245_em_RCMIP.txt"),
         "nat_ch4_file": os.path.join(data_dir, "natemis_ch4.txt"),
         "nat_n2o_file": os.path.join(data_dir, "natemis_n2o.txt"),
-    },
+    }
 )
 
 
-cscm._run({"output_folder": outdir})
+cscm._run({"output_folder": outdir}, make_plot=True)
 
 # Stop counting with profiler
 pr.disable()

@@ -36,6 +36,7 @@ With a CICEROSCM instance in place, you are ready to start runs with various par
 ### Run configurations
 * output_folder - name of or path of file wher output from the run is stored (at the moment this will always be assumed to be laying under the directory from which the code is run)
 * output_prefix - prefix to output filenames
+* make_plot - if set to True plots of the output are made and saved to a subfolder in the output_folder.
 
 ### Parameter sets
 Physical parameters to the model is divided in two parametersets each of which are sent as two seperate dictionaries to the run call.

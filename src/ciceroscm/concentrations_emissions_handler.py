@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from ._utils import check_numeric_pamset
+from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
     calculate_hemispheric_forcing,
@@ -950,7 +951,7 @@ class ConcentrationsEmissionsHandler:
         for value_dict in self.conc.values():
             value_dict[yr] = 0
 
-    def write_output_to_files(self, cfg):
+    def write_output_to_files(self, cfg, make_plot=False):
         """
         Write results to files after run
 
@@ -965,6 +966,8 @@ class ConcentrationsEmissionsHandler:
         cfg : dict
            Configurations to define where to put output
            files and what prefix to have for file name
+        make_plot : bool
+           Whether the output should be plottet or not
         """
         if "output_folder" in cfg:
             # Make os independent?
@@ -1018,6 +1021,11 @@ class ConcentrationsEmissionsHandler:
             index=False,
             float_format="%.5e",
         )
+
+        if make_plot:
+            plot_output2("forc", df_forc, outdir)
+            plot_output2("emis", df_emis, outdir, self.df_gas["EM_UNIT"])
+            plot_output2("conc", df_conc, outdir, self.df_gas["CONC_UNIT"])
 
     def add_results_to_dict(self):
         """
