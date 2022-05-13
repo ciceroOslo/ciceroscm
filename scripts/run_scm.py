@@ -30,4 +30,4 @@ cscm = CICEROSCM(
 )
 
 
-cscm._run({"output_folder": outdir})
+cscm._run({"output_folder": outdir}, make_plot=True)
