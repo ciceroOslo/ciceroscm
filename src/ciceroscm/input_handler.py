@@ -135,7 +135,6 @@ def check_inputfiles(cfg):
                     raise FileNotFoundError(f"Input file {key} not found at {cfg[key]}")
 
                 LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
-
                     f"Did not find prescribed {key}. Looking in standard path",
                 )
                 fname = f"natemis_{key.split('_')[1]}.txt"
