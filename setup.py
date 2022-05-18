@@ -21,7 +21,7 @@ REQUIREMENTS = [
     "python-dotenv",
     "scmdata>=0.7.4",
     "tqdm",
-    "matplotlib>=3.4"
+    "matplotlib>=3.4",
 ]
 
 REQUIREMENTS_NOTEBOOKS = [
