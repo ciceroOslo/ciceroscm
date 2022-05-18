@@ -29,7 +29,7 @@ def check_output(
 def test_plot(tmpdir, test_data_dir):
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "nystart": 1750,
             "emstart": 1850,

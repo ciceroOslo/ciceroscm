@@ -14,13 +14,13 @@ folder from which you run the script.
 More input data on the appropriate format (at least for emission runs) can be found in <code>/div/amoc/CSCM/SCM_Linux_v2019/RCMIP/input/</code> on amoc for internal use.
 
 ## Instance configurations
-When a new instance of the CICERO-SCM class is created the dictionary cfg needs to be sent as a parameter, detailing the configurations of the instance. Configuration options are:
+When a new instance of the CICERO-SCM class is created the dictionary cfg needs to be sent as a parameter, detailing the configurations of the instance. All options that end in _file can be exchanged with the same parameter ending in _data to send in data directly. See details on the data format in the input_handler module. Configuration options are:
 * nystart - the start year of the run
 * nyend - the end year of the run
 * emstart - the year to start the run with emissions
 * idtm - optional parameter to tune the number of subyearly steps in the concentrations_emissions_handler. Default is 24. Should probably not be the first parameter you want to start playing with.
 * sunvolc - an optional parameter to include solar an volcanic forcing. If included and equal to 1 a set of such forcing series will be included. Eventually, support for giving a custom set of solar and volcanic forcing files might be added.
-* gaspamfile - path to file of gases to include with units, forcing factors etc (mandatory).
+* gaspam_file - path to file of gases to include with units, forcing factors etc (mandatory).
 * concentrations_file - path to file with concentrations time series (mandatory if not forcing run)
 * emissions_file - path to file with emissions time series (mandatory if not forcing run)
 * nat_ch4_file- optional path to file where natural emissions for methane can be found. Default will be used if not given
@@ -162,3 +162,6 @@ The code consists of four modules
 * upwelling_diffusion_method is the energy budgeting method that takes forcing to temperature, ocean heat content sea level rise etc. It gets called and delivers results to ciceroscm.
 * concentration_emissions_handler takes care of calculating its way from emissions to concentrations to forcing. It gets called every year, but saves it's results internally and only returns the forcing. It also has an output method of it's own to produce the emission, concentration and forcing files from the run
 * _utils is just a method to put common utilities in. At the moment it has only one method that can check whehter a parameterset includes the expected values and putting in default values if not.
+* perturbations.py handles and adds perturbations to either forcing or emissions per species.
+* make_plots makes plots if plotting functionality is invoked.
+* input_handler takes care of reading in files or data, and has various file reading methods.
