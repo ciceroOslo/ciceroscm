@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pandas.testing as pdt
 
-from ciceroscm import CICEROSCM
+from ciceroscm import CICEROSCM, input_handler
 
 
 def check_output(
@@ -191,4 +191,49 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
         outdir,
         os.path.join(test_data_dir, "ssp245_conc"),
         files=["output_conc.txt", "output_em.txt", "output_forc.txt", "output_ohc.txt"],
+    )
+
+
+def test_run_with_data_not_files(tmpdir, test_data_dir):
+    ih = input_handler.InputHandler({"nystart": 1750, "nyend": 2100, "emstart": 1850})
+    cscm = CICEROSCM(
+        {
+            "gaspam_data": input_handler.read_components(
+                os.path.join(test_data_dir, "gases_v1RCMIP.txt")
+            ),
+            "nyend": 2100,
+            "nystart": 1750,
+            "emstart": 1850,
+            "concentrations_data": input_handler.read_inputfile(
+                os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"), True, 1750, 2100
+            ),
+            "emissions_data": ih.read_emissions(
+                os.path.join(test_data_dir, "ssp245_em_RCMIP.txt")
+            ),
+            "nat_ch4_data": input_handler.read_natural_emissions(
+                os.path.join(test_data_dir, "natemis_ch4.txt"), "CH4"
+            ),
+            "nat_n2o_data": input_handler.read_natural_emissions(
+                os.path.join(test_data_dir, "natemis_n2o.txt"), "N2O"
+            ),
+        },
+    )
+    # outdir_save = os.path.join(os.getcwd(), "output")
+    outdir = str(tmpdir)
+    # One year forcing:
+
+    cscm._run({"output_folder": outdir})
+
+    check_output(outdir, os.path.join(test_data_dir, "ssp245_emis"))
+    check_output_just_some_lines(
+        outdir,
+        os.path.join(test_data_dir, "ssp245_emis"),
+        files=["output_forc.txt"],
+        lines=19,
+    )
+    check_output_just_some_lines(
+        outdir,
+        os.path.join(test_data_dir, "ssp245_emis"),
+        files=["output_temp.txt"],
+        lines=16,
     )
