@@ -85,7 +85,7 @@ The scripts folder contains various example scripts that can be used to see how 
 
 
 ### prescripts
-Inside the scripts folder is a folder called prescripts. It contains scripts that show how to prepare perturbation files for a run and two example datafiles.
+Inside the scripts folder is a folder called prescripts. It contains scripts that show how to prepare perturbation files for a run and two example datafiles. And includes scripts to prepare natural emissions files.
 
 ## Development
 * To start developing make sure you have a github account and that you are part of the ciceroOslo team.
