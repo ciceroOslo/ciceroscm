@@ -14,18 +14,18 @@ folder from which you run the script.
 More input data on the appropriate format (at least for emission runs) can be found in <code>/div/amoc/CSCM/SCM_Linux_v2019/RCMIP/input/</code> on amoc for internal use.
 
 ## Instance configurations
-When a new instance of the CICERO-SCM class is created the dictionary cfg needs to be sent as a parameter, detailing the configurations of the instance. Configuration options are:
+When a new instance of the CICERO-SCM class is created the dictionary cfg needs to be sent as a parameter, detailing the configurations of the instance. All options that end in _file can be exchanged with the same parameter ending in _data to send in data directly. See details on the data format in the input_handler module. Configuration options are:
 * nystart - the start year of the run
 * nyend - the end year of the run
 * emstart - the year to start the run with emissions
 * idtm - optional parameter to tune the number of subyearly steps in the concentrations_emissions_handler. Default is 24. Should probably not be the first parameter you want to start playing with.
 * sunvolc - an optional parameter to include solar an volcanic forcing. If included and equal to 1 a set of such forcing series will be included. Eventually, support for giving a custom set of solar and volcanic forcing files might be added.
-* gaspamfile - path to file of gases to include with units, forcing factors etc (mandatory).
+* gaspam_file - path to file of gases to include with units, forcing factors etc (mandatory).
 * concentrations_file - path to file with concentrations time series (mandatory if not forcing run)
 * emissions_file - path to file with emissions time series (mandatory if not forcing run)
 * nat_ch4_file- optional path to file where natural emissions for methane can be found. Default will be used if not given
 * nat_n2o_file- optional path to file where natural emissions for n2o can be found. Default will be used if not given
-* forc_file - path to file with forcing time series, if this is sent the run will be a forcing run, and none of the emission and concentration related options will be relevant
+* forc_file - path to file with forcing time series, if this is sent the run will be a forcing run, and none of the emission and concentration related options will be relevant. The file can be a single column of numbers of total forcing, it will be assumed to run from whatever startyear you set, or a comma separated file, with 'year' as first column, followed by either hemispherically split forcing under headings "FORC_NH" and "FORC_SH", or columns per various forcing components. (At the moment you cannot include hemispherical split along with several components)
 * conc_run - Set this to True and have a concentration driven run. You will still need to provide an emission file, as some species forcings (such as ozone) are calculated from emissions after emstart.
 * perturb_em_file - path to file with emission perturbations to be added to the emissions from the emissions file, the format for this file is shown in the file in test/test_data/pertem_test.txt
 * perturb_forc_file - path to file with forcings to be added after forcings from emissions and concentrations have been calculated, the format for this file is shown in the file in test/test_data/pertforc_test.txt
@@ -36,6 +36,7 @@ With a CICEROSCM instance in place, you are ready to start runs with various par
 ### Run configurations
 * output_folder - name of or path of file wher output from the run is stored (at the moment this will always be assumed to be laying under the directory from which the code is run)
 * output_prefix - prefix to output filenames
+* make_plot - if set to True plots of the output are made and saved to a subfolder in the output_folder.
 
 ### Parameter sets
 Physical parameters to the model is divided in two parametersets each of which are sent as two seperate dictionaries to the run call.
@@ -45,30 +46,46 @@ If the parametersets are not provided, a default parameterset is used
 If one or more parameters are not provided as part of the parameterset, these parameters will be set to the default values
 #### pamset_udm
 The upwelling diffusion model (which is needed for all runs) takes the following parameters.(Default value in paranthesis):
-* rlamdo (16.0)
-* akapa (0.634)
-* cpi (0.4)
-* W (4.0)
-* beto (3.5)
-* threstemp (7.0)
-* lambda (0.540)
-* mixed (60.0)
-* foan (0.61)
-* foas (0.81)
-* ebbeta (0.0)
-* fnso (0.7531)
-* lm (40)
-* ldtime (12)
+* rlamdo (16.0) - Air-sea heat exchange parameter <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 5-25
+* akapa (0.634) - Vertical heat diffusicity <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{cm}^2}{\mathrm{s}}">, valid range 0.06-0.8
+* cpi (0.4) - Polar parameter, temperature change ratio polar to nonpolar region, unitless, valid range 0.161-0.569
+* W (4.0) - Vertical velocity, upwelling rate <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{m}}{\mathrm{yr}}">, valid range 0.55-2.55
+* beto (3.5) - Ocean interhemispheric heat exchange coefficient <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 0-7
+* threstemp (7.0) - Scales vertical velocity as a function of mixed layer temperature, unitless
+* lambda (0.540) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing <img src="https://render.githubusercontent.com/render/math?math=\large \left( 2.71 \frac{\mathrm{W}}{\mathrm{m}^2} \right)">
+* mixed (60.0) - Mixed layer depth, m, valid range 25-125
+* foan (0.61) - Fraction of Northern hemisphere covered by ocean
+* foas (0.81) - Fraction of Southern hemisphere covered by ocean
+* ebbeta (0.0) - Atmospheric interhemispheric heat exchange (not currently used)
+* fnso (0.7531) - Ratio between ocean areas in Northern and Southern hemispheres
+* lm (40) - Number of vertical layers (below the mixed layer each layer is at each 100 m depth)
+* ldtime (12) - Number of subyearly timesteps
 
 #### pamset_emiconc
 The concentration and emission parameterset (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
-* qbmb (0.03)
-* qo3 (0.4)
-* qdirso2 (-0.457)
-* qindso2 (-0.514)
-* qbc (0.200)
-* qoc (-0.103)
-* ref_yr (2010)
+
+* qbmb (0.03) - Biomass burning aerosol RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qo3 (0.4) - Tropospheric ozone RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qdirso2 (-0.457) - Direct RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qindso2 (-0.514) - Indirect RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qbc (0.200) - BC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qoc (-0.103) - OC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* ref_yr (2010) - Reference year for the above forcing values. To construct radiative forcing time series, these forcing values are scaled using emssions. The forcing in the reference year is equal to the forcing value set by the above parameters
+* idtm (24) - Number of subyearly timesteps for calculation of CO2 concentrations from emissions.
+
+## Example scripts
+The scripts folder contains various example scripts that can be used to see how to set up various types of runs. The start of all of them adds the necessary parts for the file to run with the module. If you want to run from somewhere else you will need to edit the <code>sys.path.append</code> command so it points to where you've stored the src directory of this repository.
+* <code>run_scm.py</code> runs a simple emissions run with ssp245 data from 1900 to 2050
+* <code>run_full_forcing.py</code> runs a 1 percent CO2 increase forcing with default solar and volcanic forcing from 1750 to 2100
+* <code>run_perturbations.py</code> shows runs like that in <code>run_scm.py</code> with emissions and forcing perturbations
+* <code>run_full_emissions_profile.py</code> runs an ssp245 emissions run from 1750 to 2100 with a profiler, so you can see what parts of the code is more time consuming
+* <code>run_full_forcing_profile.py</code> is like <code>run_full_emissions_profile.py</code> but for a pure forcing run
+* <code>run_full_change_all_pams.py</code> is an emissions ssp245 run from 1750 to 2100 which shows how to set all the parameters for both the upwelling diffusion model and for the concentrations emissions handler.
+* <code>run_ssps_local.py</code> runs through all scenarios on on amoc, this script will only work on amoc or qbo, but can show how to loop through elsewhere, just remember to change paths.
+
+
+### prescripts
+Inside the scripts folder is a folder called prescripts. It contains scripts that show how to prepare perturbation files for a run and two example datafiles.
 
 ## Development
 * To start developing make sure you have a github account and that you are part of the ciceroOslo team.
@@ -145,3 +162,6 @@ The code consists of four modules
 * upwelling_diffusion_method is the energy budgeting method that takes forcing to temperature, ocean heat content sea level rise etc. It gets called and delivers results to ciceroscm.
 * concentration_emissions_handler takes care of calculating its way from emissions to concentrations to forcing. It gets called every year, but saves it's results internally and only returns the forcing. It also has an output method of it's own to produce the emission, concentration and forcing files from the run
 * _utils is just a method to put common utilities in. At the moment it has only one method that can check whehter a parameterset includes the expected values and putting in default values if not.
+* perturbations.py handles and adds perturbations to either forcing or emissions per species.
+* make_plots makes plots if plotting functionality is invoked.
+* input_handler takes care of reading in files or data, and has various file reading methods.
