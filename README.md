@@ -83,6 +83,10 @@ The scripts folder contains various example scripts that can be used to see how 
 * <code>run_full_change_all_pams.py</code> is an emissions ssp245 run from 1750 to 2100 which shows how to set all the parameters for both the upwelling diffusion model and for the concentrations emissions handler.
 * <code>run_ssps_local.py</code> runs through all scenarios on on amoc, this script will only work on amoc or qbo, but can show how to loop through elsewhere, just remember to change paths.
 
+## Jupyter Notebooks
+The notebooks folder provides simple working examples to run the model within a Jupyter environment, and plot example output.  Installation instructions for installing Jupyterlab can be found at https://jupyter.org/install
+<code>CSCM_example_textinput.ipynb</code> runs a simple emissions run with ssp245 data from 1900 to 2050, using input data text files stored in the <code>tests/test-data</code> folder
+<code>CSCM_example_directinput.ipynb</code> illustrates an interactive case, where ssp data is read into the environment and passed directly to the model
 
 ### prescripts
 Inside the scripts folder is a folder called prescripts. It contains scripts that show how to prepare perturbation files for a run and two example datafiles. And includes scripts to prepare natural emissions files.
