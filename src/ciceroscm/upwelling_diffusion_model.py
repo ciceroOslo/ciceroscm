@@ -198,9 +198,8 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
          Southern hemisphere
     prev_values : dict
                   Dictionary with values from pervious time step
-                  needed in calculations, typically ice melted on
-                  Greenland and in Antarctica, previous temperature
-                  change etc
+                  needed in calculations, typically previous
+                  temperature change etc
     dtempprev : float
                 Temperature change in previous time step
     press : np.ndarray
@@ -485,7 +484,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         self.varrying["dtmsl3"] = self.pamset["fnso"] * self.varrying["dtmnl3"]
         self.varrying["dtmsl1"] = 1.0 - self.varrying["dtmsl3"]
         self.setup_ebud2(0, 0)
-
 
     def energy_budget(
         self, forc_nh, forc_sh, fn_volc, fs_volc

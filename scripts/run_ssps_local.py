@@ -26,7 +26,7 @@ for s in ssps:
 
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": os.path.join(data_dir, "gases_v1RCMIP.txt"),
             "concentrations_file": concf,
             "emissions_file": emif,
             "nat_ch4_file": os.path.join(data_dir, "natemis_ch4.txt"),

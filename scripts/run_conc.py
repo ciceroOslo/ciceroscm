@@ -14,7 +14,7 @@ data_dir = os.path.join(os.path.dirname(__file__), "../", "tests", "test-data")
 
 cscm = CICEROSCM(
     {
-        "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
+        "gaspam_file": os.path.join(data_dir, "gases_v1RCMIP.txt"),
         "nystart": 1900,
         "emstart": 1950,
         "nyend": 2050,
