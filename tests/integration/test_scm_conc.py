@@ -148,9 +148,6 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "dT_glob_sea",
         "dT_NH_sea",
         "dT_SHsea",
-        "dSL(m)",
-        "dSL_thermal(m)",
-        "dSL_ice(m)",
     ]
     for key in expected_keys:
         assert key in cscm.results

@@ -56,7 +56,7 @@ def plot_output1(pamset, results, nystart, nyend):
     )
     fig.suptitle("CICERO SCM simulation, RIB")
     plt.savefig(os.path.join(plotdir, "rib.png"))
-    fig, axs = plt.subplots(nrows=1, ncols=3, sharex=True, figsize=(14, 6))
+    fig, axs = plt.subplots(nrows=1, ncols=2, sharex=True, figsize=(14, 6))
     for comp in ["dT_glob", "dT_glob_air", "dT_glob_sea"]:
         axs[0].plot(indices, results[comp], label=comp)
     for comp in [
@@ -76,22 +76,6 @@ def plot_output1(pamset, results, nystart, nyend):
             axs[1].plot(indices, results[comp], label=comp, linestyle="--")
         else:
             axs[1].plot(indices, results[comp], label=comp)
-    for comp in ["dSL(m)", "dSL_thermal(m)", "dSL_ice(m)"]:
-        axs[2].plot(indices, results[comp], label=comp)
-    fix_plot(
-        axs,
-        [
-            "Temp. [$^\\circ\\!$C]",
-            "Temp. [$^\\circ\\!$C]",
-            "Sea level rise [m]",
-        ],
-        [
-            "CICERO SCM simulation, Temperature",
-            "CICERO SCM simulation, Temperature",
-            "CICERO SCM simulation, SLR \n(!!!!!need to be revised-checked!!!!)",
-        ],
-        legend=True,
-    )
     plt.savefig(os.path.join(plotdir, "temp.png"))
 
 

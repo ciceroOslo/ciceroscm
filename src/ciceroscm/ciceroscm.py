@@ -137,9 +137,6 @@ class CICEROSCM:
             "dT_glob_sea",
             "dT_NH_sea",
             "dT_SHsea",
-            "dSL(m)",
-            "dSL_thermal(m)",
-            "dSL_ice(m)",
             "Total_forcing",
         ]
         for output in output_variables:
@@ -307,9 +304,6 @@ class CICEROSCM:
         }
         for output, name in outputs_dict.items():
             self.results[output][index] = values[name]
-        self.results["dSL(m)"][index] = values["deltsl"][0] + values["deltsl"][1]
-        self.results["dSL_ice(m)"][index] = values["deltsl"][1]
-        self.results["dSL_thermal(m)"][index] = values["deltsl"][0]
         self.results["Total_forcing"][index] = forc
 
     def _run(
@@ -419,9 +413,6 @@ class CICEROSCM:
             "dT_glob_sea",
             "dT_NH_sea",
             "dT_SHsea",
-            "dSL(m)",
-            "dSL_thermal(m)",
-            "dSL_ice(m)",
         ]
         df_temp = pd.DataFrame(data={"Year": indices})
         if "output_prefix" in pamset:
