@@ -23,8 +23,8 @@ When a new instance of the CICERO-SCM class is created the dictionary cfg needs 
 * gaspam_file - path to file of gases to include with units, forcing factors etc (mandatory).
 * concentrations_file - path to file with concentrations time series (mandatory if not forcing run)
 * emissions_file - path to file with emissions time series (mandatory if not forcing run)
-* nat_ch4_file- optional path to file where natural emissions for methane can be found. Default will be used if not given
-* nat_n2o_file- optional path to file where natural emissions for n2o can be found. Default will be used if not given
+* nat_ch4_file- optional path to file where natural emissions timeseries for methane can be found. Default file will be used if not given
+* nat_n2o_file- optional path to file where natural emissions timeseries for n2o can be found. Default file will be used if not given
 * forc_file - path to file with forcing time series, if this is sent the run will be a forcing run, and none of the emission and concentration related options will be relevant. The file can be a single column of numbers of total forcing, it will be assumed to run from whatever startyear you set, or a comma separated file, with 'year' as first column, followed by either hemispherically split forcing under headings "FORC_NH" and "FORC_SH", or columns per various forcing components. (At the moment you cannot include hemispherical split along with several components)
 * conc_run - Set this to True and have a concentration driven run. You will still need to provide an emission file, as some species forcings (such as ozone) are calculated from emissions after emstart.
 * perturb_em_file - path to file with emission perturbations to be added to the emissions from the emissions file, the format for this file is shown in the file in test/test_data/pertem_test.txt
@@ -51,8 +51,8 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 * cpi (0.4) - Polar parameter, temperature change ratio polar to nonpolar region, unitless, valid range 0.161-0.569
 * W (4.0) - Vertical velocity, upwelling rate <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{m}}{\mathrm{yr}}">, valid range 0.55-2.55
 * beto (3.5) - Ocean interhemispheric heat exchange coefficient <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 0-7
-* threstemp (7.0) - Scales vertical velocity as a function of mixed layer temperature, unitless
-* lambda (0.540) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing <img src="https://render.githubusercontent.com/render/math?math=\large \left( 2.71 \frac{\mathrm{W}}{\mathrm{m}^2} \right)">
+* threstemp (7.0) - Scales vertical velocity as a function of mixed layer temperature, unitless. Set to 0 if you don't want to include this parameter.
+* lambda (0.540) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing <img src="https://render.githubusercontent.com/render/math?math=\large \left( 3.71 \frac{\mathrm{W}}{\mathrm{m}^2} \right)">
 * mixed (60.0) - Mixed layer depth, m, valid range 25-125
 * foan (0.61) - Fraction of Northern hemisphere covered by ocean
 * foas (0.81) - Fraction of Southern hemisphere covered by ocean
@@ -163,7 +163,7 @@ When you develop new code, try to think about what can be done to test and valid
 ## General code flow
 The code consists of four modules
 * ciceroscm takes in an sorts inputs, is what gets called, and loops over the years and calls the other methods. It also outputs temperature and ocean data.
-* upwelling_diffusion_method is the energy budgeting method that takes forcing to temperature, ocean heat content sea level rise etc. It gets called and delivers results to ciceroscm.
+* upwelling_diffusion_method is the energy budgeting method that takes forcing to temperature, ocean heat content etc. It gets called and delivers results to ciceroscm.
 * concentration_emissions_handler takes care of calculating its way from emissions to concentrations to forcing. It gets called every year, but saves it's results internally and only returns the forcing. It also has an output method of it's own to produce the emission, concentration and forcing files from the run
 * _utils is just a method to put common utilities in. At the moment it has only one method that can check whehter a parameterset includes the expected values and putting in default values if not.
 * perturbations.py handles and adds perturbations to either forcing or emissions per species.

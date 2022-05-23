@@ -15,7 +15,7 @@ data_dir = os.path.join(os.path.dirname(__file__), "../", "tests", "test-data")
 outdir = os.path.join(os.getcwd(), "output_test")
 cscm = CICEROSCM(
     {
-        "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
+        "gaspam_file": os.path.join(data_dir, "gases_v1RCMIP.txt"),
         "nyend": 2100,
         "concentrations_file": os.path.join(data_dir, "ssp245_conc_RCMIP.txt"),
         "emissions_file": os.path.join(data_dir, "ssp245_em_RCMIP.txt"),

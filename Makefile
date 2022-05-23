@@ -80,23 +80,11 @@ docs: $(VENV_DIR)  ## build the docs
 test:  $(VENV_DIR) ## run the full testsuite
 	$(VENV_DIR)/bin/pytest tests --cov -rfsxEX --cov-report term-missing
 
-test-testpypi-install: $(VENV_DIR)  ## test whether installing from test PyPI works
-	$(eval TEMPVENV := $(shell mktemp -d))
-	python3 -m venv $(TEMPVENV)
-	$(TEMPVENV)/bin/pip install pip wheel --upgrade
-	# Install dependencies not on testpypi registry
-	$(TEMPVENV)/bin/pip install pandas
-	# Install pymagicc without dependencies.
-	$(TEMPVENV)/bin/pip install \
-		-i https://testpypi.python.org/pypi openscm-runner \
-		--no-dependencies --pre
-	$(TEMPVENV)/bin/python -c "import sys; sys.path.remove(''); import openscm_runner; print(openscm_runner.__version__)"
-
 test-pypi-install: $(VENV_DIR)  ## test whether installing from PyPI works
 	$(eval TEMPVENV := $(shell mktemp -d))
 	python3 -m venv $(TEMPVENV)
 	$(TEMPVENV)/bin/pip install pip wheel --upgrade
-	$(TEMPVENV)/bin/pip install openscm-runner --pre
+	$(TEMPVENV)/bin/pip install ciceroscm --pre
 	$(TEMPVENV)/bin/python scripts/test_install.py
 
 test-install: $(VENV_DIR)  ## test installing works

@@ -198,9 +198,8 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
          Southern hemisphere
     prev_values : dict
                   Dictionary with values from pervious time step
-                  needed in calculations, typically ice melted on
-                  Greenland and in Antarctica, previous temperature
-                  change etc
+                  needed in calculations, typically previous
+                  temperature change etc
     dtempprev : float
                 Temperature change in previous time step
     press : np.ndarray
@@ -236,16 +235,12 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         self.ts = np.zeros(self.pamset["lm"])
         # Dict of values to keep from one year to the next
         self.prev_values = {
-            "zso": 0.0,
-            "zgo": 0.0,
-            "zao": 0.0,
             "fn": 0.0,
             "fs": 0.0,
             "dtemp": 0.0,
         }
 
         self.dtempprev = 0.0
-        self.setup_sealevel_rise()
 
     def _band(self, a_array, b_array, c_array, d_array):
         """
@@ -490,93 +485,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         self.varrying["dtmsl1"] = 1.0 - self.varrying["dtmsl3"]
         self.setup_ebud2(0, 0)
 
-    def setup_sealevel_rise(self):
-        """
-        Set up variables to be used in sea level rise calculations
-
-        Various arrays such as pressure, temperature and density
-        are set up do calculate sealevel rise during the run
-        """
-        self.press = np.zeros(self.pamset["lm"])
-        self.tempunp = np.zeros(self.pamset["lm"])
-        self.press[0] = 35.0 * 1.0e4 * 1.0e-5
-        self.tempunp[0] = 19.5
-        self.dens0 = np.zeros(self.pamset["lm"])
-        self.dens0[0] = _density(self.press[0], self.tempunp[0])
-        self.press[1:] = np.array(
-            [12.0 + 10.0 * (i - 1) for i in range(1, self.pamset["lm"])]
-        )
-        self.tempunp[1:] = np.array(
-            [
-                125.98 * (120.0 + 100.0 * (i - 1)) ** (-0.45952)
-                for i in range(1, self.pamset["lm"])
-            ]
-        )
-
-        self.dens0[1:] = _density_vec(self.press[1:], self.tempunp[1:])
-        # self.dens0[1:] = np.array([])
-        # for i in range(1, self.pamset["lm"]):
-        #    z = 120.0 + 100.0 * (i - 1)  # Skulle 120. = mixed?
-        #    self.press[i] = z * 1.0e4  # Units=Pa
-        #    self.press[i] = self.press[i] * 1.0e-5  # Units=bar
-        #    self.tempunp[i] = 125.98 * z ** (-0.45952)
-        #    self.dens0[i] = _density(self.press[i], self.tempunp[i])
-
-    def compute_sea_level_rise(self, templ, dtemp):
-        """
-        Compute sea level rise associated with temperature change
-
-        Parameters
-        ----------
-        templ : np.ndarray
-             Temperature in the ocean layers
-        dtemp : float
-             Current global temperature change
-
-        Returns
-        -------
-        float
-             sea level rise
-        """
-        betag = 3.0e-4  # Make changeable parameter?
-        betaa = -2.0e-4  # Make changeable parameter?
-        betas = 0.25  # Make changeable parameter?
-        ebtau = 20  # Make changeable parameter?
-        z0_param = 0.5  # Make changeable parameter?
-        deltsl = np.zeros(2)
-
-        # Sea level rise from temperature change
-        deltsl[0] = np.sum(
-            self.dz
-            * (self.dens0 / _density_vec(self.press, (templ + self.tempunp)) - 1)
-        )
-        # for i in range(self.pamset["lm"]):
-        #    dens1 = _density(self.press[i], (templ[i] + self.tempunp[i]))
-        #    deldens = dens1 - self.dens0[i]
-        #    deltsl[0] = deltsl[0] - deldens * self.dz[i] / dens1
-
-        # Sea level rise from melting Ice sheets
-        # Maybe outdated
-        # Also why not use hemispheric temperature change?
-        # Greenland
-        self.prev_values["zgo"] = (
-            self.prev_values["zgo"]
-            + 1.5 * betag * (dtemp + self.prev_values["dtemp"]) / 2.0
-        )
-        # Antarctica
-        self.prev_values["zao"] = (
-            self.prev_values["zao"] + betaa * (dtemp + self.prev_values["dtemp"]) / 2.0
-        )
-        # Small glaciers:
-        aa = self.prev_values["zso"] + z0_param * betas * dtemp / ebtau
-        bb = 1.0 + (1.0 + betas * dtemp) / ebtau
-        self.prev_values["zso"] = aa / bb
-
-        deltsl[1] = (
-            self.prev_values["zgo"] + self.prev_values["zao"] + self.prev_values["zso"]
-        )
-        return deltsl
-
     def energy_budget(
         self, forc_nh, forc_sh, fn_volc, fs_volc
     ):  # pylint: disable=too-many-locals
@@ -610,7 +518,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             Northern hemisphere radiative imbalance RIBN,
             Southern hemisphere radiative imbalance RIBS,
             Global radiative imbalance RIB,
-            Global sea level rise deltsl,
             Ocean heat content change down to 700 m OHC700,
             Ocean heat content change total OHCTOT
         """
@@ -738,7 +645,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
         dtemp = (tempn + temps) / 2.0  # Global temp chg)
 
-        deltsl = self.compute_sea_level_rise(templ, dtemp)
         # Updating previous values for next year
         self.prev_values["fn"] = forc_nh
         self.prev_values["fs"] = forc_sh
@@ -770,7 +676,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             "RIBN": ribn,
             "RIBS": ribs,
             "RIB": (ribn + ribs) / 2.0,
-            "deltsl": deltsl,
             "OHC700": ocean_res["OHC700"],
             "OHCTOT": ocean_res["OHCTOT"],
         }
