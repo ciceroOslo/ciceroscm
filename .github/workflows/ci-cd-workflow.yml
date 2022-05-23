@@ -73,7 +73,7 @@ jobs:
         pip install -e .[tests,models]
     - name: Test with pytest
       run: |
-        pytest tests -r a --cov=ciceroscm --cov-report='' --cov-fail-under=$env:MIN_COVERAGE
+        pytest tests -r a --cov=ciceroscm --cov-report='' --cov-fail-under=$MIN_COVERAGE
 
   test-notebooks:
     runs-on: ubuntu-latest
