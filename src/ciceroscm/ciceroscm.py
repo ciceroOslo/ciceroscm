@@ -15,10 +15,6 @@ from .upwelling_diffusion_model import UpwellingDiffusionModel
 
 LOGGER = logging.getLogger(__name__)
 
-default_data_dir = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), "default_data"
-)
-
 
 class CICEROSCM:
     """
@@ -107,12 +103,14 @@ class CICEROSCM:
             )
         self.results = {}
         # Reading in solar and volcanic forcing
-        self.rf_volc_sun = self.read_in_volc_and_sun(cfg)
+        self.rf_volc_sun = {
+            "volc_n": input_handler.get_data("rf_volc_n"),
+            "volc_s": input_handler.get_data("rf_volc_s"),
+            "sun": input_handler.get_data("rf_sun"),
+        }
 
         # Add support for sending filename in cfg
-        self.rf_luc = self.read_data_on_year_row(
-            os.path.join(default_data_dir, "IPCC_LUCalbedo.txt")
-        )
+        self.rf_luc = input_handler.get_data("rf_luc")
         self.initialise_output_arrays()
 
     def initialise_output_arrays(self):
@@ -141,96 +139,6 @@ class CICEROSCM:
         ]
         for output in output_variables:
             self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
-
-    def read_data_on_year_row(self, volc_datafile):
-        """
-        Read in data from file with no headers
-
-
-        Read in data from file with no headers where
-        each year is a row. Typically this is the format for
-        volcano and solar data. The years are taken to be
-        the years from the defined startyear and endyear
-
-        Parameters
-        ----------
-        volc_datafile : str
-                     Path of file to be read
-
-        Returns
-        -------
-        pandas.Dataframe
-                        Dataframe containing the data with the years as
-                        indices
-        """
-        indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
-        nrows = len(indices)
-        if self.cfg["nystart"] > 1750:
-            skiprows = self.cfg["nystart"] - 1750
-            df_data = pd.read_csv(
-                volc_datafile,
-                header=None,
-                skiprows=skiprows,
-                nrows=nrows,
-                delim_whitespace=True,
-            )
-        else:
-            df_data = pd.read_csv(
-                volc_datafile, header=None, nrows=nrows, delim_whitespace=True
-            )
-
-        df_data.set_axis(labels=indices, inplace=True)
-        return df_data
-
-    def read_in_volc_and_sun(self, cfg):
-        """
-        Read in solar and volcanic forcing and return them
-
-        Read in solar or volcanic forcing if this is chosen
-        otherwise produce empty dataframes that can be used
-        instead. If solar and volcanic forcing is added, a
-        hemispherically dependent addition is added to the
-        volcanic part, to adjust for lack of spin up.
-
-        Parameters
-        ----------
-        cfg : dict
-           Dictionary containing configurations on whether to use
-           solar and volcanic forcing or not.
-
-        Returns
-        -------
-        dict
-            Containing the dataframes for hemispheric volcanic
-            forcings and solar forcing
-        """
-        if "sunvolc" in cfg and cfg["sunvolc"] == 1:
-            # Possibly change to allow for other files
-            # And for SH to differ from NH
-            rf_volc_n = self.read_data_on_year_row(
-                os.path.join(default_data_dir, "meanVOLCmnd_ipcc_NH.txt")
-            )
-            rf_volc_s = rf_volc_n
-            # Test, adjust for not including spin up. See Gregory et al.
-            # Se regneark.
-            rf_volc_n = rf_volc_n + 0.371457071
-            rf_volc_s = rf_volc_s + 0.353195076
-            rf_sun = self.read_data_on_year_row(
-                os.path.join(default_data_dir, "solar_IPCC.txt")
-            )
-        # Add support for sending filename in cfg
-        else:
-            indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
-            rf_volc_n = pd.DataFrame(
-                data=np.zeros((self.cfg["nyend"] - self.cfg["nystart"] + 1, 12)),
-                index=indices,
-                columns=range(12),
-            )
-            rf_volc_s = rf_volc_n
-            rf_sun = pd.DataFrame(
-                data={0: np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)}
-            )
-        return {"volc_n": rf_volc_n, "volc_s": rf_volc_s, "sun": rf_sun}
 
     def forc_set(self, yr, rf_sun):
         """
