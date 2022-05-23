@@ -55,7 +55,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+	os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python-version: [3.7, 3.8, 3.9]
+    env:
+      MIN_COVERAGE: 90
 
     steps:
     - name: Checkout repository
@@ -69,16 +72,8 @@ jobs:
         pip install --upgrade pip wheel
         pip install -e .[tests,models]
     - name: Test with pytest
-      env:
-        MIN_COVERAGE: 90
       run: |
-          pytest tests -r a --cov=ciceroscm --cov-report=''
-          if ! coverage report --fail-under=${MIN_COVERAGE} --show-missing
-          then
-              echo
-              echo "Error: Test coverage has to be at least ${MIN_COVERAGE}"
-              exit 1
-          fi
+        pytest tests -r a --cov=ciceroscm --cov-report='' --cov-fail-under=$env:MIN_COVERAGE
 	  
   test-notebooks:
     runs-on: ubuntu-latest
