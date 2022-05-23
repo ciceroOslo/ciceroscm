@@ -163,7 +163,7 @@ When you develop new code, try to think about what can be done to test and valid
 ## General code flow
 The code consists of four modules
 * ciceroscm takes in an sorts inputs, is what gets called, and loops over the years and calls the other methods. It also outputs temperature and ocean data.
-* upwelling_diffusion_method is the energy budgeting method that takes forcing to temperature, ocean heat content sea level rise etc. It gets called and delivers results to ciceroscm.
+* upwelling_diffusion_method is the energy budgeting method that takes forcing to temperature, ocean heat content etc. It gets called and delivers results to ciceroscm.
 * concentration_emissions_handler takes care of calculating its way from emissions to concentrations to forcing. It gets called every year, but saves it's results internally and only returns the forcing. It also has an output method of it's own to produce the emission, concentration and forcing files from the run
 * _utils is just a method to put common utilities in. At the moment it has only one method that can check whehter a parameterset includes the expected values and putting in default values if not.
 * perturbations.py handles and adds perturbations to either forcing or emissions per species.
