@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-	os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python-version: [3.7, 3.8, 3.9]
     env:
       MIN_COVERAGE: 90
@@ -74,7 +74,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest tests -r a --cov=ciceroscm --cov-report='' --cov-fail-under=$env:MIN_COVERAGE
-	  
+
   test-notebooks:
     runs-on: ubuntu-latest
     strategy:
