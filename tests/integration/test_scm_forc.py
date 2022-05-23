@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pandas.testing as pdt
 
-from ciceroscm import CICEROSCM
+from ciceroscm import CICEROSCM, input_handler
 
 
 def check_output(
@@ -91,6 +91,7 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
 
     check_output(outdir, os.path.join(test_data_dir, "1pct_CO2_no_sunvolc"))
 
+    ih = input_handler.InputHandler({"nyend": 2100, "sunvolc": 1})
     # 1 ppct CO2 with sunvolc
     cscm = CICEROSCM(
         {
@@ -98,6 +99,8 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
             "nyend": 2100,
             "sunvolc": 1,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
+            "rf_volc_n_data": ih.get_data("rf_volc_n") + 0.371457071,
+            "rf_volc_s_data": ih.get_data("rf_volc_s") + 0.353195076,
         },
     )
 

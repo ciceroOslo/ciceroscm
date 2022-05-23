@@ -12,6 +12,10 @@ from ._utils import check_numeric_pamset
 
 LOGGER = logging.getLogger(__name__)
 
+default_data_dir = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), "default_data"
+)
+
 
 def read_components(filename):
     """
@@ -243,8 +247,65 @@ class InputHandler:
             "emissions": self.read_emissions,
             "perturb_em": read_csv_no_index_col,
             "perturb_forc": pd.read_csv,
+            "rf_luc": self.read_data_on_year_row,
+            "rf_sun": self.read_data_on_year_row,
+            "rf_volc_n": self.read_data_on_year_row,
+            "rf_volc_s": self.read_data_on_year_row,
         }
+        self.set_sun_volc_luc_defaults()
+
         check_inputfiles(self.cfg)
+
+    def set_sun_volc_luc_defaults(self):
+        """
+        Set default values for landuse change, solar and
+        volcanic data
+        """
+        if "rf_luc_file" not in self.cfg and "rf_luc_data" not in self.cfg:
+            self.cfg["rf_luc_file"] = os.path.join(
+                default_data_dir, "IPCC_LUCalbedo.txt"
+            )
+
+        if ("sunvolc", 1) in self.cfg.items():
+            # Possibly change to allow for other files
+            # And for SH to differ from NH
+            if "rf_sun_file" not in self.cfg and "rf_sun_data" not in self.cfg:
+                self.cfg["rf_sun_file"] = os.path.join(
+                    default_data_dir, "solar_IPCC.txt"
+                )
+            volc_options = [
+                "rf_volc_file",
+                "rf_volc_data",
+                "rf_volc_n_file",
+                "rf_volc_s_file",
+                "rf_volc_n_data",
+                "rf_volc_s_data",
+            ]
+            intersection = [i for i in volc_options if i in self.cfg]
+            if not intersection:
+                self.cfg["rf_volc_n_file"] = os.path.join(
+                    default_data_dir, "meanVOLCmnd_ipcc_NH.txt"
+                )
+                self.cfg["rf_volc_s_file"] = os.path.join(
+                    default_data_dir, "meanVOLCmnd_ipcc_NH.txt"
+                )
+            elif "rf_volc_file" in self.cfg:
+                self.cfg["rf_volc_n_file"] = self.cfg["rf_volc_file"]
+                self.cfg["rf_volc_s_file"] = self.cfg["rf_volc_file"]
+            elif "rf_volc_data" in self.cfg:
+                self.cfg["rf_volc_n_data"] = self.cfg["rf_volc_data"]
+                self.cfg["rf_volc_s_data"] = self.cfg["rf_volc_data"]
+        else:
+            indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
+            self.cfg["rf_volc_n_data"] = pd.DataFrame(
+                data=np.zeros((self.cfg["nyend"] - self.cfg["nystart"] + 1, 12)),
+                index=indices,
+                columns=range(12),
+            )
+            self.cfg["rf_volc_s_data"] = self.cfg["rf_volc_n_data"]
+            self.cfg["rf_sun_data"] = pd.DataFrame(
+                data={0: np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)}
+            )
 
     def get_rf_type(self):
         """
@@ -372,3 +433,43 @@ class InputHandler:
             Whether this is rf_run or not
         """
         return bool(f"{which}_file" in self.cfg or f"{which}_data" in self.cfg)
+
+    def read_data_on_year_row(self, volc_datafile):
+        """
+        Read in data from file with no headers
+
+
+        Read in data from file with no headers where
+        each year is a row. Typically this is the format for
+        volcano and solar data. The years are taken to be
+        the years from the defined startyear and endyear
+
+        Parameters
+        ----------
+        volc_datafile : str
+                     Path of file to be read
+
+        Returns
+        -------
+        pandas.Dataframe
+                        Dataframe containing the data with the years as
+                        indices
+        """
+        indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
+        nrows = len(indices)
+        if self.cfg["nystart"] > 1750:
+            skiprows = self.cfg["nystart"] - 1750
+            df_data = pd.read_csv(
+                volc_datafile,
+                header=None,
+                skiprows=skiprows,
+                nrows=nrows,
+                delim_whitespace=True,
+            )
+        else:
+            df_data = pd.read_csv(
+                volc_datafile, header=None, nrows=nrows, delim_whitespace=True
+            )
+
+        df_data.set_axis(labels=indices, inplace=True)
+        return df_data
