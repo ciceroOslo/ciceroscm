@@ -112,6 +112,7 @@ def check_pamset(pamset):
         "qindso2": -0.514,
         "qbc": 0.200,
         "qoc": -0.103,
+        "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
         "idtm": 24,
     }
@@ -560,7 +561,7 @@ class ConcentrationsEmissionsHandler:
                 q = -(0.287737 * (0.000552 * (sumcl) + 3.048 * sumbr)) / 1000.0
             elif tracer == "STRAT_H2O":
                 q = (
-                    0.15 * 1.14 * self.forc["CH4"][yr - yr_0]
+                    self.pamset["qh2o_ch4"] * self.forc["CH4"][yr - yr_0]
                 )  # + FORC_PERT(yr_ix,trc_ix)
             elif tracer == "OTHER":
                 # Possible with forcing perturbations for other
@@ -586,7 +587,7 @@ class ConcentrationsEmissionsHandler:
         self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun
-        # print("yr: %d, tot_forc: %f, FN: %f, FS: %f "%(yr, tot_forc, forc_nh, forc_sh))
+
         return tot_forc, forc_nh, forc_sh
 
     def emi2conc(self, yr):

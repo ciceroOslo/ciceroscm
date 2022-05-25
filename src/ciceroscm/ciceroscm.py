@@ -252,7 +252,7 @@ class CICEROSCM:
                 forc, fn, fs = self.ce_handler.conc2forc(
                     yr,
                     self.rf_luc.loc[yr, 0],
-                    self.rf_volc_sun["sun"].loc[yr - self.cfg["nystart"], 0],
+                    self.rf_volc_sun["sun"].iloc[yr - self.cfg["nystart"], 0],
                 )
 
             else:

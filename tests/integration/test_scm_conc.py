@@ -84,14 +84,34 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     outdir = str(tmpdir)
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_udm={
+            "rlamdo": 15.1,
+            "akapa": 0.657,
+            "cpi": 0.208,
+            "W": 2.2,
+            "beto": 6.9,
+            "lambda": 0.606,
+            "mixed": 107.0,
+        },
+        pamset_emiconc={
+            "qbmb": 0.0,
+            "qo3": 0.5,
+            "qdirso2": -0.3701,
+            "qindso2": -0.4163,
+            "qbc": 0.163,
+            "qoc": -0.084,
+            "qh2o_ch4": 0.171,
+        },
+    )
 
     check_output(outdir, os.path.join(test_data_dir, "ssp245_emis"))
     check_output_just_some_lines(
         outdir,
         os.path.join(test_data_dir, "ssp245_emis"),
         files=["output_forc.txt"],
-        lines=19,
+        lines=14,
     )
     check_output_just_some_lines(
         outdir,
@@ -177,12 +197,15 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+            "sunvolc": 1,
         },
     )
     outdir = str(tmpdir)
+    # outdir_save = os.path.join(os.getcwd(), "output")
+
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run({"output_folder": outdir}, pamset_emiconc={"qh2o_ch4": 0.171})
 
     check_output(
         outdir,
@@ -219,14 +242,34 @@ def test_run_with_data_not_files(tmpdir, test_data_dir):
     outdir = str(tmpdir)
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_udm={
+            "rlamdo": 15.1,
+            "akapa": 0.657,
+            "cpi": 0.208,
+            "W": 2.2,
+            "beto": 6.9,
+            "lambda": 0.606,
+            "mixed": 107.0,
+        },
+        pamset_emiconc={
+            "qbmb": 0.0,
+            "qo3": 0.5,
+            "qdirso2": -0.3701,
+            "qindso2": -0.4163,
+            "qbc": 0.163,
+            "qoc": -0.084,
+            "qh2o_ch4": 0.171,
+        },
+    )
 
     check_output(outdir, os.path.join(test_data_dir, "ssp245_emis"))
     check_output_just_some_lines(
         outdir,
         os.path.join(test_data_dir, "ssp245_emis"),
         files=["output_forc.txt"],
-        lines=19,
+        lines=14,
     )
     check_output_just_some_lines(
         outdir,
