@@ -102,6 +102,7 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
             "qindso2": -0.4163,
             "qbc": 0.163,
             "qoc": -0.084,
+            "qh2o_ch4": 0.171,
         },
     )
 
@@ -204,7 +205,7 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
 
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run({"output_folder": outdir}, pamset_emiconc={"qh2o_ch4": 0.171})
 
     check_output(
         outdir,
@@ -259,6 +260,7 @@ def test_run_with_data_not_files(tmpdir, test_data_dir):
             "qindso2": -0.4163,
             "qbc": 0.163,
             "qoc": -0.084,
+            "qh2o_ch4": 0.171,
         },
     )
 
