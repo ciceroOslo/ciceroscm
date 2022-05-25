@@ -304,7 +304,8 @@ class InputHandler:
             )
             self.cfg["rf_volc_s_data"] = self.cfg["rf_volc_n_data"]
             self.cfg["rf_sun_data"] = pd.DataFrame(
-                data={0: np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)}
+                data=np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1),
+                index=indices,
             )
 
     def get_rf_type(self):

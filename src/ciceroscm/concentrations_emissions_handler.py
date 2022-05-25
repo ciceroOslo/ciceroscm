@@ -586,7 +586,7 @@ class ConcentrationsEmissionsHandler:
         self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun
-        # print("yr: %d, tot_forc: %f, FN: %f, FS: %f "%(yr, tot_forc, forc_nh, forc_sh))
+
         return tot_forc, forc_nh, forc_sh
 
     def emi2conc(self, yr):
