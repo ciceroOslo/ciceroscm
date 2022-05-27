@@ -538,19 +538,19 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         ds = np.zeros(lm)
 
         for im in range(self.pamset["ldtime"]):
-
+            volc_idx = im % len(fn_volc)
             if self.pamset["threstemp"] != 0:  # pylint: disable=compare-to-zero
                 self.setup_ebud2(temp1n, temp1s)
 
             dqn = (
                 (im + 1) * forc_nh * dtyear
                 + (1 - (im + 1) * dtyear) * self.prev_values["fn"]
-                + fn_volc[im]
+                + fn_volc[volc_idx]
             )
             dqs = (
                 (im + 1) * forc_sh * dtyear
                 + (1 - (im + 1) * dtyear) * self.prev_values["fs"]
-                + fs_volc[im]
+                + fs_volc[volc_idx]
             )
             dn[0] = (
                 self.varrying["dtrm1n"] * self.tn[0]
@@ -652,16 +652,8 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
         # Getting Ocean temperature:
         ocean_res = self.ocean_temperature()
-        ribn = (
-            forc_nh
-            + np.sum(fn_volc) / self.pamset["ldtime"]
-            - self.pamset["rlamda"] * tempn
-        )
-        ribs = (
-            forc_sh
-            + np.sum(fs_volc) / self.pamset["ldtime"]
-            - self.pamset["rlamda"] * temps
-        )
+        ribn = forc_nh + np.mean(fn_volc) - self.pamset["rlamda"] * tempn
+        ribs = forc_sh + np.mean(fs_volc) - self.pamset["rlamda"] * temps
         # Returning results_dict
         return {
             "dtemp": dtemp,
