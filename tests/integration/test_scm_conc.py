@@ -139,6 +139,25 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
             "idtm": 24,
+            "sunvolc": 1,
+            "rf_luc_data": pd.read_csv(
+                os.path.join(test_data_dir, "land_use_erf_ar6.txt"),
+                header=None,
+                skiprows=1,
+                index_col=0,
+            ),
+            "rf_sun_data": pd.read_csv(
+                os.path.join(test_data_dir, "solar_erf_ar6.txt"),
+                header=None,
+                skiprows=1,
+                index_col=0,
+            ),
+            "rf_volc_data": pd.read_csv(
+                os.path.join(test_data_dir, "volcanic_erf_ar6.txt"),
+                header=None,
+                skiprows=1,
+                index_col=0,
+            ),
         },
     )
 

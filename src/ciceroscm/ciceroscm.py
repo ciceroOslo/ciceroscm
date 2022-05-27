@@ -251,7 +251,7 @@ class CICEROSCM:
                 self.ce_handler.emi2conc(yr)
                 forc, fn, fs = self.ce_handler.conc2forc(
                     yr,
-                    self.rf_luc.loc[yr, 0],
+                    self.rf_luc.iloc[yr - self.cfg["nystart"], 0],
                     self.rf_volc_sun["sun"].iloc[yr - self.cfg["nystart"], 0],
                 )
 
@@ -260,8 +260,8 @@ class CICEROSCM:
             values = udm.energy_budget(
                 fn,
                 fs,
-                self.rf_volc_sun["volc_n"].iloc[yr - self.cfg["nystart"], :],
-                self.rf_volc_sun["volc_s"].iloc[yr - self.cfg["nystart"], :],
+                np.array(self.rf_volc_sun["volc_n"].iloc[yr - self.cfg["nystart"], :]),
+                np.array(self.rf_volc_sun["volc_s"].iloc[yr - self.cfg["nystart"], :]),
             )
             self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 
