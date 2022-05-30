@@ -64,8 +64,8 @@ def cut_non_required(required, pamset, cut_warnings=False):
          pamset where unnecessary elements have been cut
     """
     new_pamset = {}
-    for pam in required:
-        if pam in pamset:
+    for pam in pamset:
+        if pam in required:
             new_pamset[pam] = pamset[pam]
         elif cut_warnings:
             LOGGER.warning(  # pylint: disable=logging-fstring-interpolation

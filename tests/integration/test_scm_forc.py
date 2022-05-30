@@ -81,7 +81,6 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     # 1pct CO2 without sunvolc
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
         },
@@ -95,7 +94,6 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     # 1 ppct CO2 with sunvolc
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "sunvolc": 1,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
@@ -117,7 +115,6 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     # Test hemispheric split:
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "test_forcing_hemisplit.txt"),
         },

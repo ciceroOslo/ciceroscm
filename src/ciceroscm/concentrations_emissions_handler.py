@@ -7,7 +7,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from ._utils import check_numeric_pamset
+# from ._utils import check_numeric_pamset
+from ._utils import cut_and_check_pamset
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -117,10 +118,11 @@ def check_pamset(pamset):
         "idtm": 24,
     }
 
-    pamset = check_numeric_pamset(required, pamset)
+    # pamset = check_numeric_pamset(required, pamset, )
     if "lifetime_mode" not in pamset:
         pamset["lifetime_mode"] = "TAR"
-
+    used = {"lifetime_mode": "TAR"}
+    pamset = cut_and_check_pamset(required, pamset, used=used, cut_warnings=True)
     return pamset
 
 
@@ -234,8 +236,13 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
-        self.pamset = check_numeric_pamset(
-            {"idtm": 24, "nystart": 1750, "nyend": 2100}, pamset
+        # self.pamset = check_numeric_pamset(
+        #    {"idtm": 24, "nystart": 1750, "nyend": 2100}, pamset
+        # )
+        self.pamset = cut_and_check_pamset(
+            {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
+            pamset,
+            cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
         years_tot = len(self.years)
