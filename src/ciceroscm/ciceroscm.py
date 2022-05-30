@@ -136,6 +136,9 @@ class CICEROSCM:
             "dT_NH_sea",
             "dT_SHsea",
             "Total_forcing",
+            "Solar_forcing",
+            "Volcanic_forcing_NH",
+            "Volcanic_forcing_SH",
         ]
         for output in output_variables:
             self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
@@ -213,6 +216,13 @@ class CICEROSCM:
         for output, name in outputs_dict.items():
             self.results[output][index] = values[name]
         self.results["Total_forcing"][index] = forc
+        self.results["Solar_forcing"][index] = self.rf_volc_sun["sun"].iloc[index, 0]
+        self.results["Volcanic_forcing_NH"][index] = np.mean(
+            np.array(self.rf_volc_sun["volc_n"].iloc[index, :])
+        )
+        self.results["Volcanic_forcing_SH"][index] = np.mean(
+            np.array(self.rf_volc_sun["volc_s"].iloc[index, :])
+        )
 
     def _run(
         self, cfg, pamset_udm={}, pamset_emiconc={}, make_plot=False
@@ -329,6 +339,7 @@ class CICEROSCM:
             filename_start = "output"
         for vari in list_temp:
             df_temp[vari] = self.results[vari]
+
         df_ohc.to_csv(
             os.path.join(outdir, f"{filename_start}_ohc.txt"),
             sep="\t",
@@ -343,6 +354,20 @@ class CICEROSCM:
         )
         df_temp.to_csv(
             os.path.join(outdir, f"{filename_start}_temp.txt"),
+            sep="\t",
+            index=False,
+            float_format="%.5e",
+        )
+        df_sunvolc = pd.DataFrame(
+            data={
+                "Year": indices,
+                "Solar_forcing": self.results["Solar_forcing"],
+                "Volcanic_forcing_NH": self.results["Volcanic_forcing_NH"],
+                "Volcanic_forcing_SH": self.results["Volcanic_forcing_SH"],
+            }
+        )
+        df_sunvolc.to_csv(
+            os.path.join(outdir, f"{filename_start}_sunvolc.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
