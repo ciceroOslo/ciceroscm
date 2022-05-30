@@ -66,9 +66,7 @@ def test_get_data_and_more(test_data_dir):
     assert not ih.conc_run()
     with pytest.raises(KeyError, match="No user or default data for emissions"):
         ih.get_data("emissions")
-    with pytest.raises(
-        KeyError, match="No reading method available for unicorn_emissions_file"
-    ):
+    with pytest.raises(KeyError, match="No user or default data for unicorn_emissions"):
         ih.get_data("unicorn_emissions")
 
 

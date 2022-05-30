@@ -11,7 +11,7 @@ from ciceroscm import CICEROSCM, input_handler
 def check_output(
     output_dir, expected_output_dir, update_expected_files=False, rtol=1e-2
 ):
-    files = ["output_temp.txt", "output_ohc.txt"]
+    files = ["output_temp.txt", "output_ohc.txt", "output_sunvolc.txt"]
 
     for filename in files:
         file_to_check = os.path.join(output_dir, filename)
@@ -71,7 +71,6 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
         },
     )
     outdir = str(tmpdir)
-    # outdir = os.path.join(os.getcwd(), "output")
     # One year forcing:
 
     cscm._run({"output_folder": outdir})
@@ -81,7 +80,6 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     # 1pct CO2 without sunvolc
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
         },
@@ -95,7 +93,6 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     # 1 ppct CO2 with sunvolc
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "sunvolc": 1,
             "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
@@ -103,7 +100,7 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
             "rf_volc_s_data": ih.get_data("rf_volc_s") + 0.353195076,
         },
     )
-
+    outdir = str(tmpdir)
     cscm._run({"output_folder": outdir})
 
     check_output(outdir, os.path.join(test_data_dir, "1pct_CO2"))
@@ -117,7 +114,6 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     # Test hemispheric split:
     cscm = CICEROSCM(
         {
-            "gaspamfile": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "test_forcing_hemisplit.txt"),
         },

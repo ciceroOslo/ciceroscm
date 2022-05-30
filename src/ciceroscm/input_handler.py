@@ -8,7 +8,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from ._utils import check_numeric_pamset
+# from ._utils import check_numeric_pamset
+from ._utils import cut_and_check_pamset
 
 LOGGER = logging.getLogger(__name__)
 
@@ -230,9 +231,6 @@ class InputHandler:
         FileNotFoundError
             If forcing file is not found when forcing run is chosen
         """
-        self.cfg = check_numeric_pamset(
-            {"nystart": 1750, "nyend": 2100, "emstart": 1850}, cfg
-        )
         self.read_methods = {
             "forc": read_forc,
             "gaspam": read_components,
@@ -241,8 +239,8 @@ class InputHandler:
             "concentrations": [
                 read_inputfile,
                 True,
-                self.cfg["nystart"],
-                self.cfg["nyend"],
+                1750,
+                2100,
             ],
             "emissions": self.read_emissions,
             "perturb_em": read_csv_no_index_col,
@@ -252,6 +250,22 @@ class InputHandler:
             "rf_volc_n": self.read_data_on_year_row,
             "rf_volc_s": self.read_data_on_year_row,
         }
+        used = {"sunvolc": 0, "conc_run": False}
+        for key in self.read_methods:
+            used[f"{key}_file"] = 0
+            used[f"{key}_data"] = 0
+        self.cfg = cut_and_check_pamset(
+            {"nystart": 1750, "nyend": 2100, "emstart": 1850},
+            cfg,
+            used=used,
+            cut_warnings=True,
+        )
+        self.read_methods["concentrations"] = [
+            read_inputfile,
+            True,
+            self.cfg["nystart"],
+            self.cfg["nyend"],
+        ]
         self.set_sun_volc_luc_defaults()
 
         check_inputfiles(self.cfg)

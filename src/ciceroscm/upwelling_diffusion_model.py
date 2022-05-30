@@ -5,7 +5,7 @@ import logging
 
 import numpy as np
 
-from ._utils import check_numeric_pamset
+from ._utils import cut_and_check_pamset
 
 SEC_DAY = 86400
 DAY_YEAR = 365.0
@@ -47,7 +47,7 @@ def check_pamset(pamset):
         "lm": 40,
         "ldtime": 12,
     }
-    pamset = check_numeric_pamset(required, pamset)
+    pamset = cut_and_check_pamset(required, pamset, cut_warnings=True)
     pamset["rakapa"] = 1.0e-4 * pamset["akapa"]
     pamset["rlamda"] = 1.0 / pamset["lambda"]
     pamset["dt"] = 1 / pamset["ldtime"] * SEC_DAY * DAY_YEAR
@@ -226,7 +226,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
         # Setting up dz height difference between ocean layers
         self.dz = np.ones(self.pamset["lm"]) * 100.0
-        self.dz[0] = params["mixed"]
+        self.dz[0] = self.pamset["mixed"]
         self.varrying = {}
         self.setup_ebud()
 
