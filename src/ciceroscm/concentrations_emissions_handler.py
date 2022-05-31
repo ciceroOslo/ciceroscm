@@ -266,6 +266,7 @@ class ConcentrationsEmissionsHandler:
         ]
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
+        print(f"CH4_ref : {self.conc_in['CH4'][2010]}")
 
     def reset_with_new_pams(self, pamset, preexisting=True):
         """
@@ -469,7 +470,11 @@ class ConcentrationsEmissionsHandler:
             # ALOG(1700.0))  !Concentration in 2010 &
             self.conc[tracer][yr] = (
                 30.0
-                + 6.7 * (np.log(self.conc["CH4"][yr]) - np.log(1832.0))
+                + 6.7
+                * (
+                    np.log(self.conc["CH4"][yr])
+                    - np.log(self.conc_in["CH4"][self.pamset["ref_yr"]])
+                )
                 + 0.17
                 * (self.emis["NOx"][yr] - self.emis["NOx"][self.pamset["ref_yr"]])
                 + 0.0014
