@@ -418,7 +418,10 @@ class ConcentrationsEmissionsHandler:
             + 0.043
         ) * (np.sqrt(c_ch4) - np.sqrt(c0_ch4))
         # Feedback factor: Smith et al 2018
-        q_ch4 = 1.0 / 1.14 * q_ch4  # + FORC_PERT(yr_ix,trc_ix))
+        q_co2 = self.df_gas["SARF_TO_ERF"]["CO2"] * q_co2  # + FORC_PERT(yr_ix,trc_ix))
+        q_n2o = self.df_gas["SARF_TO_ERF"]["N2O"] * q_n2o  # + FORC_PERT(yr_ix,trc_ix))
+        q_ch4 = self.df_gas["SARF_TO_ERF"]["CH4"] * q_ch4  # + FORC_PERT(yr_ix,trc_ix))
+
         self.forc["CO2"][yr - yr_0] = q_co2
         self.forc["CH4"][yr - yr_0] = q_ch4
         self.forc["N2O"][yr - yr_0] = q_n2o
@@ -561,11 +564,11 @@ class ConcentrationsEmissionsHandler:
                 tracer in self.df_gas.index
                 and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
             ):
-                q = (self.conc[tracer][yr] - self.conc[tracer][yr_0]) * self.df_gas[
-                    "ALPHA"
-                ][
-                    tracer
-                ]  # +forc_pert
+                q = (
+                    (self.conc[tracer][yr] - self.conc[tracer][yr_0])
+                    * self.df_gas["ALPHA"][tracer]
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )  # +forc_pert
             elif tracer == "TROP_O3":
                 q = self.tropospheric_ozone_forcing(yr)
             elif tracer == "STRAT_O3":
