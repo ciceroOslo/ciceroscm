@@ -882,6 +882,7 @@ class ConcentrationsEmissionsHandler:
         cols = df_forc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_forc = df_forc[cols]
+        df_forc.rename(columns={"SO2": "SO4_DIR"}, inplace=True)
         df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis=1).drop(
             labels=np.arange(self.years[-1] + 1, self.emis.index[-1] + 1), axis=0
         )
@@ -944,6 +945,7 @@ class ConcentrationsEmissionsHandler:
         cols = df_forc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_forc = df_forc[cols]
+        df_forc.rename(columns={"SO2": "SO4_DIR"}, inplace=True)
         df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis=1).drop(
             labels=np.arange(self.years[-1] + 1, self.emis.index[-1] + 1), axis=0
         )
