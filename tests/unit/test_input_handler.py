@@ -35,6 +35,7 @@ def test_read_components(test_data_dir):
         "TAU2",
         "TAU3",
         "NAT_EM",
+        "SARF_TO_ERF",
     ]
     assert len(df_gas.index) == 46
 
