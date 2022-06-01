@@ -121,7 +121,7 @@ def check_pamset(pamset):
     # pamset = check_numeric_pamset(required, pamset, )
     if "lifetime_mode" not in pamset:
         pamset["lifetime_mode"] = "TAR"
-    used = {"lifetime_mode": "TAR"}
+    used = {"lifetime_mode": "TAR", "just_one": "CO2"}
     pamset = cut_and_check_pamset(required, pamset, used=used, cut_warnings=True)
     return pamset
 
@@ -496,7 +496,7 @@ class ConcentrationsEmissionsHandler:
             )
         return q
 
-    def conc2forc(self, yr, rf_luc, rf_sun):
+    def conc2forc(self, yr, rf_luc, rf_sun):  # pylint: disable=too-many-branches
         """
         Calculate forcing from concentrations
 
@@ -599,6 +599,11 @@ class ConcentrationsEmissionsHandler:
 
         # Adding solar forcing
         # tot_forc = tot_forc + rf_sun
+        if "just_one" in self.pamset:
+            tot_forc = self.forc[self.pamset["just_one"]][yr - yr_0]
+            forc_nh, forc_sh = calculate_hemispheric_forcing(
+                self.pamset["just_one"], tot_forc, 0, 0
+            )
         self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun

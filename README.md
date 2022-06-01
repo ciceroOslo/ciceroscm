@@ -39,6 +39,7 @@ With a CICEROSCM instance in place, you are ready to start runs with various par
 * output_folder - name of or path of file wher output from the run is stored (at the moment this will always be assumed to be laying under the directory from which the code is run)
 * output_prefix - prefix to output filenames
 * make_plot - if set to True plots of the output are made and saved to a subfolder in the output_folder.
+* results_as_dict - if set to True, outputs will not be printed to files, instead they will be available as a results attribute dictionary to the ciceroscm instance.
 
 ### Parameter sets
 Physical parameters to the model is divided in two parametersets each of which are sent as two seperate dictionaries to the run call.
@@ -75,6 +76,7 @@ The concentration and emission parameterset (which is needed for emission runs) 
 * qh2o_ch4 (0.091915) - Stratospheric water vapour ERF ratio to methane ERF
 * ref_yr (2010) - Reference year for the above forcing values. To construct radiative forcing time series, these forcing values are scaled using emssions. The forcing in the reference year is equal to the forcing value set by the above parameters
 * idtm (24) - Number of subyearly timesteps for calculation of CO2 concentrations from emissions.
+* just_one - this is an optional parameter which allows you to run with the forcing of a single component to the upwelling diffusion model. It should be set equal to the component you are interested in seeing the effects of.
 
 ## Example scripts
 The scripts folder contains various example scripts that can be used to see how to set up various types of runs. The start of all of them adds the necessary parts for the file to run with the module. If you want to run from somewhere else you will need to edit the <code>sys.path.append</code> command so it points to where you've stored the src directory of this repository.
