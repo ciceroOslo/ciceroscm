@@ -300,3 +300,29 @@ def test_run_with_data_not_files(tmpdir, test_data_dir):
         files=["output_temp.txt"],
         lines=16,
     )
+
+
+def test_ciceroscm_just_one(tmpdir, test_data_dir):
+    cscm = CICEROSCM(
+        {
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "nyend": 2100,
+            "conc_run": True,
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
+            "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
+            "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
+            "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+        },
+    )
+    # outdir = str(tmpdir)
+    outdir_save = os.path.join(os.getcwd(), "output")
+
+    # One year forcing:
+
+    cscm._run(
+        {"output_folder": outdir_save, "results_as_dict": True},
+        pamset_emiconc={"qh2o_ch4": 0.171, "just_one": "CO2"},
+    )
+    assert cscm.results["forcing"]["CO2"].equals(
+        cscm.results["forcing"]["Total_forcing"]
+    )
