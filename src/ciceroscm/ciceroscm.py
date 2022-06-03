@@ -278,9 +278,9 @@ class CICEROSCM:
         if make_plot:
             plot_output1(cfg, self.results, self.cfg["nystart"], self.cfg["nyend"])
         if (
-            "results_as_dict" in cfg
+            ("results_as_dict" in cfg)
             and cfg["results_as_dict"]
-            and not self.cfg["rf_run"]
+            and (not self.cfg["rf_run"])
         ):
             self.results.update(self.ce_handler.add_results_to_dict())
         else:

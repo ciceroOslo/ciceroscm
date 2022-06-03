@@ -10,6 +10,23 @@ import numpy as np
 def fix_plot(axs, ylabel, title, legend=False):
     """
     Add labels to ohc, rib and temp plot
+
+    Adding Year as xlabel, and a list of ylabels
+    and list of titles to each of a list of axes
+    If choosen add label
+    Used typically  to annotate ohc rib and temp plot
+
+    Parameters
+    ----------
+    axs : list
+       list of plot axes
+    ylabel : list
+          list of ylabels for each axis
+    title : list
+          list of ylabels for each axis
+    legend : bool
+          Whether or not to add a legend to the
+          plot axes
     """
     axs = axs.flatten()
     for i, ylab in enumerate(ylabel):
@@ -23,6 +40,17 @@ def fix_plot(axs, ylabel, title, legend=False):
 def plot_output1(pamset, results, nystart, nyend):
     """
     Plot ohc, rib and temp output
+
+    Parameters
+    ----------
+    pamset : dict
+          pamset possibly containing output_folder path
+    results : dict
+           Dictionary with results to plot
+    nystart : int
+           Startyear of dataset
+    nyend : int
+         Endyear of dataset
     """
     if "output_folder" in pamset:
         outdir = os.path.join(os.getcwd(), pamset["output_folder"])
@@ -82,6 +110,18 @@ def plot_output1(pamset, results, nystart, nyend):
 def plot_output2(var, df_in, outdir, unit=None):
     """
     Plot concentration, emission and forcing
+
+    Parameters
+    ----------
+    var : str
+       Denoting whether data is concentrations (conc),
+       emissions (emis) or forcing (forc)
+    df_in : pd.dataframe
+         Dataframe to plot
+    outdir : str
+          path of where to send plot
+    unit : pd.dataframe
+        dataframe possibly containing units
     """
     plotdir = os.path.join(outdir, "plots")
     years = df_in["Year"]
