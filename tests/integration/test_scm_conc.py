@@ -315,14 +315,22 @@ def test_ciceroscm_just_one(tmpdir, test_data_dir):
         },
     )
     # outdir = str(tmpdir)
-    outdir_save = os.path.join(os.getcwd(), "output")
 
     # One year forcing:
 
     cscm._run(
-        {"output_folder": outdir_save, "results_as_dict": True},
+        {"results_as_dict": True},
         pamset_emiconc={"qh2o_ch4": 0.171, "just_one": "CO2"},
     )
     assert cscm.results["forcing"]["CO2"].equals(
         cscm.results["forcing"]["Total_forcing"]
     )
+
+    cscm2 = CICEROSCM(
+        {"nyend": 2100, "forc_data": cscm.results["forcing"]["CO2"].to_numpy()}
+    )
+
+    cscm2._run({"results_as_dict": True})
+
+    for key in cscm2.results:
+        assert np.array_equal(cscm2.results[key], cscm.results[key])

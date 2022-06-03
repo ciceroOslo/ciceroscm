@@ -17,7 +17,7 @@ from _version import get_versions  # isort:skip # append path before
 # -- Project information -----------------------------------------------------
 
 project = "Ciceroscm"
-authors = ", ".join(["Marit Sandstad"])
+authors = ", ".join(["Ane Nordlie Johansen", "Benjaminn M. Sanderson", "Marit Sandstad", "Ragnhild Bieltvedt Skeie"])
 copyright_year = "2022"
 copyright = "{}, {}".format(copyright_year, authors)
 author = authors
@@ -99,9 +99,9 @@ html_static_path = ["_static"]
 
 html_context = {
     "display_github": False,
-    "github_user": "openscm",
-    "github_repo": "openscm-runner",
-    "github_version": "master",
+    "github_user": "ciceroOslo",
+    "github_repo": "ciceroscm",
+    "github_version": "main",
     "conf_py_path": "/docs/source",
 }
 
@@ -132,7 +132,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "openscm-runner.tex", "OpenSCM-Runner Documentation", author, "manual")
+    (master_doc, "ciceroscm.tex", "CICEROSCM Documentation", author, "manual")
 ]
 
 
@@ -141,7 +141,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, "openscm-runner", "OpenSCM-Runner Documentation", [author], 1)
+    (master_doc, "ciceroscm", "CICEROSCM Documentation", [author], 1)
 ]
 
 
