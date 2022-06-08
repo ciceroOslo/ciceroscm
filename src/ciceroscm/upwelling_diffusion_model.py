@@ -32,14 +32,14 @@ def check_pamset(pamset):
         Updated pamset with default values used where necessary
     """
     required = {
-        "rlamdo": 16.0,
-        "akapa": 0.634,
-        "cpi": 0.4,
-        "W": 4.0,
-        "beto": 3.5,
+        "rlamdo": 15.0,
+        "akapa": 0.66,
+        "cpi": 0.21,
+        "W": 2.2,
+        "beto": 6.9,
         "threstemp": 7.0,
-        "lambda": 0.540,
-        "mixed": 60.0,
+        "lambda": 0.61,
+        "mixed": 107.0,
         "foan": 0.61,
         "foas": 0.81,
         "ebbeta": 0.0,

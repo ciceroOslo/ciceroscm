@@ -73,7 +73,18 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     outdir = str(tmpdir)
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_udm={
+            "rlamdo": 16.0,
+            "akapa": 0.634,
+            "cpi": 0.4,
+            "W": 4.0,
+            "beto": 3.5,
+            "lambda": 0.540,
+            "mixed": 60.0,
+        },
+    )
 
     check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
 
@@ -85,7 +96,18 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
         },
     )
 
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_udm={
+            "rlamdo": 16.0,
+            "akapa": 0.634,
+            "cpi": 0.4,
+            "W": 4.0,
+            "beto": 3.5,
+            "lambda": 0.540,
+            "mixed": 60.0,
+        },
+    )
 
     check_output(outdir, os.path.join(test_data_dir, "1pct_CO2_no_sunvolc"))
 
@@ -101,13 +123,33 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
         },
     )
     outdir = str(tmpdir)
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_udm={
+            "rlamdo": 16.0,
+            "akapa": 0.634,
+            "cpi": 0.4,
+            "W": 4.0,
+            "beto": 3.5,
+            "lambda": 0.540,
+            "mixed": 60.0,
+        },
+    )
 
     check_output(outdir, os.path.join(test_data_dir, "1pct_CO2"))
     # check_output(outdir, os.path.join(test_data_dir,"1pct_CO2_no_sunvolc"))
     cscm._run(
         {"output_folder": outdir},
-        pamset_udm={"threstemp": 0},
+        pamset_udm={
+            "threstemp": 0,
+            "rlamdo": 16.0,
+            "akapa": 0.634,
+            "cpi": 0.4,
+            "W": 4.0,
+            "beto": 3.5,
+            "lambda": 0.540,
+            "mixed": 60.0,
+        },
     )
 
     check_output_subset(outdir, os.path.join(test_data_dir, "nr_test_1pct_CO2"))
@@ -122,7 +164,19 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     # outdir = os.path.join(os.getcwd(), "output")
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_udm={
+            "threstemp": 0,
+            "rlamdo": 16.0,
+            "akapa": 0.634,
+            "cpi": 0.4,
+            "W": 4.0,
+            "beto": 3.5,
+            "lambda": 0.540,
+            "mixed": 60.0,
+        },
+    )
 
     check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
     # Test component split:
@@ -137,7 +191,19 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
     # outdir = os.path.join(os.getcwd(), "output")
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_udm={
+            "threstemp": 0,
+            "rlamdo": 16.0,
+            "akapa": 0.634,
+            "cpi": 0.4,
+            "W": 4.0,
+            "beto": 3.5,
+            "lambda": 0.540,
+            "mixed": 60.0,
+        },
+    )
 
     check_output(outdir, os.path.join(test_data_dir, "1_year_blipp"))
 

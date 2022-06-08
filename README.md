@@ -49,14 +49,14 @@ If the parametersets are not provided, a default parameterset is used
 If one or more parameters are not provided as part of the parameterset, these parameters will be set to the default values
 #### pamset_udm
 The upwelling diffusion model (which is needed for all runs) takes the following parameters.(Default value in paranthesis):
-* rlamdo (16.0) - Air-sea heat exchange parameter <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 5-25
-* akapa (0.634) - Vertical heat diffusicity <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{cm}^2}{\mathrm{s}}">, valid range 0.06-0.8
-* cpi (0.4) - Polar parameter, temperature change ratio polar to nonpolar region, unitless, valid range 0.161-0.569
-* W (4.0) - Vertical velocity, upwelling rate <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{m}}{\mathrm{yr}}">, valid range 0.55-2.55
-* beto (3.5) - Ocean interhemispheric heat exchange coefficient <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 0-7
+* rlamdo (15.0) - Air-sea heat exchange parameter <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 5-25
+* akapa (0.66) - Vertical heat diffusicity <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{cm}^2}{\mathrm{s}}">, valid range 0.06-0.8
+* cpi (0.21) - Polar parameter, temperature change ratio polar to nonpolar region, unitless, valid range 0.161-0.569
+* W (2.2) - Vertical velocity, upwelling rate <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{m}}{\mathrm{yr}}">, valid range 0.55-2.55
+* beto (6.9) - Ocean interhemispheric heat exchange coefficient <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 0-7
 * threstemp (7.0) - Scales vertical velocity as a function of mixed layer temperature, unitless. Set to 0 if you don't want to include this parameter.
-* lambda (0.540) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing <img src="https://render.githubusercontent.com/render/math?math=\large \left( 3.71 \frac{\mathrm{W}}{\mathrm{m}^2} \right)">
-* mixed (60.0) - Mixed layer depth, m, valid range 25-125
+* lambda (0.61) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing <img src="https://render.githubusercontent.com/render/math?math=\large \left( 3.71 \frac{\mathrm{W}}{\mathrm{m}^2} \right)">
+* mixed (107.) - Mixed layer depth, m, valid range 25-125
 * foan (0.61) - Fraction of Northern hemisphere covered by ocean
 * foas (0.81) - Fraction of Southern hemisphere covered by ocean
 * ebbeta (0.0) - Atmospheric interhemispheric heat exchange (not currently used)
@@ -67,12 +67,12 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 #### pamset_emiconc
 The concentration and emission parameterset (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
 
-* qbmb (0.03) - Biomass burning aerosol RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qo3 (0.4) - Tropospheric ozone RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qdirso2 (-0.457) - Direct RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qindso2 (-0.514) - Indirect RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qbc (0.200) - BC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qoc (-0.103) - OC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qbmb (0.0) - Biomass burning aerosol RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qo3 (0.5) - Tropospheric ozone RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qdirso2 (-0.36) - Direct RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qindso2 (-0.97) - Indirect RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qbc (0.16) - BC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qoc (-0.08) - OC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
 * qh2o_ch4 (0.091915) - Stratospheric water vapour ERF ratio to methane ERF
 * ref_yr (2010) - Reference year for the above forcing values. To construct radiative forcing time series, these forcing values are scaled using emssions. The forcing in the reference year is equal to the forcing value set by the above parameters
 * idtm (24) - Number of subyearly timesteps for calculation of CO2 concentrations from emissions.
