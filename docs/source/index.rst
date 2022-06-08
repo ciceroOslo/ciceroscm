@@ -22,6 +22,13 @@ CiceroSCM
     :maxdepth: 2
     :caption: API reference
 
+    ciceroscm
+    upwelling_diffusion_model
+    concentrations_emissions_handler
+    input_handler
+    perturbations
+    make_plots
+
 .. toctree::
     :maxdepth: 2
     :caption: Versions

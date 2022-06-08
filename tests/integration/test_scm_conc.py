@@ -228,7 +228,28 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
 
     # One year forcing:
 
-    cscm._run({"output_folder": outdir}, pamset_emiconc={"qh2o_ch4": 0.171})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_emiconc={
+            "qh2o_ch4": 0.171,
+            "qbmb": 0.03,
+            "qo3": 0.4,
+            "qdirso2": -0.457,
+            "qindso2": -0.514,
+            "qbc": 0.200,
+            "qoc": -0.103,
+            "qh2o_ch4": 0.171,
+        },
+        pamset_udm={
+            "rlamdo": 16.0,
+            "akapa": 0.634,
+            "cpi": 0.4,
+            "W": 4.0,
+            "beto": 3.5,
+            "lambda": 0.540,
+            "mixed": 60.0,
+        },
+    )
 
     check_output(
         outdir,
@@ -315,14 +336,22 @@ def test_ciceroscm_just_one(tmpdir, test_data_dir):
         },
     )
     # outdir = str(tmpdir)
-    outdir_save = os.path.join(os.getcwd(), "output")
 
     # One year forcing:
 
     cscm._run(
-        {"output_folder": outdir_save, "results_as_dict": True},
+        {"results_as_dict": True},
         pamset_emiconc={"qh2o_ch4": 0.171, "just_one": "CO2"},
     )
     assert cscm.results["forcing"]["CO2"].equals(
         cscm.results["forcing"]["Total_forcing"]
     )
+
+    cscm2 = CICEROSCM(
+        {"nyend": 2100, "forc_data": cscm.results["forcing"]["CO2"].to_numpy()}
+    )
+
+    cscm2._run({"results_as_dict": True})
+
+    for key in cscm2.results:
+        assert np.array_equal(cscm2.results[key], cscm.results[key])

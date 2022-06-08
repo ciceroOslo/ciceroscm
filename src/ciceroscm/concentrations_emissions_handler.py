@@ -107,12 +107,12 @@ def check_pamset(pamset):
         Updated pamset with default values used where necessary
     """
     required = {
-        "qbmb": 0.03,
-        "qo3": 0.4,
-        "qdirso2": -0.457,
-        "qindso2": -0.514,
-        "qbc": 0.200,
-        "qoc": -0.103,
+        "qbmb": 0.0,
+        "qo3": 0.5,
+        "qdirso2": -0.36,
+        "qindso2": -0.97,
+        "qbc": 0.16,
+        "qoc": -0.08,
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
         "idtm": 24,
@@ -663,10 +663,10 @@ class ConcentrationsEmissionsHandler:
             q = 1.0 / self.df_gas["TAU1"][tracer]
 
             if tracer == "CH4":
-                self.df_gas["NAT_EM"][tracer] = self.nat_emis_ch4["CH4"][yr]
+                self.df_gas.at[tracer, "NAT_EM"] = self.nat_emis_ch4["CH4"][yr]
                 q = self.methane_lifetime(q, conc_local, yr)
             if tracer == "N2O":
-                self.df_gas["NAT_EM"][tracer] = self.nat_emis_n2o["N2O"][yr]
+                self.df_gas.at[tracer, "NAT_EM"] = self.nat_emis_n2o["N2O"][yr]
 
             emis = self.emis[tracer][yr]
             emis = (
