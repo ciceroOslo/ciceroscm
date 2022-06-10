@@ -107,5 +107,7 @@ def cut_and_check_pamset(
         used.update(required)
     else:
         used = required
+    # print(used)
+    # print(required)
     pamset = cut_non_required(used, pamset, cut_warnings)
     return check_numeric_pamset(required, pamset)

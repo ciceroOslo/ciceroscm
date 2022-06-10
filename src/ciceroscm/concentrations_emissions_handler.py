@@ -115,13 +115,19 @@ def check_pamset(pamset):
         "qoc": -0.08,
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
-        "idtm": 24,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
     if "lifetime_mode" not in pamset:
         pamset["lifetime_mode"] = "TAR"
-    used = {"lifetime_mode": "TAR", "just_one": "CO2"}
+    used = {
+        "lifetime_mode": "TAR",
+        "just_one": "CO2",
+        "idtm": 24,
+        "nystart": 1750,
+        "nyend": 2100,
+        "emstart": 1850,
+    }
     pamset = cut_and_check_pamset(required, pamset, used=used, cut_warnings=True)
     return pamset
 
@@ -266,7 +272,6 @@ class ConcentrationsEmissionsHandler:
         ]
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
-        print(f"CH4_ref : {self.conc_in['CH4'][2010]}")
 
     def reset_with_new_pams(self, pamset, preexisting=True):
         """

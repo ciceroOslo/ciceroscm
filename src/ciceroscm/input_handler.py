@@ -250,7 +250,11 @@ class InputHandler:
             "rf_volc_n": self.read_data_on_year_row,
             "rf_volc_s": self.read_data_on_year_row,
         }
-        used = {"sunvolc": 0, "conc_run": False}
+        used = {
+            "sunvolc": 0,
+            "conc_run": False,
+            "idtm": 24,
+        }
         for key in self.read_methods:
             used[f"{key}_file"] = 0
             used[f"{key}_data"] = 0
