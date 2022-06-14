@@ -242,9 +242,6 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
-        # self.pamset = check_numeric_pamset(
-        #    {"idtm": 24, "nystart": 1750, "nyend": 2100}, pamset
-        # )
         self.pamset = cut_and_check_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
