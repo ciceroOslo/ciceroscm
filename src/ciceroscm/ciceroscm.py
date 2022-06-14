@@ -97,6 +97,7 @@ class CICEROSCM:
             pamset_emiconc["emstart"] = self.cfg["emstart"]
             pamset_emiconc["nystart"] = self.cfg["nystart"]
             pamset_emiconc["nyend"] = self.cfg["nyend"]
+            pamset_emiconc["idtm"] = self.cfg["idtm"]
             self.ce_handler = ConcentrationsEmissionsHandler(
                 input_handler, pamset_emiconc
             )
