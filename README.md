@@ -46,7 +46,8 @@ Physical parameters to the model is divided in two parametersets each of which a
 * One parameterset pamset_udm for the upwelling diffusion model
 * One parameterset pamset_emiconc for emissions and concentrations
 If the parametersets are not provided, a default parameterset is used
-If one or more parameters are not provided as part of the parameterset, these parameters will be set to the default values
+If one or more parameters are not provided as part of the parameterset, these parameters will be set to the default values. 
+The default parameter sets should produce fairly sensible temperature histories when fed with AR6 input data, however, there is nothing uniquely appropriate about this particular set of parameters, and a thorough span of the best fit set of parameter combinations will be subject of later work.
 #### pamset_udm
 The upwelling diffusion model (which is needed for all runs) takes the following parameters.(Default value in paranthesis):
 * rlamdo (15.0) - Air-sea heat exchange parameter <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 5-25
