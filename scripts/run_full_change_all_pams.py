@@ -21,9 +21,9 @@ cscm = CICEROSCM(
         "emissions_file": os.path.join(data_dir, "ssp245_em_RCMIP.txt"),
         "nat_ch4_file": os.path.join(data_dir, "natemis_ch4.txt"),
         "nat_n2o_file": os.path.join(data_dir, "natemis_n2o.txt"),
+        "idtm": 24
     },
 )
-
 
 cscm._run(
     {"output_folder": outdir, "output_prefix": "pams_other"},
@@ -33,7 +33,7 @@ cscm._run(
         "cpi": 0.5513349,
         "W": 1.081163,
         "beto": 0.8246083,
-        "threshtemp": 6.0,
+        "threstemp": 6.0,
         "lambda": 0.6086934,
         "mixed": 78.46448,
         "foan": 0.62,

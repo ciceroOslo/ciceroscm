@@ -84,8 +84,9 @@ class CICEROSCM:
 
         """
         self.cfg = cut_and_check_pamset(
-            {"nystart": 1750, "nyend": 2100, "emstart": 1850}, cfg
+            {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24}, cfg
         )
+        cfg.update(self.cfg)
         input_handler = InputHandler(cfg)
         self.cfg["rf_run"] = input_handler.optional_pam("forc")
         if self.cfg["rf_run"]:
@@ -96,8 +97,7 @@ class CICEROSCM:
             pamset_emiconc["emstart"] = self.cfg["emstart"]
             pamset_emiconc["nystart"] = self.cfg["nystart"]
             pamset_emiconc["nyend"] = self.cfg["nyend"]
-            if "idtm" in cfg:
-                pamset_emiconc["idtm"] = cfg["idtm"]
+            pamset_emiconc["idtm"] = self.cfg["idtm"]
             self.ce_handler = ConcentrationsEmissionsHandler(
                 input_handler, pamset_emiconc
             )
