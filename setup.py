@@ -1,3 +1,5 @@
+import os
+
 from setuptools import find_packages, setup
 from setuptools.command.test import test as TestCommand
 
@@ -6,6 +8,9 @@ import versioneer
 PACKAGE_NAME = "ciceroscm"
 AUTHORS = [
     ("Marit Sandstad", "marit.sandstad@cicero.oslo.no"),
+    ("Ragnhild Bieltvedt Skeie", "r.b.skeie@cicero.oslo.no"),
+    ("Ane Nordlie Johansen", "ane.nordlie.johansen@cicero.oslo.no"),
+    ("Benjamin Sanderson", "benjamin.sanderson@cicero.oslo.no"),
 ]
 URL = "https://github.com/ciceroOslo/ciceroscm"
 
@@ -69,7 +74,7 @@ REQUIREMENTS_EXTRAS = {
 # no tests/docs in `src` so don't need exclude
 PACKAGES = find_packages(SOURCE_DIR)
 PACKAGE_DIR = {"": SOURCE_DIR}
-# PACKAGE_DATA = {}
+PACKAGE_DATA = {"ciceroscm": [os.path.join("default_data", "*.txt")]}
 
 # Get the long description from the README file
 with open(README, "r") as f:
@@ -111,10 +116,10 @@ setup(
     author=", ".join([author[0] for author in AUTHORS]),
     author_email=", ".join([author[1] for author in AUTHORS]),
     url=URL,
-    license="3-Clause BSD License",
+    license="Apache 2.0",
     classifiers=[  # full list at https://pypi.org/pypi?%3Aaction=list_classifiers
         "Development Status :: 4 - Beta",
-        "License :: OSI Approved :: BSD License",
+        "License :: OSI Approved :: Apache Software License",
         "Intended Audience :: Developers",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3.7",
@@ -124,14 +129,9 @@ setup(
     keywords=["cicero-scm", "cicero", "python", "repo", "simple", "climate", "model"],
     packages=PACKAGES,
     package_dir=PACKAGE_DIR,
-    # package_data=PACKAGE_DATA,
+    package_data=PACKAGE_DATA,
     include_package_data=True,
     install_requires=REQUIREMENTS,
     extras_require=REQUIREMENTS_EXTRAS,
     cmdclass=cmdclass,
-    # entry_points={
-    #     "console_scripts": [
-    #         "openscm-runner=openscm_runner.cli:run",
-    #     ]
-    # },
 )
