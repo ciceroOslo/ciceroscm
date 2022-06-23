@@ -72,11 +72,7 @@ REQUIREMENTS_EXTRAS = {
 # no tests/docs in `src` so don't need exclude
 PACKAGES = find_packages(SOURCE_DIR)
 PACKAGE_DIR = {"": SOURCE_DIR}
-PACKAGE_DATA = {
-    "ciceroscm": [
-        os.path.join("default_data", "*.txt")
-        ]
-}
+PACKAGE_DATA = {"ciceroscm": [os.path.join("default_data", "*.txt")]}
 
 # Get the long description from the README file
 with open(README, "r") as f:
