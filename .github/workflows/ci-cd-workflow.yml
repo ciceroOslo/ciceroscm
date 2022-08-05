@@ -98,7 +98,9 @@ jobs:
       if: matrix.python-version == 3.7
       run: |
           pytest notebooks -r a --nbval --sanitize-with tests/notebook-tests.cfg --no-cov
- test-install:
+
+
+  test-install:
 
     needs: [build,linting-and-docs]
     runs-on: ubuntu-latest
@@ -113,6 +115,8 @@ jobs:
       run: |
         pip list
         python scripts/test_install.py
+
+
   create-dist:
 
     needs: [build,linting-and-docs]
