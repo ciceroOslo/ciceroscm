@@ -42,7 +42,7 @@ def check_numeric_pamset(required, pamset):
     return pamset
 
 
-def cut_non_required(required, pamset):
+def cut_non_required(required, pamset, cut_warnings=False):
     """
     Cut elements from pamset that are not required
 
@@ -55,20 +55,28 @@ def cut_non_required(required, pamset):
             with default values
     pamset : dict
           Dictionary to be checked and cut from
-
+    cut_warnings : bool
+                Boolean stating whether or not warnings
+                should be printed if parameters are cut
     Returns
     -------
     dict
          pamset where unnecessary elements have been cut
     """
     new_pamset = {}
-    for pam in required:
-        if pam in pamset:
+    for pam in pamset:
+        if pam in required:
             new_pamset[pam] = pamset[pam]
+        elif cut_warnings:
+            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
+                f"Parameter {pam} is not used. Please check if you have a typo",
+            )
     return new_pamset
 
 
-def cut_and_check_pamset(required, pamset):
+def cut_and_check_pamset(
+    required, pamset, used={}, cut_warnings=False
+):  # pylint: disable=dangerous-default-value
     """
     Combine cut and check of parameters
 
@@ -82,7 +90,12 @@ def cut_and_check_pamset(required, pamset):
             with default values
     pamset : dict
           Dictionary to be checked and cut from
-
+    used : dict
+        Dictionary or list containing keys used, so
+        that unused parameters can be cut.
+    cut_warnings : bool
+                Boolean stating whether or not warnings
+                should be printed if parameters are cut
     Returns
     -------
     dict
@@ -90,5 +103,9 @@ def cut_and_check_pamset(required, pamset):
          and missing necessary elements have been added
          or augmented if not of numeric type.
     """
-    pamset = cut_non_required(required, pamset)
+    if used:
+        used.update(required)
+    else:
+        used = required
+    pamset = cut_non_required(used, pamset, cut_warnings)
     return check_numeric_pamset(required, pamset)

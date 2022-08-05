@@ -35,6 +35,7 @@ def test_read_components(test_data_dir):
         "TAU2",
         "TAU3",
         "NAT_EM",
+        "SARF_TO_ERF",
     ]
     assert len(df_gas.index) == 46
 
@@ -66,7 +67,32 @@ def test_get_data_and_more(test_data_dir):
     assert not ih.conc_run()
     with pytest.raises(KeyError, match="No user or default data for emissions"):
         ih.get_data("emissions")
-    with pytest.raises(
-        KeyError, match="No reading method available for unicorn_emissions_file"
-    ):
+    with pytest.raises(KeyError, match="No user or default data for unicorn_emissions"):
         ih.get_data("unicorn_emissions")
+
+
+def test_read_volc_sun(test_data_dir):
+    ih = input_handler.InputHandler(
+        {
+            "forc_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
+            "unicorn_emissions_file": os.path.join(test_data_dir, "CO2_1pros.txt"),
+        }
+    )
+
+    # Testing volcano rf reading
+    df_volc = ih.read_data_on_year_row(
+        os.path.join(test_data_dir, "meanVOLCmnd_ipcc_NH.txt")
+    )
+    print(df_volc.columns.tolist)
+    assert len(df_volc.index) == 351
+    assert df_volc.columns.tolist() == list(range(12))
+
+    # Testing solar rf reading:
+    df_sun = ih.read_data_on_year_row(os.path.join(test_data_dir, "solar_IPCC.txt"))
+    assert len(df_sun.index) == 351
+    assert df_sun.columns.tolist() == [0]
+
+    # Testing LUCalbedo rf reading
+    df_luc = ih.read_data_on_year_row(os.path.join(test_data_dir, "IPCC_LUCalbedo.txt"))
+    assert len(df_luc.index) == 351
+    assert df_luc.columns.tolist() == [0]

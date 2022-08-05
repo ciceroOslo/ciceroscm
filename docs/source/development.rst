@@ -3,7 +3,7 @@
 Development
 ===========
 
-If you're interested in contributing to OpenSCM-Runner, we'd love to have you on board!
+If you're interested in contributing to CICEROSCM, we'd love to have you on board!
 This section of the docs will (once we've written it) detail how to get setup to contribute and how best to communicate.
 This whole documentation has been copied more or less verbatim from the docs for  `OpenSCM-runner <https://github.com/openscm/openscm-runner/tree/master/docs/>`_
 
@@ -41,8 +41,8 @@ To get setup as a developer, we recommend the following steps (if any of these t
 #. Install conda and make
 #. Run ``make virtual-environment``, if that fails you can try doing it manually
 
-    #. Change your current directory to OpenSCM-Runner's root directory (i.e. the one which contains ``README.rst``), ``cd openscm-runner``
-    #. Create a virtual environment to use with OpenSCM-Runner ``python3 -m venv venv``
+    #. Change your current directory to ciceroscm's root directory (i.e. the one which contains ``README.md``), ``cd ciceroscm``
+    #. Create a virtual environment to use with CICEROSCM ``python3 -m venv venv``
     #. Activate your virtual environment ``source ./venv/bin/activate``
     #. Upgrade pip ``pip install --upgrade pip``
     #. Install the development dependencies (very important, make sure your virtual environment is active before doing this) ``pip install -e .[dev]``
@@ -54,14 +54,14 @@ Getting help
 ~~~~~~~~~~~~
 
 Whilst developing, unexpected things can go wrong (that's why it's called 'developing', if we knew what we were doing, it would already be 'developed').
-Normally, the fastest way to solve an issue is to contact us via the `issue tracker <https://github.com/openscm/openscm-runner/issues>`_.
+Normally, the fastest way to solve an issue is to contact us via the `issue tracker <https://github.com/ciceroOslo/ciceroscm/issues>`_.
 The other option is to debug yourself.
 For this purpose, we provide a list of the tools we use during our development as starting points for your search to find what has gone wrong.
 
 Development tools
 +++++++++++++++++
 
-This list of development tools is what we rely on to develop OpenSCM-Runner reliably and reproducibly.
+This list of development tools is what we rely on to develop ciceroscm's reliably and reproducibly.
 It gives you a few starting points in case things do go inexplicably wrong and you want to work out why.
 We include links with each of these tools to starting points that we think are useful, in case you want to learn more.
 
@@ -174,5 +174,5 @@ Whilst it may not be standard practice, a ``Makefile`` is a simple way to automa
 Hence we have one here which basically acts as a notes file for how to do all those little jobs which we often forget e.g. setting up environments, running tests (and making sure we're in the right environment), building docs, setting up auxillary bits and pieces.
 
 .. _Sphinx: https://www.sphinx-doc.org/en/master/
-.. _Ciceroscm issue tracker: https://github.com/openscm/openscm-runner/issues
+.. _Ciceroscm issue tracker: https://github.com/ciceroOslo/ciceroscm/issues
 .. _`OpenSCM-Runner's PyPI`: https://pypi.org/project/openscm-runner/

@@ -17,7 +17,7 @@ outdir = os.path.join(os.getcwd(), "output_test")
 # Emission perturbation test:
 cscm = CICEROSCM(
     {
-        "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
+        "gaspam_file": os.path.join(data_dir, "gases_v1RCMIP.txt"),
         "nystart": 1900,
         "emstart": 1950,
         "nyend": 2050,
@@ -34,7 +34,7 @@ cscm._run({"output_folder": outdir, "output_prefix": "emissions_perturbation"})
 # Forcing perturbation test:
 cscm = CICEROSCM(
     {
-        "gaspamfile": os.path.join(data_dir, "gases_v1RCMIP.txt"),
+        "gaspam_file": os.path.join(data_dir, "gases_v1RCMIP.txt"),
         "nystart": 1900,
         "emstart": 1950,
         "nyend": 2050,

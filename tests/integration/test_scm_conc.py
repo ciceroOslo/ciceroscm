@@ -71,6 +71,7 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     cscm = CICEROSCM(
         {
             "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            # "gaspam_file": os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt"),
             "nyend": 2100,
             "nystart": 1750,
             "emstart": 1850,
@@ -84,14 +85,34 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     outdir = str(tmpdir)
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_udm={
+            "rlamdo": 15.1,
+            "akapa": 0.657,
+            "cpi": 0.208,
+            "W": 2.2,
+            "beto": 6.9,
+            "lambda": 0.606,
+            "mixed": 107.0,
+        },
+        pamset_emiconc={
+            "qbmb": 0.0,
+            "qo3": 0.5,
+            "qdirso2": -0.3701,
+            "qindso2": -0.4163,
+            "qbc": 0.163,
+            "qoc": -0.084,
+            "qh2o_ch4": 0.171,
+        },
+    )
 
     check_output(outdir, os.path.join(test_data_dir, "ssp245_emis"))
     check_output_just_some_lines(
         outdir,
         os.path.join(test_data_dir, "ssp245_emis"),
         files=["output_forc.txt"],
-        lines=19,
+        lines=14,
     )
     check_output_just_some_lines(
         outdir,
@@ -119,6 +140,25 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
             "idtm": 24,
+            "sunvolc": 1,
+            "rf_luc_data": pd.read_csv(
+                os.path.join(test_data_dir, "land_use_erf_ar6.txt"),
+                header=None,
+                skiprows=1,
+                index_col=0,
+            ),
+            "rf_sun_data": pd.read_csv(
+                os.path.join(test_data_dir, "solar_erf_ar6.txt"),
+                header=None,
+                skiprows=1,
+                index_col=0,
+            ),
+            "rf_volc_data": pd.read_csv(
+                os.path.join(test_data_dir, "volcanic_erf_ar6.txt"),
+                header=None,
+                skiprows=1,
+                index_col=0,
+            ),
         },
     )
 
@@ -148,9 +188,9 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "dT_glob_sea",
         "dT_NH_sea",
         "dT_SHsea",
-        "dSL(m)",
-        "dSL_thermal(m)",
-        "dSL_ice(m)",
+        "Solar_forcing",
+        "Volcanic_forcing_NH",
+        "Volcanic_forcing_SH",
     ]
     for key in expected_keys:
         assert key in cscm.results
@@ -180,12 +220,36 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+            "sunvolc": 1,
         },
     )
     outdir = str(tmpdir)
+    # outdir_save = os.path.join(os.getcwd(), "output")
+
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_emiconc={
+            "qh2o_ch4": 0.171,
+            "qbmb": 0.03,
+            "qo3": 0.4,
+            "qdirso2": -0.457,
+            "qindso2": -0.514,
+            "qbc": 0.200,
+            "qoc": -0.103,
+            "qh2o_ch4": 0.171,
+        },
+        pamset_udm={
+            "rlamdo": 16.0,
+            "akapa": 0.634,
+            "cpi": 0.4,
+            "W": 4.0,
+            "beto": 3.5,
+            "lambda": 0.540,
+            "mixed": 60.0,
+        },
+    )
 
     check_output(
         outdir,
@@ -222,14 +286,34 @@ def test_run_with_data_not_files(tmpdir, test_data_dir):
     outdir = str(tmpdir)
     # One year forcing:
 
-    cscm._run({"output_folder": outdir})
+    cscm._run(
+        {"output_folder": outdir},
+        pamset_udm={
+            "rlamdo": 15.1,
+            "akapa": 0.657,
+            "cpi": 0.208,
+            "W": 2.2,
+            "beto": 6.9,
+            "lambda": 0.606,
+            "mixed": 107.0,
+        },
+        pamset_emiconc={
+            "qbmb": 0.0,
+            "qo3": 0.5,
+            "qdirso2": -0.3701,
+            "qindso2": -0.4163,
+            "qbc": 0.163,
+            "qoc": -0.084,
+            "qh2o_ch4": 0.171,
+        },
+    )
 
     check_output(outdir, os.path.join(test_data_dir, "ssp245_emis"))
     check_output_just_some_lines(
         outdir,
         os.path.join(test_data_dir, "ssp245_emis"),
         files=["output_forc.txt"],
-        lines=19,
+        lines=14,
     )
     check_output_just_some_lines(
         outdir,
@@ -237,3 +321,37 @@ def test_run_with_data_not_files(tmpdir, test_data_dir):
         files=["output_temp.txt"],
         lines=16,
     )
+
+
+def test_ciceroscm_just_one(tmpdir, test_data_dir):
+    cscm = CICEROSCM(
+        {
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "nyend": 2100,
+            "conc_run": True,
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
+            "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
+            "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
+            "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+        },
+    )
+    # outdir = str(tmpdir)
+
+    # One year forcing:
+
+    cscm._run(
+        {"results_as_dict": True},
+        pamset_emiconc={"qh2o_ch4": 0.171, "just_one": "CO2"},
+    )
+    assert cscm.results["forcing"]["CO2"].equals(
+        cscm.results["forcing"]["Total_forcing"]
+    )
+
+    cscm2 = CICEROSCM(
+        {"nyend": 2100, "forc_data": cscm.results["forcing"]["CO2"].to_numpy()}
+    )
+
+    cscm2._run({"results_as_dict": True})
+
+    for key in cscm2.results:
+        assert np.array_equal(cscm2.results[key], cscm.results[key])

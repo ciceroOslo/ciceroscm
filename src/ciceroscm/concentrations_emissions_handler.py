@@ -7,7 +7,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from ._utils import check_numeric_pamset
+# from ._utils import check_numeric_pamset
+from ._utils import cut_and_check_pamset
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -106,20 +107,28 @@ def check_pamset(pamset):
         Updated pamset with default values used where necessary
     """
     required = {
-        "qbmb": 0.03,
-        "qo3": 0.4,
-        "qdirso2": -0.457,
-        "qindso2": -0.514,
-        "qbc": 0.200,
-        "qoc": -0.103,
+        "qbmb": 0.0,
+        "qo3": 0.5,
+        "qdirso2": -0.36,
+        "qindso2": -0.97,
+        "qbc": 0.16,
+        "qoc": -0.08,
+        "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
-        "idtm": 24,
     }
 
-    pamset = check_numeric_pamset(required, pamset)
+    # pamset = check_numeric_pamset(required, pamset, )
     if "lifetime_mode" not in pamset:
         pamset["lifetime_mode"] = "TAR"
-
+    used = {
+        "lifetime_mode": "TAR",
+        "just_one": "CO2",
+        "idtm": 24,
+        "nystart": 1750,
+        "nyend": 2100,
+        "emstart": 1850,
+    }
+    pamset = cut_and_check_pamset(required, pamset, used=used, cut_warnings=True)
     return pamset
 
 
@@ -233,8 +242,10 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
-        self.pamset = check_numeric_pamset(
-            {"idtm": 24, "nystart": 1750, "nyend": 2100}, pamset
+        self.pamset = cut_and_check_pamset(
+            {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
+            pamset,
+            cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
         years_tot = len(self.years)
@@ -409,7 +420,10 @@ class ConcentrationsEmissionsHandler:
             + 0.043
         ) * (np.sqrt(c_ch4) - np.sqrt(c0_ch4))
         # Feedback factor: Smith et al 2018
-        q_ch4 = 1.0 / 1.14 * q_ch4  # + FORC_PERT(yr_ix,trc_ix))
+        q_co2 = self.df_gas["SARF_TO_ERF"]["CO2"] * q_co2  # + FORC_PERT(yr_ix,trc_ix))
+        q_n2o = self.df_gas["SARF_TO_ERF"]["N2O"] * q_n2o  # + FORC_PERT(yr_ix,trc_ix))
+        q_ch4 = self.df_gas["SARF_TO_ERF"]["CH4"] * q_ch4  # + FORC_PERT(yr_ix,trc_ix))
+
         self.forc["CO2"][yr - yr_0] = q_co2
         self.forc["CH4"][yr - yr_0] = q_ch4
         self.forc["N2O"][yr - yr_0] = q_n2o
@@ -461,7 +475,11 @@ class ConcentrationsEmissionsHandler:
             # ALOG(1700.0))  !Concentration in 2010 &
             self.conc[tracer][yr] = (
                 30.0
-                + 6.7 * (np.log(self.conc["CH4"][yr]) - np.log(1832.0))
+                + 6.7
+                * (
+                    np.log(self.conc["CH4"][yr])
+                    - np.log(self.conc_in["CH4"][self.pamset["ref_yr"]])
+                )
                 + 0.17
                 * (self.emis["NOx"][yr] - self.emis["NOx"][self.pamset["ref_yr"]])
                 + 0.0014
@@ -480,7 +498,7 @@ class ConcentrationsEmissionsHandler:
             )
         return q
 
-    def conc2forc(self, yr, rf_luc, rf_sun):
+    def conc2forc(self, yr, rf_luc, rf_sun):  # pylint: disable=too-many-branches
         """
         Calculate forcing from concentrations
 
@@ -548,11 +566,11 @@ class ConcentrationsEmissionsHandler:
                 tracer in self.df_gas.index
                 and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
             ):
-                q = (self.conc[tracer][yr] - self.conc[tracer][yr_0]) * self.df_gas[
-                    "ALPHA"
-                ][
-                    tracer
-                ]  # +forc_pert
+                q = (
+                    (self.conc[tracer][yr] - self.conc[tracer][yr_0])
+                    * self.df_gas["ALPHA"][tracer]
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )  # +forc_pert
             elif tracer == "TROP_O3":
                 q = self.tropospheric_ozone_forcing(yr)
             elif tracer == "STRAT_O3":
@@ -560,7 +578,7 @@ class ConcentrationsEmissionsHandler:
                 q = -(0.287737 * (0.000552 * (sumcl) + 3.048 * sumbr)) / 1000.0
             elif tracer == "STRAT_H2O":
                 q = (
-                    0.15 * 1.14 * self.forc["CH4"][yr - yr_0]
+                    self.pamset["qh2o_ch4"] * self.forc["CH4"][yr - yr_0]
                 )  # + FORC_PERT(yr_ix,trc_ix)
             elif tracer == "OTHER":
                 # Possible with forcing perturbations for other
@@ -583,10 +601,15 @@ class ConcentrationsEmissionsHandler:
 
         # Adding solar forcing
         # tot_forc = tot_forc + rf_sun
+        if "just_one" in self.pamset:
+            tot_forc = self.forc[self.pamset["just_one"]][yr - yr_0]
+            forc_nh, forc_sh = calculate_hemispheric_forcing(
+                self.pamset["just_one"], tot_forc, 0, 0
+            )
         self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun
-        # print("yr: %d, tot_forc: %f, FN: %f, FS: %f "%(yr, tot_forc, forc_nh, forc_sh))
+
         return tot_forc, forc_nh, forc_sh
 
     def emi2conc(self, yr):
@@ -642,10 +665,10 @@ class ConcentrationsEmissionsHandler:
             q = 1.0 / self.df_gas["TAU1"][tracer]
 
             if tracer == "CH4":
-                self.df_gas["NAT_EM"][tracer] = self.nat_emis_ch4["CH4"][yr]
+                self.df_gas.at[tracer, "NAT_EM"] = self.nat_emis_ch4["CH4"][yr]
                 q = self.methane_lifetime(q, conc_local, yr)
             if tracer == "N2O":
-                self.df_gas["NAT_EM"][tracer] = self.nat_emis_n2o["N2O"][yr]
+                self.df_gas.at[tracer, "NAT_EM"] = self.nat_emis_n2o["N2O"][yr]
 
             emis = self.emis[tracer][yr]
             emis = (
@@ -874,6 +897,7 @@ class ConcentrationsEmissionsHandler:
         cols = df_forc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_forc = df_forc[cols]
+        df_forc.rename(columns={"SO2": "SO4_DIR"}, inplace=True)
         df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis=1).drop(
             labels=np.arange(self.years[-1] + 1, self.emis.index[-1] + 1), axis=0
         )
@@ -936,6 +960,7 @@ class ConcentrationsEmissionsHandler:
         cols = df_forc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_forc = df_forc[cols]
+        df_forc.rename(columns={"SO2": "SO4_DIR"}, inplace=True)
         df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis=1).drop(
             labels=np.arange(self.years[-1] + 1, self.emis.index[-1] + 1), axis=0
         )

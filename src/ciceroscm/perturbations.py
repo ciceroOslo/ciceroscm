@@ -30,13 +30,26 @@ def calculate_hemispheric_forcing(tracer, q, forc_nh, forc_sh):
         Containing the two updated hemispheric forcings
         forc_nh, forc_sh
     """
-    if tracer in ("SO2", "SO4_IND"):
-        forc_nh = forc_nh + q * 1.6
-        forc_sh = forc_sh + q * 0.4
+    if tracer in (
+        "SO2",
+        "SO4_IND",
+        "BC",
+        "OC",
+        "BMB_AEROS",
+        "BMB_AEROS_OC",
+        "BMB_AEROS_BC",
+    ):
+        # Smith et al 2020
+        forc_nh = forc_nh + q * 1.47
+        forc_sh = forc_sh + q * (2 - 1.47)
     elif tracer == "TROP_O3":
-        # 1.29+0.74 != 2, update/check
-        forc_nh = forc_nh + q * 1.29  # 1.3
-        forc_sh = forc_sh + q * 0.74  # 0.7
+        # Skeie et al 2020
+        forc_nh = forc_nh + q * 1.45  # 1.3
+        forc_sh = forc_sh + q * (2 - 1.45)  # 0.7
+    elif tracer == "LANDUSE":
+        # Smith et al 2020
+        forc_nh = forc_nh + q * 1.42
+        forc_sh = forc_sh + q * (2 - 1.42)
     else:
         forc_nh = forc_nh + q
         forc_sh = forc_sh + q

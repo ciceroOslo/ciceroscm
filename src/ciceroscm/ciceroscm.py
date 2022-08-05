@@ -15,10 +15,6 @@ from .upwelling_diffusion_model import UpwellingDiffusionModel
 
 LOGGER = logging.getLogger(__name__)
 
-default_data_dir = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), "default_data"
-)
-
 
 class CICEROSCM:
     """
@@ -88,8 +84,9 @@ class CICEROSCM:
 
         """
         self.cfg = cut_and_check_pamset(
-            {"nystart": 1750, "nyend": 2100, "emstart": 1850}, cfg
+            {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24}, cfg
         )
+        cfg.update(self.cfg)
         input_handler = InputHandler(cfg)
         self.cfg["rf_run"] = input_handler.optional_pam("forc")
         if self.cfg["rf_run"]:
@@ -100,19 +97,20 @@ class CICEROSCM:
             pamset_emiconc["emstart"] = self.cfg["emstart"]
             pamset_emiconc["nystart"] = self.cfg["nystart"]
             pamset_emiconc["nyend"] = self.cfg["nyend"]
-            if "idtm" in cfg:
-                pamset_emiconc["idtm"] = cfg["idtm"]
+            pamset_emiconc["idtm"] = self.cfg["idtm"]
             self.ce_handler = ConcentrationsEmissionsHandler(
                 input_handler, pamset_emiconc
             )
         self.results = {}
         # Reading in solar and volcanic forcing
-        self.rf_volc_sun = self.read_in_volc_and_sun(cfg)
+        self.rf_volc_sun = {
+            "volc_n": input_handler.get_data("rf_volc_n"),
+            "volc_s": input_handler.get_data("rf_volc_s"),
+            "sun": input_handler.get_data("rf_sun"),
+        }
 
         # Add support for sending filename in cfg
-        self.rf_luc = self.read_data_on_year_row(
-            os.path.join(default_data_dir, "IPCC_LUCalbedo.txt")
-        )
+        self.rf_luc = input_handler.get_data("rf_luc")
         self.initialise_output_arrays()
 
     def initialise_output_arrays(self):
@@ -137,103 +135,13 @@ class CICEROSCM:
             "dT_glob_sea",
             "dT_NH_sea",
             "dT_SHsea",
-            "dSL(m)",
-            "dSL_thermal(m)",
-            "dSL_ice(m)",
             "Total_forcing",
+            "Solar_forcing",
+            "Volcanic_forcing_NH",
+            "Volcanic_forcing_SH",
         ]
         for output in output_variables:
             self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
-
-    def read_data_on_year_row(self, volc_datafile):
-        """
-        Read in data from file with no headers
-
-
-        Read in data from file with no headers where
-        each year is a row. Typically this is the format for
-        volcano and solar data. The years are taken to be
-        the years from the defined startyear and endyear
-
-        Parameters
-        ----------
-        volc_datafile : str
-                     Path of file to be read
-
-        Returns
-        -------
-        pandas.Dataframe
-                        Dataframe containing the data with the years as
-                        indices
-        """
-        indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
-        nrows = len(indices)
-        if self.cfg["nystart"] > 1750:
-            skiprows = self.cfg["nystart"] - 1750
-            df_data = pd.read_csv(
-                volc_datafile,
-                header=None,
-                skiprows=skiprows,
-                nrows=nrows,
-                delim_whitespace=True,
-            )
-        else:
-            df_data = pd.read_csv(
-                volc_datafile, header=None, nrows=nrows, delim_whitespace=True
-            )
-
-        df_data.set_axis(labels=indices, inplace=True)
-        return df_data
-
-    def read_in_volc_and_sun(self, cfg):
-        """
-        Read in solar and volcanic forcing and return them
-
-        Read in solar or volcanic forcing if this is chosen
-        otherwise produce empty dataframes that can be used
-        instead. If solar and volcanic forcing is added, a
-        hemispherically dependent addition is added to the
-        volcanic part, to adjust for lack of spin up.
-
-        Parameters
-        ----------
-        cfg : dict
-           Dictionary containing configurations on whether to use
-           solar and volcanic forcing or not.
-
-        Returns
-        -------
-        dict
-            Containing the dataframes for hemispheric volcanic
-            forcings and solar forcing
-        """
-        if "sunvolc" in cfg and cfg["sunvolc"] == 1:
-            # Possibly change to allow for other files
-            # And for SH to differ from NH
-            rf_volc_n = self.read_data_on_year_row(
-                os.path.join(default_data_dir, "meanVOLCmnd_ipcc_NH.txt")
-            )
-            rf_volc_s = rf_volc_n
-            # Test, adjust for not including spin up. See Gregory et al.
-            # Se regneark.
-            rf_volc_n = rf_volc_n + 0.371457071
-            rf_volc_s = rf_volc_s + 0.353195076
-            rf_sun = self.read_data_on_year_row(
-                os.path.join(default_data_dir, "solar_IPCC.txt")
-            )
-        # Add support for sending filename in cfg
-        else:
-            indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
-            rf_volc_n = pd.DataFrame(
-                data=np.zeros((self.cfg["nyend"] - self.cfg["nystart"] + 1, 12)),
-                index=indices,
-                columns=range(12),
-            )
-            rf_volc_s = rf_volc_n
-            rf_sun = pd.DataFrame(
-                data={0: np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)}
-            )
-        return {"volc_n": rf_volc_n, "volc_s": rf_volc_s, "sun": rf_sun}
 
     def forc_set(self, yr, rf_sun):
         """
@@ -307,10 +215,14 @@ class CICEROSCM:
         }
         for output, name in outputs_dict.items():
             self.results[output][index] = values[name]
-        self.results["dSL(m)"][index] = values["deltsl"][0] + values["deltsl"][1]
-        self.results["dSL_ice(m)"][index] = values["deltsl"][1]
-        self.results["dSL_thermal(m)"][index] = values["deltsl"][0]
         self.results["Total_forcing"][index] = forc
+        self.results["Solar_forcing"][index] = self.rf_volc_sun["sun"].iloc[index, 0]
+        self.results["Volcanic_forcing_NH"][index] = np.mean(
+            np.array(self.rf_volc_sun["volc_n"].iloc[index, :])
+        )
+        self.results["Volcanic_forcing_SH"][index] = np.mean(
+            np.array(self.rf_volc_sun["volc_s"].iloc[index, :])
+        )
 
     def _run(
         self, cfg, pamset_udm={}, pamset_emiconc={}, make_plot=False
@@ -349,8 +261,8 @@ class CICEROSCM:
                 self.ce_handler.emi2conc(yr)
                 forc, fn, fs = self.ce_handler.conc2forc(
                     yr,
-                    self.rf_luc.loc[yr, 0],
-                    self.rf_volc_sun["sun"].loc[yr - self.cfg["nystart"], 0],
+                    self.rf_luc.iloc[yr - self.cfg["nystart"], 0],
+                    self.rf_volc_sun["sun"].iloc[yr - self.cfg["nystart"], 0],
                 )
 
             else:
@@ -358,15 +270,16 @@ class CICEROSCM:
             values = udm.energy_budget(
                 fn,
                 fs,
-                self.rf_volc_sun["volc_n"].iloc[yr - self.cfg["nystart"], :],
-                self.rf_volc_sun["volc_s"].iloc[yr - self.cfg["nystart"], :],
+                np.array(self.rf_volc_sun["volc_n"].iloc[yr - self.cfg["nystart"], :]),
+                np.array(self.rf_volc_sun["volc_s"].iloc[yr - self.cfg["nystart"], :]),
             )
             self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 
         if make_plot:
             plot_output1(cfg, self.results, self.cfg["nystart"], self.cfg["nyend"])
-        if "results_as_dict" in cfg and cfg["results_as_dict"]:
-            self.results.update(self.ce_handler.add_results_to_dict())
+        if ("results_as_dict" in cfg) and cfg["results_as_dict"]:
+            if not self.cfg["rf_run"]:
+                self.results.update(self.ce_handler.add_results_to_dict())
         else:
             if not self.cfg["rf_run"]:
                 self.ce_handler.write_output_to_files(cfg, make_plot)
@@ -419,9 +332,6 @@ class CICEROSCM:
             "dT_glob_sea",
             "dT_NH_sea",
             "dT_SHsea",
-            "dSL(m)",
-            "dSL_thermal(m)",
-            "dSL_ice(m)",
         ]
         df_temp = pd.DataFrame(data={"Year": indices})
         if "output_prefix" in pamset:
@@ -430,6 +340,7 @@ class CICEROSCM:
             filename_start = "output"
         for vari in list_temp:
             df_temp[vari] = self.results[vari]
+
         df_ohc.to_csv(
             os.path.join(outdir, f"{filename_start}_ohc.txt"),
             sep="\t",
@@ -444,6 +355,20 @@ class CICEROSCM:
         )
         df_temp.to_csv(
             os.path.join(outdir, f"{filename_start}_temp.txt"),
+            sep="\t",
+            index=False,
+            float_format="%.5e",
+        )
+        df_sunvolc = pd.DataFrame(
+            data={
+                "Year": indices,
+                "Solar_forcing": self.results["Solar_forcing"],
+                "Volcanic_forcing_NH": self.results["Volcanic_forcing_NH"],
+                "Volcanic_forcing_SH": self.results["Volcanic_forcing_SH"],
+            }
+        )
+        df_sunvolc.to_csv(
+            os.path.join(outdir, f"{filename_start}_sunvolc.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
