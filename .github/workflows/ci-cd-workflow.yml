@@ -94,12 +94,6 @@ jobs:
     - name: Test notebooks with nbval
       run: |
           pytest notebooks -r a --nbval-lax --sanitize-with tests/notebook-tests.cfg --no-cov
-    - name: Test notebooks strictly
-      run: |
-      	  if: matrix.python-version == 3.7
-	  then
-		pytest notebooks -r a --nbval --sanitize-with tests/notebook-tests.cfg --no-cov
-	  fi
 	
  test-install:
 
