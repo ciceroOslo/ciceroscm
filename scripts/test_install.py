@@ -23,7 +23,7 @@ def import_submodules(package_name):
 import_submodules("ciceroscm")
 
 # make sure input data etc. are included
-ciceroscm_root = os.path.dirname(openscm_runner.__file__)
+ciceroscm_root = os.path.dirname(ciceroscm.__file__)
 assert os.path.isfile(
     os.path.join(
         ciceroscm_root, "default_data/IPCC_LUCalbedo.txt"
