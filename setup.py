@@ -27,6 +27,7 @@ REQUIREMENTS = [
     "scmdata>=0.7.4",
     "tqdm",
     "matplotlib>=3.4",
+    "openscm_runner",
 ]
 
 REQUIREMENTS_NOTEBOOKS = [
