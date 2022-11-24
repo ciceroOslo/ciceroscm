@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 from ciceroscm import input_handler
-from ciceroscm.parallel.run_ciceroscm_parallel import run_ciceroscm_parallel
+from ciceroscm.parallel.cscmparwrapper import run_ciceroscm_parallel
 
 
 def test_ciceroscm_run_parallel_many_scenarios(test_data_dir):
