@@ -13,3 +13,9 @@ The changes listed in this file are categorised as follows:
     - Removed: now removed features
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
+
+## [Unreleased]
+
+### Added
+
+- Made the fertilisation factor beta_f part a changeable parameter
