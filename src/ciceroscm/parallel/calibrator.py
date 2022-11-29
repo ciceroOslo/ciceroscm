@@ -88,7 +88,7 @@ class Calibrator:
             )
             sigma = datapoint["sigma"]
             vexp = datapoint["Central Value"]
-            logli = logli - 0.5 * (vres - vexp) ** 2 / sigma ** 2  # + np.log(sigma)
+            logli = logli - 0.5 * (vres - vexp) ** 2 / sigma**2  # + np.log(sigma)
         print(np.exp(logli))
         return logli
 
@@ -150,7 +150,7 @@ class Calibrator:
             print(f"vres: {vres}")
             print(f"vexp: {vexp}")
             print(f"sigma: {sigma}")
-            distance = distance + (vres - vexp) ** 2 / sigma ** 2
+            distance = distance + (vres - vexp) ** 2 / sigma**2
         return distance
 
     def reject_samples(self, results):
