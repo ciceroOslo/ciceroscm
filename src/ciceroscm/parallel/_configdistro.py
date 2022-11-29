@@ -253,6 +253,7 @@ class _ConfigDistro:
             samples = self.get_samples_from_distro_latin(numvalues)
         else:
             samples = self.get_samples_from_distro_gaussian(numvalues)
+        print(samples)
         pamset_udm_start = {}
         pamset_emiconc_start = {}
         for pam, value in self.setvalues.items():
@@ -269,9 +270,10 @@ class _ConfigDistro:
                     pamset_udm[pam] = samples[i, j]
                 elif not self.forc:
                     pamset_emiconc[pam] = samples[i, j]
+
             config_list[i] = {
-                "pamset_udm": pamset_udm,
-                "pamset_emiconc": pamset_emiconc,
+                "pamset_udm": pamset_udm.copy(),
+                "pamset_emiconc": pamset_emiconc.copy(),
                 "Index": f"{indexer_pre}{i}",
             }
         if json_fname != "No":
