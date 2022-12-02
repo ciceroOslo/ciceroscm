@@ -9,7 +9,7 @@ from ciceroscm.parallel.distributionrun import DistributionRun
 
 def test_distro_run_forcing(test_data_dir):
     testconfig = _ConfigDistro(
-        setvalues={"threstemp": 7.0, "lm": 40, "ldtime": 12}, forc=True
+        setvalues={"threstemp": 7.0, "lm": 40, "ldtime": 12}, options={"forc": True}
     )
     jsonfile = os.path.join(test_data_dir, "test_config_json.json")
     distrorun1 = DistributionRun(testconfig, numvalues=40)

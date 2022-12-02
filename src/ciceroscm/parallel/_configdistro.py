@@ -25,6 +25,7 @@ prior_flat = {
     "qbc": [0.1, 0.2],
     "qoc": [-0.1, -0.06],
     "qh2o_ch4": [0.08, 0.1],
+    "aerosol_total": [-3.0, -0.5],
 }
 """dict: Containing a default prior for parameters """
 
@@ -80,6 +81,7 @@ ordering_standard_forc = [
     "ldtime",
 ]
 """list: Containing a default ordering of parameters for forcing run"""
+aerosols = ["qdirso2", "qindso2", "qbc", "qoc"]
 
 
 class _ConfigDistro:
@@ -99,9 +101,12 @@ class _ConfigDistro:
             "qh2o_ch4": 0.091915,
         },
         ordering="standard",
-        forc=False,
-        method="latin",
-    ):  # pylint: disable=too-many-arguments disable=dangerous-default-value
+        options={
+            "forc": False,
+            "method": "latin",
+            "aerosol-total": [-0.461590, -0.519163, 0.202893, -0.104478],
+        },
+    ):  # pylint:disable=dangerous-default-value
         """
         Intialise _ConfigDistro
 
@@ -123,28 +128,46 @@ class _ConfigDistro:
         ordering: list
               list of parameter ordering. This  should match the ordering
               of values in the distro_array
-        forc: bool
-              whether parameter distribution is meant for forcing runs.
-        method: str
-              method to get samples with. If method='latin', latin hypercube
-              is used, and this is the default method. If gaussian is chosen
-              samples are drawn from gaussian distributions for each of the
-              parameters
+        options: dict
+              for optional key word arguments, such as forc, a bool which
+              defines whether parameter distribution is meant for forcing
+              runs. method, a string to define the configuration sampling
+              method. If method='latin', latin hypercube is used, and this
+              is the default method. If gaussian is chosen, samples are
+              drawn from gaussian distributions for each of the
+              parameters. This method will also be cosen if some other random
+              string or object is sent for this keyword argument.
+              And aerosol_total, which should be a four element array
+              defining the proportions between the aerosol forcings for
+              dirso2, indso2, bc and oc in that order
         """
+        self.options = options
+        if "forc" not in options:
+            self.options["forc"] = False
+        if "method" not in options:
+            self.options["method"] = "latin"
+        if "aerosol_total" in ordering and "aerosol_total" not in options:
+            options["aerosol_total"] = [-0.461590, -0.519163, 0.202893, -0.104478]
+        if "aerosol_total" in ordering:
+            self.options["aerosol_total"] = np.array(options["aerosol_total"]) / np.sum(
+                options["aerosol_total"]
+            )
         if ordering == "standard":
-            if forc:
+            if self.options["forc"]:
                 ordering = [
                     o for o in ordering_standard_forc if o not in set(setvalues)
                 ]
             else:
                 ordering = [o for o in ordering_standard if o not in set(setvalues)]
+                if "aerosol_total" in ordering:
+                    for aerosol in aerosols:
+                        ordering.remove(aerosol)
         else:
             ordering = [o for o in ordering if o not in set(setvalues)]
         self.ordering = ordering
         self.prior = self._set_prior(distro_array)
         self.setvalues = setvalues
-        self.forc = forc
-        self.method = method
+        self._set_pamsets_start()
 
     def _set_prior(self, distro_array):
         """
@@ -179,6 +202,18 @@ class _ConfigDistro:
         for i, pam in enumerate(self.ordering[len_given:]):
             prior[len_given + i, :] = prior_flat[pam]
         return prior
+
+    def _set_pamsets_start(self):
+        """
+        Set starting pamsets from the setvalues
+        """
+        self.pamset_udm_start = {}
+        self.pamset_emiconc_start = {}
+        for pam, value in self.setvalues.items():
+            if pam in ordering_standard_forc:
+                self.pamset_udm_start[pam] = value
+            else:
+                self.pamset_emiconc_start[pam] = value
 
     def get_samples_from_distro_latin(self, numvalues):
         """
@@ -249,27 +284,25 @@ class _ConfigDistro:
            that are defined with setvalues
         """
         config_list = [None] * numvalues
-        if self.method == "latin":
+        if self.options["method"] == "latin":
             samples = self.get_samples_from_distro_latin(numvalues)
         else:
             samples = self.get_samples_from_distro_gaussian(numvalues)
-        print(samples)
-        pamset_udm_start = {}
-        pamset_emiconc_start = {}
-        for pam, value in self.setvalues.items():
-            if pam in ordering_standard_forc:
-                pamset_udm_start[pam] = value
-            else:
-                pamset_emiconc_start[pam] = value
 
         for i in range(numvalues):
-            pamset_udm = pamset_udm_start
-            pamset_emiconc = pamset_emiconc_start
+            pamset_udm = self.pamset_udm_start
+            pamset_emiconc = self.pamset_emiconc_start
             for j, pam in enumerate(self.ordering):
                 if pam in ordering_standard_forc:
                     pamset_udm[pam] = samples[i, j]
-                elif not self.forc:
-                    pamset_emiconc[pam] = samples[i, j]
+                elif not self.options["forc"]:
+                    if pam == "aerosol_total":
+                        for anum, aerosol in enumerate(aerosols):
+                            pamset_emiconc[aerosol] = (
+                                samples[i, j] * self.options["aerosol_total"][anum]
+                            )
+                    else:
+                        pamset_emiconc[pam] = samples[i, j]
 
             config_list[i] = {
                 "pamset_udm": pamset_udm.copy(),

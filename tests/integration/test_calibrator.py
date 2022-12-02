@@ -50,16 +50,38 @@ def test_calibrator(test_data_dir):
     )
     # calibdata = pd.DataFrame(data = {'Variable Name': ["Heat Content|Ocean"], 'Yearstart_norm': [1971], "Yearend_norm":[1971], "Yearstart_change":[2018], "Yearend_change":[2018], "Central Value": [320.69251537323], "sigma": [17.020342912051203]})
     testconfig = _ConfigDistro(
+        distro_array=[],
+        ordering=["aerosol_total", "W", "lambda"],
         setvalues={
             "threstemp": 7.0,
             "lm": 40,
             "ldtime": 12,
             "qbmb": 0,
             "qo3": 0.5,
-            "qdiso2": -0.36,
-            "qindso2": -0.97,
-            "qbc": 0.16,
-            "qoc": -0.08,
+            "qh2o_ch4": 0.091915,
+            "rlamdo": 16,
+            "akapa": 0.634,
+            "cpi": 0.4,
+            "beto": 3.5,
+            "mixed": 60,
+        },
+        options={"aerosol_total": [-0.36, -0.97, 0.16, -0.08]},
+    )
+    assert testconfig.ordering == ["aerosol_total", "W", "lambda"]
+    calibrator = Calibrator(calibdata, testconfig, scendata)
+    drawn_cfgs = calibrator.get_n_samples(
+        1, current_samples=[], kept_configs=[], recurse_num=0
+    )
+    assert len(drawn_cfgs) >= 1
+    testconfig = _ConfigDistro(
+        distro_array=[],
+        ordering=["W", "lambda"],
+        setvalues={
+            "threstemp": 7.0,
+            "lm": 40,
+            "ldtime": 12,
+            "qbmb": 0,
+            "qo3": 0.5,
             "qh2o_ch4": 0.091915,
             "rlamdo": 16,
             "akapa": 0.634,
@@ -68,6 +90,7 @@ def test_calibrator(test_data_dir):
             "mixed": 60,
         },
     )
+    assert testconfig.ordering == ["W", "lambda"]
     calibrator = Calibrator(calibdata, testconfig, scendata)
     drawn_cfgs = calibrator.get_n_samples(
         3, current_samples=[], kept_configs=[], recurse_num=0

@@ -8,6 +8,7 @@ import numpy as np
 from .distributionrun import DistributionRun
 
 LOGGER = logging.getLogger(__name__)
+options_default = {"subsamplesize": 50, "maxrecurse": 4}
 
 
 class Calibrator:
@@ -15,7 +16,9 @@ class Calibrator:
     Calibrator class used to do calibration
     """
 
-    def __init__(self, calibdata, config_distro, scendata, subsamplesize=50):
+    def __init__(
+        self, calibdata, config_distro, scendata, options=options_default
+    ):  # pylint:disable=dangerous-default-value
         """
         Initialise calibrator
         Set the calibrators data to calibrate to, prior, scenario
@@ -42,18 +45,22 @@ class Calibrator:
             to pick from
         scendata: dict
             Dictionary that defines what to run in order to calibrate
-        subsamplesize: The calibrator will try to get fitted values by
-            Sampling in chunks and doing an accept/reject on the samples
+        options: dict
+            Dictionary including keyword options that the user can
+            choose to set. These are subsamplesize and maxrecurse
+            The calibrator will try to get fitted values by
+            sampling in chunks and doing an accept/reject on the samples
             after running them. This will be done recursively untill the
-            maximal recursion depth is reached, or the requested number of
-            accepted samples is found. The subsamplesize decides the number
-            of configuration in each chunk.
+            maximal recursion depth decided by maxrecurse is reached,
+            or the requested number of accepted samples is found.
+            The subsamplesize decides the number of configuration in
+            each chunk.
         """
         self.calibdata = calibdata
-        self.subsamplesize = subsamplesize
+        self.subsamplesize = options["subsamplesize"]
         self.config_distro = config_distro
         self.scendata = scendata
-        self.recurse_max = 1
+        self.recurse_max = options["maxrecurse"]
 
     def assign_log_liklihood(self, res):
         """
@@ -232,7 +239,11 @@ class Calibrator:
         if len(current_samples) >= numvalues:
             return kept_configs
         if recurse_num > self.recurse_max:
-            LOGGER.warning("Reached recurse limit with only %d", len(current_samples))
+            LOGGER.warning(
+                "Reached recurse limit %d with only %d",
+                recurse_num,
+                len(current_samples),
+            )
             return kept_configs
         return self.get_n_samples(
             numvalues, current_samples, kept_configs, recurse_num + 1
