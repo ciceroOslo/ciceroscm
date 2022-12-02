@@ -19,3 +19,7 @@ The changes listed in this file are categorised as follows:
 ### Added
 
 - Made the fertilisation factor beta_f part a changeable parameter
+- Parallelisation wrapper for parallel runs
+- Config distributions support to make parameter distributions
+- Distrobution runner to run over distributions in parallel
+- Calibrator to make calibrated set of configurations based on calibration data
