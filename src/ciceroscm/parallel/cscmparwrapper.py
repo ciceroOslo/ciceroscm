@@ -180,7 +180,6 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
                 )
                 if isinstance(years, pd.DataFrame) and years.empty:  # pragma: no cover
                     continue  # pragma: no cover
-                print(variable)
                 runs.append(
                     scmdata.ScmRun(
                         pd.Series(timeseries, index=years),

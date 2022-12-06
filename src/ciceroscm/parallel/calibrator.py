@@ -96,7 +96,6 @@ class Calibrator:
             sigma = datapoint["sigma"]
             vexp = datapoint["Central Value"]
             logli = logli - 0.5 * (vres - vexp) ** 2 / sigma**2  # + np.log(sigma)
-        print(np.exp(logli))
         return logli
 
     def find_distance(self, res):
@@ -154,9 +153,6 @@ class Calibrator:
                 )
             sigma = datapoint["sigma"]
             vexp = datapoint["Central Value"]
-            print(f"vres: {vres}")
-            print(f"vexp: {vexp}")
-            print(f"sigma: {sigma}")
             distance = distance + (vres - vexp) ** 2 / sigma**2
         return distance
 
@@ -183,7 +179,6 @@ class Calibrator:
             the test
         """
         indices = results.get_unique_meta("run_id")
-        print(indices)
 
         draws = np.square(
             np.random.normal(size=(len(indices)))
@@ -192,8 +187,6 @@ class Calibrator:
         keep = []
         for i, index in enumerate(indices):
             distance = self.find_distance(results.filter(run_id=index))
-            print(f"distance: {distance}")
-            print(f"draw: {draws[i]}")
             if draws[i] * len(self.calibdata) > distance:
                 keep.append(index)
         return keep
