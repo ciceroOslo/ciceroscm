@@ -99,7 +99,10 @@ def check_pamset(pamset):
     ----------
     pamset : dict
           Dictionary of parameters to define the physics
-          of the run
+          of the run. Values that begin with q are concetration
+          or emissions to forcing factors, beta_f is the
+          carbon cycle fertilisation factor, and ref_yr is
+          the reference year for calculations
 
     Returns
     -------
@@ -115,6 +118,7 @@ def check_pamset(pamset):
         "qoc": -0.08,
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
+        "beta_f": 0.287,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -733,9 +737,6 @@ class ConcentrationsEmissionsHandler:
         yr : int
           Year for which to calculate
         """
-        # Fertilisation factor
-        beta_f = 0.287
-
         # Area of the ocean (m^2)
         ocean_area = 3.62e14
 
@@ -766,7 +767,7 @@ class ConcentrationsEmissionsHandler:
             # Net emissions, including biogenic fertilization effects
             if it > 0:
                 self.co2_hold["dfnpp"][it] = (
-                    60 * beta_f * np.log(self.co2_hold["xCO2"] / 278.0)
+                    60 * self.pamset["beta_f"] * np.log(self.co2_hold["xCO2"] / 278.0)
                 )
             if it > 0:
                 sumf = float(
