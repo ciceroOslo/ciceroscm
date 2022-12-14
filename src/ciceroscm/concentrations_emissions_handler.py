@@ -705,7 +705,6 @@ class ConcentrationsEmissionsHandler:
         float
              Concentrations adjusted for lifetime / feedback
         """
-        ch4_wigley_exp = -0.238
         if self.pamset["lifetime_mode"] == "TAR":
             # 1751 is reference conc in 2000
             dln_oh = (
@@ -715,9 +714,28 @@ class ConcentrationsEmissionsHandler:
                 - 0.000315 * (self.emis["NMVOC"][yr] - self.emis["NMVOC"][2000])
             )
             q = q * (dln_oh + 1)
+        elif self.pamset["lifetime_mode"] == "2022_regr_free":
+            reloh = (
+                1.44992719
+                - 0.0648730285 * np.log(conc_local)
+                + 0.00467273967 * self.emis["NOx"][yr]
+                - 0.000198439518 * self.emis["CO"][yr]
+                + 0.0000936556589 * self.emis["NMVOC"][yr]
+            )
+            q = q * (reloh)
+        elif self.pamset["lifetime_mode"] == "2022_regr_constr":
+            reloh = (
+                3.08799753
+                - 0.32 * np.log(conc_local)
+                + 6.83375264e-3 * self.emis["NOx"][yr]
+                + 5.95030088e-5 * self.emis["CO"][yr]
+                - 2.11279768e-4 * self.emis["NMVOC"][yr]
+            )
+            q = q * (reloh)
         elif self.pamset["lifetime_mode"] == "CONSTANT":
-            q = 1.0 / 12.0
+            pass
         else:
+            ch4_wigley_exp = -0.238
             q = q * (((conc_local / 1700.0)) ** (ch4_wigley_exp))
 
         q = q + 1.0 / self.df_gas["TAU2"]["CH4"] + 1.0 / self.df_gas["TAU3"]["CH4"]

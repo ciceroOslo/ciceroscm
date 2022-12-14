@@ -355,3 +355,129 @@ def test_ciceroscm_just_one(tmpdir, test_data_dir):
 
     for key in cscm2.results:
         assert np.array_equal(cscm2.results[key], cscm.results[key])
+
+
+def test_methane_lifetime_modes(tmpdir, test_data_dir):
+    ih = input_handler.InputHandler({"nystart": 1750, "nyend": 2100, "emstart": 1850})
+    cscm = CICEROSCM(
+        {
+            "gaspam_data": input_handler.read_components(
+                os.path.join(test_data_dir, "gases_v1RCMIP.txt")
+            ),
+            "nyend": 2100,
+            "nystart": 1750,
+            "emstart": 1850,
+            "concentrations_data": input_handler.read_inputfile(
+                os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"), True, 1750, 2100
+            ),
+            "emissions_data": ih.read_emissions(
+                os.path.join(test_data_dir, "ssp245_em_RCMIP.txt")
+            ),
+            "nat_ch4_data": input_handler.read_natural_emissions(
+                os.path.join(test_data_dir, "natemis_ch4.txt"), "CH4"
+            ),
+            "nat_n2o_data": input_handler.read_natural_emissions(
+                os.path.join(test_data_dir, "natemis_n2o.txt"), "N2O"
+            ),
+        },
+    )
+    cscm._run(
+        {"results_as_dict": True},
+        pamset_udm={
+            "rlamdo": 15.1,
+            "akapa": 0.657,
+            "cpi": 0.208,
+            "W": 2.2,
+            "beto": 6.9,
+            "lambda": 0.606,
+            "mixed": 107.0,
+        },
+        pamset_emiconc={
+            "qbmb": 0.0,
+            "qo3": 0.5,
+            "qdirso2": -0.3701,
+            "qindso2": -0.4163,
+            "qbc": 0.163,
+            "qoc": -0.084,
+            "qh2o_ch4": 0.171,
+        },
+    )
+    ch4_conc_normal = cscm.results["concentrations"]["CH4"][-100:]
+    cscm._run(
+        {"results_as_dict": True},
+        pamset_emiconc={"lifetime_mode": "2022_regr_free"},
+    )
+    ch4_conc_regfree = cscm.results["concentrations"]["CH4"][-100:]
+    cscm._run(
+        {"results_as_dict": True},
+        pamset_emiconc={"lifetime_mode": "2022_regr_constr"},
+    )
+    ch4_conc_regconstr = cscm.results["concentrations"]["CH4"][-100:]
+    cscm._run(
+        {"results_as_dict": True},
+        pamset_emiconc={"lifetime_mode": "CONSTANT"},
+    )
+    ch4_conc_const = cscm.results["concentrations"]["CH4"][-100:]
+    ih2 = input_handler.InputHandler({"nystart": 1850, "nyend": 2100, "emstart": 1850})
+    cscm2 = CICEROSCM(
+        {
+            "gaspam_data": input_handler.read_components(
+                os.path.join(test_data_dir, "gases_v1RCMIP.txt")
+            ),
+            "nyend": 2100,
+            "nystart": 1850,
+            "emstart": 1900,
+            "concentrations_data": input_handler.read_inputfile(
+                os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"), True, 1850, 2100
+            ),
+            "emissions_data": ih2.read_emissions(
+                os.path.join(test_data_dir, "ssp245_em_RCMIP.txt")
+            ),
+            "nat_ch4_data": input_handler.read_natural_emissions(
+                os.path.join(test_data_dir, "natemis_ch4.txt"), "CH4"
+            ),
+            "nat_n2o_data": input_handler.read_natural_emissions(
+                os.path.join(test_data_dir, "natemis_n2o.txt"), "N2O"
+            ),
+        },
+    )
+    cscm2._run(
+        {"results_as_dict": True},
+        pamset_udm={
+            "rlamdo": 15.1,
+            "akapa": 0.657,
+            "cpi": 0.208,
+            "W": 2.2,
+            "beto": 6.9,
+            "lambda": 0.606,
+            "mixed": 107.0,
+        },
+        pamset_emiconc={
+            "qbmb": 0.0,
+            "qo3": 0.5,
+            "qdirso2": -0.3701,
+            "qindso2": -0.4163,
+            "qbc": 0.163,
+            "qoc": -0.084,
+            "qh2o_ch4": 0.171,
+        },
+    )
+    ch4_conc_shift_time = cscm2.results["concentrations"]["CH4"][-100:]
+
+    print("Shift time")
+    print(ch4_conc_shift_time)
+    print("constant")
+    print(ch4_conc_const)
+    print("normal")
+    print(ch4_conc_normal)
+    print("regfree")
+    print(ch4_conc_regfree)
+    print("regconstr")
+    print(ch4_conc_regconstr)
+
+    assert np.allclose(ch4_conc_shift_time, ch4_conc_normal)
+    assert len(ch4_conc_const) == 100
+    assert len(ch4_conc_regfree) == 100
+    assert len(ch4_conc_regconstr) == 100
+    assert len(ch4_conc_normal) == 100
+    assert False
