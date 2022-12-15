@@ -18,7 +18,7 @@ def test_check_numeric_pamset():
     assert pamset2["untouched_string"] == "Hello"
 
 
-def test_cut_and_checl_pamset():
+def test_cut_and_check_pamset():
     required = {"Year": 2022, "number": 4.55, "test": 6.3e-4, "test2": 85}
     pamset = {
         "test": 7.8e-3,

@@ -252,7 +252,6 @@ class ConcentrationsEmissionsHandler:
             cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
-        years_tot = len(self.years)
         self.conc_in = input_handler.get_data("concentrations")
         self.emis = input_handler.get_data("emissions")
         self.pamset["conc_run"] = input_handler.conc_run()
@@ -260,17 +259,7 @@ class ConcentrationsEmissionsHandler:
             perturb_emissions(input_handler, self.emis)
         if input_handler.optional_pam("perturb_forc"):
             self.pamset["forc_pert"] = ForcingPerturbation(input_handler, self.years[0])
-        self.r_functions = np.empty(
-            (2, self.pamset["idtm"] * years_tot)
-        )  # if speedup, get this to reflect number of years
-        self.r_functions[0, :] = [
-            _rs_function(it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * years_tot)
-        ]
-        self.r_functions[1, :] = [
-            _rb_function(it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * years_tot)
-        ]
+        self.precalc_r_functions(pamset)
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
 
@@ -311,6 +300,40 @@ class ConcentrationsEmissionsHandler:
             "ss1": 0.0,
             "sums": 0.0,
         }
+
+    def precalc_r_functions(self, pamset):
+        """
+        Precalculate decay functions either
+        sent in pamset or from default
+
+        If functions are sent with keywords rs_function
+        or rb_function in the pamset, these must take
+        time and number of steps per year as input
+
+        Parameters
+        ----------
+        pamset
+        """
+        years_tot = len(self.years)
+        self.r_functions = np.empty(
+            (2, self.pamset["idtm"] * years_tot)
+        )  # if speedup, get this to reflect number of years
+        if "rs_function" in pamset:
+            rs_func = pamset["rs_function"]
+        else:
+            rs_func = _rs_function
+        self.r_functions[0, :] = [
+            rs_func(it, self.pamset["idtm"])
+            for it in range(self.pamset["idtm"] * years_tot)
+        ]
+        if "rb_function" in pamset:
+            rb_func = pamset["rs_function"]
+        else:
+            rb_func = _rb_function
+        self.r_functions[1, :] = [
+            rb_func(it, self.pamset["idtm"])
+            for it in range(self.pamset["idtm"] * years_tot)
+        ]
 
     def calculate_strat_quantities(self, yr):
         """
