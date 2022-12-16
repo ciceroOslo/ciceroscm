@@ -327,7 +327,7 @@ class ConcentrationsEmissionsHandler:
             for it in range(self.pamset["idtm"] * years_tot)
         ]
         if "rb_function" in pamset:
-            rb_func = pamset["rs_function"]
+            rb_func = pamset["rb_function"]
         else:
             rb_func = _rb_function
         self.r_functions[1, :] = [
