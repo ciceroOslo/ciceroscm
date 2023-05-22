@@ -597,14 +597,23 @@ class ConcentrationsEmissionsHandler:
                     * self.df_gas["SARF_TO_ERF"][tracer]
                 )  # +forc_pert
             elif tracer == "TROP_O3":
-                q = self.tropospheric_ozone_forcing(yr)
+                q = (
+                    self.tropospheric_ozone_forcing(yr)
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )
             elif tracer == "STRAT_O3":
                 sumcl, sumbr = self.calculate_strat_quantities(yr - 3)
-                q = -(0.287737 * (0.000552 * (sumcl) + 3.048 * sumbr)) / 1000.0
+                q = (
+                    -(0.287737 * (0.000552 * (sumcl) + 3.048 * sumbr))
+                    / 1000.0
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )
             elif tracer == "STRAT_H2O":
                 q = (
                     self.pamset["qh2o_ch4"] * self.forc["CH4"][yr - yr_0]
-                )  # + FORC_PERT(yr_ix,trc_ix)
+                ) * self.df_gas["SARF_TO_ERF"][
+                    tracer
+                ]  # + FORC_PERT(yr_ix,trc_ix)
             elif tracer == "OTHER":
                 # Possible with forcing perturbations for other
                 # components such as contrails, cirrus etc...
