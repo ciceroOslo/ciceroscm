@@ -57,7 +57,7 @@ def _check_array_consistency(coeffs, timescales):
 
 def make_rs_function_from_arrays(rs_coeff, rs_time):
     """
-    Make carbon pool decay function from arrays of coefficients
+    Make mixed layer pulse response function from arrays of coefficients
     and timescales
 
     Parameters
@@ -73,7 +73,7 @@ def make_rs_function_from_arrays(rs_coeff, rs_time):
     Returns
     -------
     function
-       Carbon pool decay function based on the coefficient and
+       Mixed layer carbon pool decay function based on the coefficient and
        timescale vectors
 
     Raises

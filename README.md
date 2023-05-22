@@ -31,6 +31,8 @@ When a new instance of the CICERO-SCM class is created the dictionary cfg needs 
 * conc_run - Set this to True and have a concentration driven run. You will still need to provide an emission file, as some species forcings (such as ozone) are calculated from emissions after emstart.
 * perturb_em_file - path to file with emission perturbations to be added to the emissions from the emissions file, the format for this file is shown in the file in test/test_data/pertem_test.txt
 * perturb_forc_file - path to file with forcings to be added after forcings from emissions and concentrations have been calculated, the format for this file is shown in the file in test/test_data/pertforc_test.txt
+* rs_function - Custom mixed layer pulse response function, must take in it, time step number, and idtm, subyearly division, and return the mixed layer pulse response for this value. Such a function can be generated from an arrays of coefficients and timescales using the pub_utils function make_rs_function_from_arrays.
+* rb_function - Custom biotic decay function, must take in it, time step number, and idtm, subyearly division, and return the mixed layer pulse response for this value. Such a function can be generated from an arrays of coefficients and timescales using the pub_utils function make_rs_function_from_arrays.
 
 ## Options for run
 With a CICEROSCM instance in place, you are ready to start runs with various parameter configurations, using the input files as set by the instance configuration
