@@ -19,7 +19,7 @@ When a new instance of the CICERO-SCM class is created the dictionary cfg needs 
 * nyend - the end year of the run
 * emstart - the year to start the run with emissions
 * idtm - optional parameter to tune the number of subyearly steps in the concentrations_emissions_handler. Default is 24. Should probably not be the first parameter you want to start playing with.
-* sunvolc - an optional parameter to include solar an volcanic forcing. If included and equal to 1 a set of such forcing series will be included.
+* sunvolc - an optional parameter to include solar and volcanic forcing. If included and equal to 1 a set of such forcing series will be included.
 * rf_sun_file - optional path to file with solar data, only read if sunvolc is 1. If sunvolc is 1 and this parameter is not set, a default file will be used.
 * rf_volc_file - optional path to file with hemispherically symmetric volcanic forcing data. If you prefer, you can send rf_volc_n_file and rf_volc_s_file for separate data for each hemisphere, but then a global file must not be sent, as it will override the hemispherically split files when present. The volcanic data can be on columns, with monthly data, on one yearly column, or on any other periodic split per column per year (i.e. seasonal, half yearly, every four months). If sunvolc is not 1, all of these will be ignored. If sunvolc is 1 and none and no volcanic forcing data is indicated by the user, a default file will be used.
 * gaspam_file - path to file of gases to include with units, lifetimes, forcing factors etc (mandatory), since the python version, this has been updated to also include a SARF_TO_ERF factor which was previously only hard coded in for methane. The test-data directory has example files for this, one similar to what was used in RCMIP and one with updates from AR6.
@@ -78,6 +78,7 @@ The concentration and emission parameterset (which is needed for emission runs) 
 * beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
 * ref_yr (2010) - Reference year for the above forcing values. To construct radiative forcing time series, these forcing values are scaled using emssions. The forcing in the reference year is equal to the forcing value set by the above parameters
 * idtm (24) - Number of subyearly timesteps for calculation of CO2 concentrations from emissions.
+* lifetime_mode - Lifetime mode for methane, valid options are TAR (for following the third IPCC assessment report), CONSTANT (for a constant value of 12 years) or a wigley exponent behaviour. TAR is the default, but wigley is a hidden default if you send a value for this option which is not TAR nor CONSTANT
 * just_one - this is an optional parameter which allows you to run with the forcing of a single component to the upwelling diffusion model. It should be set equal to the component you are interested in seeing the effects of.
 
 ## Parallelisation tools
