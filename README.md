@@ -53,7 +53,7 @@ The default parameter sets should produce fairly sensible temperature histories 
 #### pamset_udm
 The upwelling diffusion model (which is needed for all runs) takes the following parameters.(Default value in paranthesis):
 * rlamdo (15.0) - Air-sea heat exchange parameter <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 5-25
-* akapa (0.66) - Vertical heat diffusicity <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{cm}^2}{\mathrm{s}}">, valid range 0.06-0.8
+* akapa (0.66) - Vertical heat diffusivity <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{cm}^2}{\mathrm{s}}">, valid range 0.06-0.8
 * cpi (0.21) - Polar parameter, temperature change ratio polar to nonpolar region, unitless, valid range 0.161-0.569
 * W (2.2) - Vertical velocity, upwelling rate <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{m}}{\mathrm{yr}}">, valid range 0.55-2.55
 * beto (6.9) - Ocean interhemispheric heat exchange coefficient <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 0-7
