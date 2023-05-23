@@ -123,7 +123,6 @@ class Calibrator:
             index,  # pylint: disable=unused-variable
             datapoint,
         ) in self.calibdata.iterrows():
-
             if datapoint["Yearstart_change"] == datapoint["Yearend_change"]:
                 vres = (
                     res.filter(

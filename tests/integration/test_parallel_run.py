@@ -80,7 +80,6 @@ def test_ciceroscm_run_parallel_many_scenarios(test_data_dir):
 
 
 def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
-
     gaspam_data = input_handler.read_components(
         os.path.join(test_data_dir, "gases_v1RCMIP.txt")
     )
@@ -270,7 +269,6 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
 
 
 def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
-
     gaspam_data = input_handler.read_components(
         os.path.join(test_data_dir, "gases_v1RCMIP.txt")
     )

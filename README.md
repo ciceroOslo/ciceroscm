@@ -19,7 +19,7 @@ When a new instance of the CICERO-SCM class is created the dictionary cfg needs 
 * nyend - the end year of the run
 * emstart - the year to start the run with emissions
 * idtm - optional parameter to tune the number of subyearly steps in the concentrations_emissions_handler. Default is 24. Should probably not be the first parameter you want to start playing with.
-* sunvolc - an optional parameter to include solar an volcanic forcing. If included and equal to 1 a set of such forcing series will be included.
+* sunvolc - an optional parameter to include solar and volcanic forcing. If included and equal to 1 a set of such forcing series will be included.
 * rf_sun_file - optional path to file with solar data, only read if sunvolc is 1. If sunvolc is 1 and this parameter is not set, a default file will be used.
 * rf_volc_file - optional path to file with hemispherically symmetric volcanic forcing data. If you prefer, you can send rf_volc_n_file and rf_volc_s_file for separate data for each hemisphere, but then a global file must not be sent, as it will override the hemispherically split files when present. The volcanic data can be on columns, with monthly data, on one yearly column, or on any other periodic split per column per year (i.e. seasonal, half yearly, every four months). If sunvolc is not 1, all of these will be ignored. If sunvolc is 1 and none and no volcanic forcing data is indicated by the user, a default file will be used.
 * gaspam_file - path to file of gases to include with units, lifetimes, forcing factors etc (mandatory), since the python version, this has been updated to also include a SARF_TO_ERF factor which was previously only hard coded in for methane. The test-data directory has example files for this, one similar to what was used in RCMIP and one with updates from AR6.
@@ -31,6 +31,8 @@ When a new instance of the CICERO-SCM class is created the dictionary cfg needs 
 * conc_run - Set this to True and have a concentration driven run. You will still need to provide an emission file, as some species forcings (such as ozone) are calculated from emissions after emstart.
 * perturb_em_file - path to file with emission perturbations to be added to the emissions from the emissions file, the format for this file is shown in the file in test/test_data/pertem_test.txt
 * perturb_forc_file - path to file with forcings to be added after forcings from emissions and concentrations have been calculated, the format for this file is shown in the file in test/test_data/pertforc_test.txt
+* rs_function - Custom mixed layer pulse response function, must take in it, time step number, and idtm, subyearly division, and return the mixed layer pulse response for this value. Such a function can be generated from an arrays of coefficients and timescales using the pub_utils function make_rs_function_from_arrays.
+* rb_function - Custom biotic decay function, must take in it, time step number, and idtm, subyearly division, and return the mixed layer pulse response for this value. Such a function can be generated from an arrays of coefficients and timescales using the pub_utils function make_rs_function_from_arrays.
 
 ## Options for run
 With a CICEROSCM instance in place, you are ready to start runs with various parameter configurations, using the input files as set by the instance configuration
@@ -51,7 +53,7 @@ The default parameter sets should produce fairly sensible temperature histories 
 #### pamset_udm
 The upwelling diffusion model (which is needed for all runs) takes the following parameters.(Default value in paranthesis):
 * rlamdo (15.0) - Air-sea heat exchange parameter <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 5-25
-* akapa (0.66) - Vertical heat diffusicity <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{cm}^2}{\mathrm{s}}">, valid range 0.06-0.8
+* akapa (0.66) - Vertical heat diffusivity <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{cm}^2}{\mathrm{s}}">, valid range 0.06-0.8
 * cpi (0.21) - Polar parameter, temperature change ratio polar to nonpolar region, unitless, valid range 0.161-0.569
 * W (2.2) - Vertical velocity, upwelling rate <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{m}}{\mathrm{yr}}">, valid range 0.55-2.55
 * beto (6.9) - Ocean interhemispheric heat exchange coefficient <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 0-7
@@ -78,6 +80,7 @@ The concentration and emission parameterset (which is needed for emission runs) 
 * beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
 * ref_yr (2010) - Reference year for the above forcing values. To construct radiative forcing time series, these forcing values are scaled using emssions. The forcing in the reference year is equal to the forcing value set by the above parameters
 * idtm (24) - Number of subyearly timesteps for calculation of CO2 concentrations from emissions.
+* lifetime_mode - Lifetime mode for methane, valid options are TAR (for following the third IPCC assessment report), CONSTANT (for a constant value of 12 years) or a wigley exponent behaviour. TAR is the default, but wigley is a hidden default if you send a value for this option which is not TAR nor CONSTANT
 * just_one - this is an optional parameter which allows you to run with the forcing of a single component to the upwelling diffusion model. It should be set equal to the component you are interested in seeing the effects of.
 
 ## Parallelisation tools

@@ -124,6 +124,7 @@ def check_pamset(pamset):
     # pamset = check_numeric_pamset(required, pamset, )
     if "lifetime_mode" not in pamset:
         pamset["lifetime_mode"] = "TAR"
+
     used = {
         "lifetime_mode": "TAR",
         "just_one": "CO2",
@@ -249,6 +250,7 @@ class ConcentrationsEmissionsHandler:
         self.pamset = cut_and_check_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
+            used={"rs_function": _rs_function, "rb_function": _rb_function},
             cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
@@ -259,7 +261,7 @@ class ConcentrationsEmissionsHandler:
             perturb_emissions(input_handler, self.emis)
         if input_handler.optional_pam("perturb_forc"):
             self.pamset["forc_pert"] = ForcingPerturbation(input_handler, self.years[0])
-        self.precalc_r_functions(pamset)
+        self.precalc_r_functions()
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
 
@@ -301,7 +303,7 @@ class ConcentrationsEmissionsHandler:
             "sums": 0.0,
         }
 
-    def precalc_r_functions(self, pamset):
+    def precalc_r_functions(self):
         """
         Precalculate decay functions either
         sent in pamset or from default
@@ -318,20 +320,16 @@ class ConcentrationsEmissionsHandler:
         self.r_functions = np.empty(
             (2, self.pamset["idtm"] * years_tot)
         )  # if speedup, get this to reflect number of years
-        if "rs_function" in pamset:
-            rs_func = pamset["rs_function"]
-        else:
-            rs_func = _rs_function
+        if "rs_function" not in self.pamset:
+            self.pamset["rs_function"] = _rs_function
+        if "rb_function" not in self.pamset:
+            self.pamset["rb_function"] = _rb_function
         self.r_functions[0, :] = [
-            rs_func(it, self.pamset["idtm"])
+            self.pamset["rs_function"](it, self.pamset["idtm"])
             for it in range(self.pamset["idtm"] * years_tot)
         ]
-        if "rb_function" in pamset:
-            rb_func = pamset["rb_function"]
-        else:
-            rb_func = _rb_function
         self.r_functions[1, :] = [
-            rb_func(it, self.pamset["idtm"])
+            self.pamset["rb_function"](it, self.pamset["idtm"])
             for it in range(self.pamset["idtm"] * years_tot)
         ]
 
@@ -599,14 +597,23 @@ class ConcentrationsEmissionsHandler:
                     * self.df_gas["SARF_TO_ERF"][tracer]
                 )  # +forc_pert
             elif tracer == "TROP_O3":
-                q = self.tropospheric_ozone_forcing(yr)
+                q = (
+                    self.tropospheric_ozone_forcing(yr)
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )
             elif tracer == "STRAT_O3":
                 sumcl, sumbr = self.calculate_strat_quantities(yr - 3)
-                q = -(0.287737 * (0.000552 * (sumcl) + 3.048 * sumbr)) / 1000.0
+                q = (
+                    -(0.287737 * (0.000552 * (sumcl) + 3.048 * sumbr))
+                    / 1000.0
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )
             elif tracer == "STRAT_H2O":
                 q = (
                     self.pamset["qh2o_ch4"] * self.forc["CH4"][yr - yr_0]
-                )  # + FORC_PERT(yr_ix,trc_ix)
+                ) * self.df_gas["SARF_TO_ERF"][
+                    tracer
+                ]  # + FORC_PERT(yr_ix,trc_ix)
             elif tracer == "OTHER":
                 # Possible with forcing perturbations for other
                 # components such as contrails, cirrus etc...
