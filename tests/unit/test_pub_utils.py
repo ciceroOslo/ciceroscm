@@ -1,7 +1,9 @@
+import os
+
 import numpy as np
 import pytest
 
-from ciceroscm import pub_utils
+from ciceroscm import input_handler, pub_utils
 
 
 def test_making_biotic_decay_function():
@@ -69,3 +71,39 @@ def test_error_management_decay_functions():
     rs_C = [0.25, 0.25, 0.25]
     rs = pub_utils.make_rs_function_from_arrays(rs_C, rs_T)
     assert rs(0, 5364) == 1.0
+
+
+def test_find_num_cl_in_hcfc():
+    assert pub_utils.find_num_cl_in_hcfc("CFC-11") == 3
+    assert pub_utils.find_num_cl_in_hcfc("CFC-12") == 2
+    assert pub_utils.find_num_cl_in_hcfc("CFC-113") == 3
+    assert pub_utils.find_num_cl_in_hcfc("CFC-114") == 2
+    assert pub_utils.find_num_cl_in_hcfc("CFC-115") == 1
+    assert pub_utils.find_num_cl_in_hcfc("HCFC-22") == 1
+    assert pub_utils.find_num_cl_in_hcfc("HCFC-141b") == 2
+    assert pub_utils.find_num_cl_in_hcfc("HCFC-123") == 2
+    assert pub_utils.find_num_cl_in_hcfc("HCFC-142b") == 1
+
+
+def test_make_cl_and_br_dictionaries(test_data_dir):
+    df_gas = input_handler.read_components(
+        os.path.join(test_data_dir, "gases_v1RCMIP.txt")
+    )
+    chlor_dict, brom_dict = pub_utils.make_cl_and_br_dictionaries(df_gas.index)
+    assert brom_dict == {"H-1211": 1, "H-1301": 1, "CH3Br": 1, "H-2402": 2}
+    chlor_dict_old = {
+        "CFC-11": 3,
+        "CFC-12": 2,
+        "CFC-113": 3,
+        "CFC-114": 2,
+        "CFC-115": 1,
+        "CCl4": 4,
+        "CH3CCl3": 3,
+        "HCFC-22": 1,
+        "HCFC-141b": 2,
+        "HCFC-123": 2,
+        "HCFC-142b": 1,
+    }
+    assert chlor_dict != chlor_dict_old
+    chlor_dict_old["H-1211"] = 1
+    assert chlor_dict == chlor_dict_old
