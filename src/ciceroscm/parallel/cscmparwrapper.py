@@ -175,11 +175,7 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
                 pamset_emiconc=pamset["pamset_emiconc"],
             )
             for variable in output_variables:
-                (
-                    years,
-                    timeseries,
-                    unit,
-                ) = self.resultsreader.get_variable_timeseries(
+                (years, timeseries, unit,) = self.resultsreader.get_variable_timeseries(
                     self.cscm.results, variable, self.sdatagetter
                 )
                 if isinstance(years, pd.DataFrame) and years.empty:  # pragma: no cover
