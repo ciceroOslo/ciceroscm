@@ -15,6 +15,7 @@ from .perturbations import (
     calculate_hemispheric_forcing,
     perturb_emissions,
 )
+from .pub_utils import make_cl_and_br_dictionaries
 
 LOGGER = logging.getLogger(__name__)
 
@@ -262,6 +263,9 @@ class ConcentrationsEmissionsHandler:
         if input_handler.optional_pam("perturb_forc"):
             self.pamset["forc_pert"] = ForcingPerturbation(input_handler, self.years[0])
         self.precalc_r_functions()
+        self.pamset["cl_dict"], self.pamset["br_dict"] = make_cl_and_br_dictionaries(
+            self.df_gas.index
+        )
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
 
@@ -352,29 +356,17 @@ class ConcentrationsEmissionsHandler:
             Containing the sumcl, value for chlorinated gases
             and the sumbr value for halon gases.
         """
-        if yr < self.years[0]:
+        yr0 = int(self.years[0])
+        if yr <= yr0:
             return 0.0, 0.0
-        chlor_dict = {
-            "CFC-11": 3,
-            "CFC-12": 2,
-            "CFC-113": 3,
-            "CFC-114": 2,
-            "CFC-115": 1,
-            "CCl4": 4,
-            "CH3CCl3": 3,
-            "HCFC-22": 1,
-            "HCFC-141b": 2,
-            "HCFC-123": 2,
-            "HCFC-142b": 1,
-        }
-        # More Halons?
-        brom_dict = {"H-1211": 1, "H-1301": 1}
         sumcl = 0
         sumbr = 0
-        for comp, mult in chlor_dict.items():
-            sumcl = sumcl + (mult * self.conc[comp][yr]) ** 1.7
-        for comp, mult in brom_dict.items():
-            sumbr = sumbr + (mult * self.conc[comp][yr])
+        for comp, mult in self.pamset["cl_dict"].items():
+            num = self.conc[comp][yr] - self.conc[comp][yr0]
+            # sumcl = sumcl + (mult * (self.conc[comp][yr] - self.conc[comp][yr0])) ** 1.7
+            sumcl = sumcl + np.sign(num) * np.power(mult * abs(num), 1.7)
+        for comp, mult in self.pamset["br_dict"].items():
+            sumbr = sumbr + mult * (self.conc[comp][yr] - self.conc[comp][yr0])
         return sumcl, sumbr
 
     def calculate_forc_three_main(self, yr):  # pylint: disable=too-many-locals
@@ -580,11 +572,15 @@ class ConcentrationsEmissionsHandler:
                 # SO2, SO4_IND, BC and OC are treated exactly the same
                 # Only with emission to concentration factors differing
                 # These are held in dictionary
-                erefyr = self.emis[ref_emission_species[tracer][0]][
-                    self.pamset["ref_yr"]
-                ]
+                erefyr = (
+                    self.emis[ref_emission_species[tracer][0]][self.pamset["ref_yr"]]
+                    - self.emis[ref_emission_species[tracer][0]][yr_0]
+                )
                 if erefyr != 0.0:  # pylint: disable=compare-to-zero
-                    frac_em = self.emis[ref_emission_species[tracer][0]][yr] / erefyr
+                    frac_em = (
+                        self.emis[ref_emission_species[tracer][0]][yr]
+                        - self.emis[ref_emission_species[tracer][0]][yr_0]
+                    ) / erefyr
                     q = ref_emission_species[tracer][1] * frac_em
 
             elif (
@@ -603,8 +599,14 @@ class ConcentrationsEmissionsHandler:
                 )
             elif tracer == "STRAT_O3":
                 sumcl, sumbr = self.calculate_strat_quantities(yr - 3)
+                # Updated according to IPCC AR4.
+                # Multiply by factor 0.287737 (=-0.05/-0.17377, AR4/SCM)
                 q = (
-                    -(0.287737 * (0.000552 * (sumcl) + 3.048 * sumbr))
+                    -(
+                        self.pamset["qo3"]
+                        / 0.17377
+                        * (0.000552 * (sumcl) + 3.048 * sumbr)
+                    )
                     / 1000.0
                     * self.df_gas["SARF_TO_ERF"][tracer]
                 )
