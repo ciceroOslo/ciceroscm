@@ -78,7 +78,7 @@ def plot_output1(pamset, results, nystart, nyend):
     axs[1].plot(indices, results["RIB_S"], label="RIB_S", linestyle="--")
     fix_plot(
         axs,
-        ["check", "check"],
+        [r"W/$\mathrm{m}^2$", r"W/$\mathrm{m}^2$"],
         ["RIB_glob", "RIB_glob"],
         legend=True,
     )
@@ -104,6 +104,12 @@ def plot_output1(pamset, results, nystart, nyend):
             axs[1].plot(indices, results[comp], label=comp, linestyle="--")
         else:
             axs[1].plot(indices, results[comp], label=comp)
+    fix_plot(
+        axs,
+        ["K", "K"],
+        ["Temperature change global", "Temperature change global and hemispheric"],
+        legend=True,
+    )
     plt.savefig(os.path.join(plotdir, "temp.png"))
 
 
