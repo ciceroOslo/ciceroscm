@@ -603,7 +603,8 @@ class ConcentrationsEmissionsHandler:
                 # Multiply by factor 0.287737 (=-0.05/-0.17377, AR4/SCM)
                 q = (
                     -(
-                        self.pamset["qo3"]
+                        # self.pamset["qo3"]
+                        0.05
                         / 0.17377
                         * (0.000552 * (sumcl) + 3.048 * sumbr)
                     )
