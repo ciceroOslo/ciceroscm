@@ -707,10 +707,9 @@ class ConcentrationsEmissionsHandler:
             if tracer == "N2O":
                 self.df_gas.at[tracer, "NAT_EM"] = self.nat_emis_n2o["N2O"][yr]
 
-            emis = self.emis[tracer][yr]
-            emis = (
-                emis + self.df_gas["NAT_EM"][tracer]
-            )  # natural emissions, from gasspamfile
+            # natural emissions, from gasspamfile
+            emis = self.emis[tracer][yr] + self.df_gas["NAT_EM"][tracer]
+
             point_conc = emis / self.df_gas["BETA"][tracer]
             # Rewrote this quite a bit from an original loop,
             # but I think it is mathematically equivalent
@@ -748,9 +747,9 @@ class ConcentrationsEmissionsHandler:
                 - 0.000315 * (self.emis["NMVOC"][yr] - self.emis["NMVOC"][2000])
             )
             q = q * (dln_oh + 1)
-        elif self.pamset["lifetime_mode"] == "CONSTANT":
+        elif self.pamset["lifetime_mode"] == "CONSTANT_12":
             q = 1.0 / 12.0
-        else:
+        elif self.pamset["lifetime_mode"] == "WIGLEY":
             q = q * (((conc_local / 1700.0)) ** (ch4_wigley_exp))
 
         q = q + 1.0 / self.df_gas["TAU2"]["CH4"] + 1.0 / self.df_gas["TAU3"]["CH4"]
@@ -857,9 +856,7 @@ class ConcentrationsEmissionsHandler:
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
         self.conc["CO2"][yr] = self.co2_hold["xCO2"]
 
-    def fill_one_row_conc(
-        self, yr, avoid=[]
-    ):  # pylint: disable=dangerous-default-value
+    def fill_one_row_conc(self, yr, avoid=None):
         """
         Fill in one row of concentrations in conc_dict
 
@@ -879,7 +876,7 @@ class ConcentrationsEmissionsHandler:
              are read from prescribed data.
         """
         for tracer, value_dict in self.conc.items():
-            if tracer in avoid:
+            if avoid and tracer in avoid:
                 continue
             if tracer in self.conc_in:
                 value_dict[yr] = self.conc_in[tracer][yr]

@@ -65,11 +65,12 @@ def plot_output1(pamset, results, nystart, nyend):
     #    if not os.path.exists("plots"):
     #        os.makedirs("plots")
     indices = np.arange(nystart, nyend + 1)
-    fig, axs = plt.subplots(nrows=1, ncols=2, sharex=True, figsize=(12, 6))
+    fig, axs = plt.subplots(nrows=1, ncols=2, sharex=True, sharey=True, figsize=(12, 6))
     axs[0].plot(indices, results["OHC700"])
     axs[1].plot(indices, results["OHCTOT"])
     fix_plot(axs, ["OHC [$10^{22}$J]", "OHC [$10^{22}$J]"], ["OHC700", "OHCTOT"])
     fig.suptitle("CICERO SCM simulation, Ocean heat content")
+    axs[1].yaxis.set_tick_params(labelbottom=True)
     plt.savefig(os.path.join(plotdir, "ohc.png"))
     fig, axs = plt.subplots(nrows=1, ncols=2, sharex=True, figsize=(12, 6))
     axs[0].plot(indices, results["RIB_glob"], label="RIB_glob")
@@ -85,12 +86,16 @@ def plot_output1(pamset, results, nystart, nyend):
     fig.suptitle("CICERO SCM simulation, RIB")
     plt.savefig(os.path.join(plotdir, "rib.png"))
     fig, axs = plt.subplots(nrows=1, ncols=2, sharex=True, figsize=(14, 6))
+
     for comp in ["dT_glob", "dT_glob_air", "dT_glob_sea"]:
-        axs[0].plot(indices, results[comp], label=comp)
+        colours = {"glob": "tab:green", "air": "tab:orange", "sea": "tab:blue"}
+        axs[0].plot(
+            indices,
+            results[comp],
+            label=comp,
+            color=colours[comp.rsplit("_", maxsplit=1)[-1]],
+        )
     for comp in [
-        "dT_glob",
-        "dT_glob_air",
-        "dT_glob_sea",
         "dT_NH",
         "dT_NH_air",
         "dT_NH_sea",
@@ -99,11 +104,23 @@ def plot_output1(pamset, results, nystart, nyend):
         "dT_SHsea",
     ]:
         if "NH" in comp:
-            axs[1].plot(indices, results[comp], label=comp, linestyle=":")
-        elif "SH" in comp:
-            axs[1].plot(indices, results[comp], label=comp, linestyle="--")
+            colours = {"NH": "tab:green", "air": "tab:orange", "sea": "tab:blue"}
+            axs[1].plot(
+                indices,
+                results[comp],
+                label=comp,
+                linestyle=":",
+                color=colours[comp.rsplit("_", maxsplit=1)[-1]],
+            )
         else:
-            axs[1].plot(indices, results[comp], label=comp)
+            colours = {"SH": "tab:green", "air": "tab:orange", "SHsea": "tab:blue"}
+            axs[1].plot(
+                indices,
+                results[comp],
+                label=comp,
+                linestyle="--",
+                color=colours[comp.rsplit("_", maxsplit=1)[-1]],
+            )
     fix_plot(
         axs,
         ["K", "K"],
@@ -113,7 +130,9 @@ def plot_output1(pamset, results, nystart, nyend):
     plt.savefig(os.path.join(plotdir, "temp.png"))
 
 
-def plot_output2(var, df_in, outdir, unit=None):
+def plot_output2(
+    var, df_in, outdir, unit=None
+):  # pylint: disable=too-many-locals, too-many-branches
     """
     Plot concentration, emission and forcing
 
@@ -130,11 +149,24 @@ def plot_output2(var, df_in, outdir, unit=None):
         dataframe possibly containing units
     """
     plotdir = os.path.join(outdir, "plots")
+    if var == "emis":
+        df_in = df_in.drop(labels=unit[unit.values == "X"].index.tolist(), axis=1)
+    elif var == "conc":
+        df_in = df_in.drop(labels=unit[unit.values == "-"].index.tolist(), axis=1)
+    elif var == "forc":
+        df_in = df_in.drop(
+            labels=["NOx", "CO", "NMVOC", "NH3", "BMB_AEROS_OC", "BMB_AEROS_BC"], axis=1
+        )
     years = df_in["Year"]
     comps = df_in.columns[1:]
     for c, comp in enumerate(comps):
         if c in [0, 16, 32]:
-            fig, axs = plt.subplots(nrows=4, ncols=4, sharex=True, figsize=(15, 10))
+            maxrows = 4
+            if c == 32:
+                maxrows = int(np.ceil((len(comps) - 32) / 4))
+            fig, axs = plt.subplots(
+                nrows=maxrows, ncols=4, sharex=True, figsize=(15, 10)
+            )
             if var == "forc":
                 title = (
                     "CICERO SCM simulation, Radiative Forcing "
@@ -152,24 +184,25 @@ def plot_output2(var, df_in, outdir, unit=None):
                 title = (
                     "CICERO SCM simulation, Concentrations "
                     + str(int(c / 16 + 1))
-                    + " of 3"
+                    + " of 2"
                 )
                 fname = "conc_" + str(int(c / 16 + 1)) + ".png"
             fig.suptitle(title)
             i = 0
             j = 0
         axs[i, j].plot(years, df_in[comp])
-        axs[i, j].set_title(comp)
+        if comp != "Total_forcing":
+            axs[i, j].set_title(comp)
+        else:
+            axs[i, j].set_title("Total anthropogenic")
+        axs[i, j].xaxis.set_tick_params(labelbottom=True)
         if var != "forc":
             axs[i, j].set_ylim(ymin=0)
             axs[i, j].set_ylabel("[" + unit.loc[comp] + "]")
         if c in [15, 31, len(comps) - 1]:
             if c == len(comps) - 1:
-                fig.delaxes(axs[3, 3])
-                axs[2, 3].xaxis.set_tick_params(labelbottom=True)
-                if var != "forc":
-                    fig.delaxes(axs[3, 2])
-                    axs[2, 2].xaxis.set_tick_params(labelbottom=True)
+                for j_left in range(j + 1, 4):
+                    fig.delaxes(axs[i, j_left])
             fig.tight_layout(pad=4, h_pad=2, w_pad=1)
             fig.supxlabel("Year")
             fig.savefig(os.path.join(plotdir, fname))
