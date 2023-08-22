@@ -32,7 +32,7 @@ When a new instance of the CICERO-SCM class is created the dictionary cfg needs 
 * perturb_em_file - path to file with emission perturbations to be added to the emissions from the emissions file, the format for this file is shown in the file in test/test_data/pertem_test.txt
 * perturb_forc_file - path to file with forcings to be added after forcings from emissions and concentrations have been calculated, the format for this file is shown in the file in test/test_data/pertforc_test.txt
 * rs_function - Custom mixed layer pulse response function, must take in it, time step number, and idtm, subyearly division, and return the mixed layer pulse response for this value. Such a function can be generated from an arrays of coefficients and timescales using the pub_utils function make_rs_function_from_arrays.
-* rb_function - Custom biotic decay function, must take in it, time step number, and idtm, subyearly division, and return the mixed layer pulse response for this value. Such a function can be generated from an arrays of coefficients and timescales using the pub_utils function make_rs_function_from_arrays.
+* rb_function - Custom biotic decay function, must take in it, time step number, and idtm, subyearly division, and return the mixed layer pulse response for this value. Such a function can be generated from an arrays of coefficients and timescales using the pub_utils function make_rb_function_from_arrays.
 
 ## Options for run
 With a CICEROSCM instance in place, you are ready to start runs with various parameter configurations, using the input files as set by the instance configuration
