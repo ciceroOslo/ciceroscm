@@ -5,24 +5,8 @@ from ciceroscm import upwelling_diffusion_model
 
 # Rewrite test for class method
 def test_band():
-    udm = upwelling_diffusion_model.UpwellingDiffusionModel(
-        {
-            "lambda": 0.540,
-            "akapa": 0.341,
-            "cpi": 0.556,
-            "W": 1.897,
-            "rlamdo": 16.618,
-            "beto": 3.225,
-            "mixed": 107.277,
-            "dirso2_forc": -0.457,
-            "indso2_forc": -0.514,
-            "bc_forc": 0.200,
-            "oc_forc": -0.103,
-            "threstemp": 7.0,
-        }
-    )
-
     testa = np.ones(40)
+    testa[-1] = 0
     testb = np.array(
         [
             1,
@@ -69,7 +53,8 @@ def test_band():
     )
     testc = np.array(
         [
-            2,
+            0,
+            1 / 1.5,
             3,
             2,
             2,
@@ -155,7 +140,7 @@ def test_band():
         ]
     )
 
-    ans = udm._band(testa, testb, 1.5 * testc, 0.5 * testd)
+    ans = upwelling_diffusion_model._band(testa, testb, 1.5 * testc, 0.5 * testd)
     assert len(ans) == len(testa)
     assert ans[0] != 0
     assert ans[-1] != 0

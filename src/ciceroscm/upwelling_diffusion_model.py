@@ -4,6 +4,7 @@ Energy budget upwelling diffusion model
 import logging
 
 import numpy as np
+from scipy.linalg import solve_banded
 
 from ._utils import cut_and_check_pamset
 
@@ -11,6 +12,29 @@ SEC_DAY = 86400
 DAY_YEAR = 365.0
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _band(a_array, b_array, c_array, d_array):
+    """
+    Calculate band
+
+    Parameters
+    ----------
+    a_array : np.ndarray
+              a_array through ocean layers
+    b_array : np.ndarray
+              b_array through ocean layers
+    c_array : np.ndarray
+              c_array through ocean layers
+    d_array : np.ndarray
+               d_array through ocean layers
+
+    Returns
+    -------
+    np.ndarray
+             band value through ocean layers
+    """
+    return solve_banded((1, 1), np.array([c_array, b_array, a_array]), d_array)
 
 
 def check_pamset(pamset):
@@ -130,52 +154,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
         self.dtempprev = 0.0
 
-    def _band(self, a_array, b_array, c_array, d_array):
-        """
-        Calculate band
-
-        Parameters
-        ----------
-        a_array : np.ndarray
-               a_array through ocean layers
-        b_array : np.ndarray
-               b_array through ocean layers
-        c_array : np.ndarray
-               c_array through ocean layers
-        d_array : np.ndarray
-               d_array through ocean layers
-
-        Returns
-        -------
-        np.ndarray
-                  band value through ocean layers
-        """
-        alfa = np.zeros(self.pamset["lm"] - 1)
-        ans = np.zeros(self.pamset["lm"])
-        bbeta = np.zeros(self.pamset["lm"] - 1)
-
-        alfa[0] = -b_array[0] / a_array[0]
-        bbeta[0] = d_array[0] / a_array[0]
-
-        for i in range(1, self.pamset["lm"] - 1):
-            tem = a_array[i] * alfa[i - 1] + b_array[i]
-            alfa[i] = -c_array[i] / tem
-            bbeta[i] = (d_array[i] - a_array[i] * bbeta[i - 1]) / tem
-        tem = (
-            a_array[self.pamset["lm"] - 1] * alfa[self.pamset["lm"] - 2]
-            + b_array[self.pamset["lm"] - 1]
-        )
-        ans[self.pamset["lm"] - 1] = (
-            d_array[self.pamset["lm"] - 1]
-            - a_array[self.pamset["lm"] - 1] * bbeta[self.pamset["lm"] - 2]
-        ) / tem
-
-        for i in range(1, self.pamset["lm"]):
-            j = self.pamset["lm"] - 1 - i
-            ans[j] = alfa[j] * ans[j + 1] + bbeta[j]
-
-        return ans
-
     def get_gam_and_fro_factor_ns(self, northern_hemisphere):
         """
         Get correct gam and fro variables
@@ -216,6 +194,13 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         """
         Calculate a, b c coefficient arrays for hemisphere
 
+        This method has been changed since the fortran version
+        to have the coefficients a be the coefficients for the
+        layer underneath, b be the coefficient for current layer
+        and c be the coefficient for the layer above in such a
+        way that they can represent a banded matrix and solved for
+        as such
+
         Parameters
         ----------
         wcfac : float
@@ -233,19 +218,19 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         c = np.zeros(lm)
         rakapafac = 2 * self.pamset["rakapa"] * self.pamset["dt"]
 
-        b[0] = -rakapafac / (
+        c[1] = -rakapafac / (
             self.dz[0] * (0.0 * self.dz[0] + self.dz[1])
         )  # Can the 0.*dz(0) term be dropped here?
-        a[0] = 1.0 - b[0] + gam_fro_fac - wcfac / self.dz[0]
-        a[1] = -rakapafac / (self.dz[1] ** 2) + wcfac / self.dz[1]
-        a[2:] = -rakapafac / (self.dz[2:] * (self.dz[1 : lm - 1] + self.dz[2:]))
-        c[1 : lm - 1] = (
+        b[0] = 1.0 - c[1] + gam_fro_fac - wcfac / self.dz[0]
+        a[0] = -rakapafac / (self.dz[1] ** 2) + wcfac / self.dz[1]
+        a[1 : lm - 1] = -rakapafac / (self.dz[2:] * (self.dz[1 : lm - 1] + self.dz[2:]))
+        c[2:] = (
             -rakapafac / (self.dz[1 : lm - 1] * (self.dz[1 : lm - 1] + self.dz[2:]))
             - wcfac / self.dz[1 : lm - 1]
         )
-        b[1 : lm - 1] = 1.0 - a[1 : lm - 1] - c[1 : lm - 1]
+        b[1 : lm - 1] = 1.0 - a[: lm - 2] - c[2:]
         b[lm - 1] = (
-            1.0 - a[lm - 1] + wcfac / self.dz[lm - 1]
+            1.0 - a[lm - 2] + wcfac / self.dz[lm - 1]
         )  # Her var det brukt i selvom vi var utenfor loekka, litt uklart hva som er ment...
         return a, b, c
 
@@ -476,13 +461,13 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
             #
             # Where are these being initialised? Ok, I think
-            self.tn = self._band(
+            self.tn = _band(
                 self.varrying["acoeffn"],
                 self.varrying["bcoeffn"],
                 self.varrying["ccoeffn"],
                 dn,
             )
-            self.ts = self._band(
+            self.ts = _band(
                 self.varrying["acoeffs"],
                 self.varrying["bcoeffs"],
                 self.varrying["ccoeffs"],
