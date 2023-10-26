@@ -515,5 +515,5 @@ class InputHandler:
                 volc_datafile, header=None, nrows=nrows, delim_whitespace=True
             )
 
-        df_data.set_axis(labels=indices, inplace=True)
+        df_data.set_axis(labels=indices)
         return df_data

@@ -32,7 +32,8 @@ def fix_plot(axs, ylabel, title, legend=False):
     for i, ylab in enumerate(ylabel):
         axs[i].set_xlabel("Year")
         axs[i].set_ylabel(ylab)
-        axs[i].set_title(title[i])
+        axs[i].set_title(title[i], fontsize=11, fontweight="bold")
+        axs[i].set_title(f"{chr(i+97)})", fontsize=11, loc="left")
         if legend:
             axs[i].legend()
 
@@ -192,9 +193,11 @@ def plot_output2(
             j = 0
         axs[i, j].plot(years, df_in[comp])
         if comp != "Total_forcing":
-            axs[i, j].set_title(comp)
+            axs[i, j].set_title(comp, fontsize=11, fontweight="bold")
+            axs[i, j].set_title(f"{chr(i*4+j+97)})", fontsize=11, loc="left")
         else:
-            axs[i, j].set_title("Total anthropogenic")
+            axs[i, j].set_title("Total anthropogenic", fontsize=11, fontweight="bold")
+            axs[i, j].set_title(f"{chr(i*4+j+97)})", fontsize=11, loc="left")
         axs[i, j].xaxis.set_tick_params(labelbottom=True)
         if var != "forc":
             axs[i, j].set_ylim(ymin=0)
