@@ -553,6 +553,7 @@ class ConcentrationsEmissionsHandler:
             "SO4_IND": ["SO2", self.pamset["qindso2"]],
             "OC": ["OC", self.pamset["qoc"]],
             "BC": ["BC", self.pamset["qbc"]],
+            "BMB_AEROS": ["BMB_AEROS_OC", self.pamset["qbmb"]] 
         }
         # Intialising with the combined values from CO2, N2O and CH4
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
