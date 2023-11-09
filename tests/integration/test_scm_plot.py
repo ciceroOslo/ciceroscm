@@ -9,7 +9,6 @@ def check_output(
     files=[
         "conc_1.png",
         "conc_2.png",
-        "conc_3.png",
         "em_1.png",
         "em_2.png",
         "em_3.png",

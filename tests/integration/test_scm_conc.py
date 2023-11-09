@@ -18,13 +18,13 @@ def check_output(
     for filename in files:
         file_to_check = os.path.join(output_dir, filename)
         file_expected = os.path.join(expected_output_dir, filename)
-
+        print(filename)
         if update_expected_files:
             shutil.copyfile(file_to_check, file_expected)
         else:
-
             res = pd.read_csv(file_to_check, delim_whitespace=True)
             exp = pd.read_csv(file_expected, delim_whitespace=True)
+
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
@@ -50,7 +50,6 @@ def check_output_just_some_lines(
         if update_expected_files:
             shutil.copyfile(file_to_check, file_expected)
         else:
-
             res = pd.read_csv(
                 file_to_check, delim_whitespace=True, skiprows=range(lines, 352)
             )
@@ -331,8 +330,6 @@ def test_ciceroscm_just_one(tmpdir, test_data_dir):
             "conc_run": True,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
-            "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
-            "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
         },
     )
     # outdir = str(tmpdir)

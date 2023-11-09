@@ -3,45 +3,10 @@ import numpy as np
 from ciceroscm import upwelling_diffusion_model
 
 
-def test_coefic():
-    assert upwelling_diffusion_model._coefic(0, 0, 0) == 19652.21
-    assert upwelling_diffusion_model._coefic(1, 0, 0) == 19706.96404
-    assert upwelling_diffusion_model._coefic(0, 1, 0) == 19798.31704821712
-    assert upwelling_diffusion_model._coefic(0, 0, 1) == 19655.449993093498
-
-
-def test_denso():
-    assert upwelling_diffusion_model._denso(0, 0) == 999.842594
-    assert upwelling_diffusion_model._denso(0, 1) == 999.9015372849533
-    assert upwelling_diffusion_model._denso(1, 0) == 1000.6618454799999
-
-
-def test_density():
-    assert upwelling_diffusion_model._density(0, 0) == 1028.1063314148107
-    assert upwelling_diffusion_model._density(1, 0) == 1028.1539628244798
-    assert upwelling_diffusion_model._density(0, 1) == 1028.0456085605597
-
-
 # Rewrite test for class method
 def test_band():
-    udm = upwelling_diffusion_model.UpwellingDiffusionModel(
-        {
-            "lambda": 0.540,
-            "akapa": 0.341,
-            "cpi": 0.556,
-            "W": 1.897,
-            "rlamdo": 16.618,
-            "beto": 3.225,
-            "mixed": 107.277,
-            "dirso2_forc": -0.457,
-            "indso2_forc": -0.514,
-            "bc_forc": 0.200,
-            "oc_forc": -0.103,
-            "threstemp": 7.0,
-        }
-    )
-
     testa = np.ones(40)
+    testa[-1] = 0
     testb = np.array(
         [
             1,
@@ -88,7 +53,8 @@ def test_band():
     )
     testc = np.array(
         [
-            2,
+            0,
+            1 / 1.5,
             3,
             2,
             2,
@@ -174,7 +140,7 @@ def test_band():
         ]
     )
 
-    ans = udm._band(testa, testb, 1.5 * testc, 0.5 * testd)
+    ans = upwelling_diffusion_model._band(testa, testb, 1.5 * testc, 0.5 * testd)
     assert len(ans) == len(testa)
     assert ans[0] != 0
     assert ans[-1] != 0

@@ -15,6 +15,7 @@ from .perturbations import (
     calculate_hemispheric_forcing,
     perturb_emissions,
 )
+from .pub_utils import make_cl_and_br_dictionaries
 
 LOGGER = logging.getLogger(__name__)
 
@@ -99,7 +100,10 @@ def check_pamset(pamset):
     ----------
     pamset : dict
           Dictionary of parameters to define the physics
-          of the run
+          of the run. Values that begin with q are concetration
+          or emissions to forcing factors, beta_f is the
+          carbon cycle fertilisation factor, and ref_yr is
+          the reference year for calculations
 
     Returns
     -------
@@ -115,11 +119,13 @@ def check_pamset(pamset):
         "qoc": -0.08,
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
+        "beta_f": 0.287,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
     if "lifetime_mode" not in pamset:
         pamset["lifetime_mode"] = "TAR"
+
     used = {
         "lifetime_mode": "TAR",
         "just_one": "CO2",
@@ -245,10 +251,10 @@ class ConcentrationsEmissionsHandler:
         self.pamset = cut_and_check_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
+            used={"rs_function": _rs_function, "rb_function": _rb_function},
             cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
-        years_tot = len(self.years)
         self.conc_in = input_handler.get_data("concentrations")
         self.emis = input_handler.get_data("emissions")
         self.pamset["conc_run"] = input_handler.conc_run()
@@ -256,17 +262,10 @@ class ConcentrationsEmissionsHandler:
             perturb_emissions(input_handler, self.emis)
         if input_handler.optional_pam("perturb_forc"):
             self.pamset["forc_pert"] = ForcingPerturbation(input_handler, self.years[0])
-        self.r_functions = np.empty(
-            (2, self.pamset["idtm"] * years_tot)
-        )  # if speedup, get this to reflect number of years
-        self.r_functions[0, :] = [
-            _rs_function(it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * years_tot)
-        ]
-        self.r_functions[1, :] = [
-            _rb_function(it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * years_tot)
-        ]
+        self.precalc_r_functions()
+        self.pamset["cl_dict"], self.pamset["br_dict"] = make_cl_and_br_dictionaries(
+            self.df_gas.index
+        )
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
 
@@ -308,6 +307,36 @@ class ConcentrationsEmissionsHandler:
             "sums": 0.0,
         }
 
+    def precalc_r_functions(self):
+        """
+        Precalculate decay functions either
+        sent in pamset or from default
+
+        If functions are sent with keywords rs_function
+        or rb_function in the pamset, these must take
+        time and number of steps per year as input
+
+        Parameters
+        ----------
+        pamset
+        """
+        years_tot = len(self.years)
+        self.r_functions = np.empty(
+            (2, self.pamset["idtm"] * years_tot)
+        )  # if speedup, get this to reflect number of years
+        if "rs_function" not in self.pamset:
+            self.pamset["rs_function"] = _rs_function
+        if "rb_function" not in self.pamset:
+            self.pamset["rb_function"] = _rb_function
+        self.r_functions[0, :] = [
+            self.pamset["rs_function"](it, self.pamset["idtm"])
+            for it in range(self.pamset["idtm"] * years_tot)
+        ]
+        self.r_functions[1, :] = [
+            self.pamset["rb_function"](it, self.pamset["idtm"])
+            for it in range(self.pamset["idtm"] * years_tot)
+        ]
+
     def calculate_strat_quantities(self, yr):
         """
         Calculate sumcl and sumbr in stratosphere
@@ -327,29 +356,17 @@ class ConcentrationsEmissionsHandler:
             Containing the sumcl, value for chlorinated gases
             and the sumbr value for halon gases.
         """
-        if yr < self.years[0]:
+        yr0 = int(self.years[0])
+        if yr <= yr0:
             return 0.0, 0.0
-        chlor_dict = {
-            "CFC-11": 3,
-            "CFC-12": 2,
-            "CFC-113": 3,
-            "CFC-114": 2,
-            "CFC-115": 1,
-            "CCl4": 4,
-            "CH3CCl3": 3,
-            "HCFC-22": 1,
-            "HCFC-141b": 2,
-            "HCFC-123": 2,
-            "HCFC-142b": 1,
-        }
-        # More Halons?
-        brom_dict = {"H-1211": 1, "H-1301": 1}
         sumcl = 0
         sumbr = 0
-        for comp, mult in chlor_dict.items():
-            sumcl = sumcl + (mult * self.conc[comp][yr]) ** 1.7
-        for comp, mult in brom_dict.items():
-            sumbr = sumbr + (mult * self.conc[comp][yr])
+        for comp, mult in self.pamset["cl_dict"].items():
+            num = self.conc[comp][yr] - self.conc[comp][yr0]
+            # sumcl = sumcl + (mult * (self.conc[comp][yr] - self.conc[comp][yr0])) ** 1.7
+            sumcl = sumcl + np.sign(num) * np.power(mult * abs(num), 1.7)
+        for comp, mult in self.pamset["br_dict"].items():
+            sumbr = sumbr + mult * (self.conc[comp][yr] - self.conc[comp][yr0])
         return sumcl, sumbr
 
     def calculate_forc_three_main(self, yr):  # pylint: disable=too-many-locals
@@ -536,6 +553,7 @@ class ConcentrationsEmissionsHandler:
             "SO4_IND": ["SO2", self.pamset["qindso2"]],
             "OC": ["OC", self.pamset["qoc"]],
             "BC": ["BC", self.pamset["qbc"]],
+            "BMB_AEROS": ["BMB_AEROS_OC", self.pamset["qbmb"]],
         }
         # Intialising with the combined values from CO2, N2O and CH4
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
@@ -555,11 +573,15 @@ class ConcentrationsEmissionsHandler:
                 # SO2, SO4_IND, BC and OC are treated exactly the same
                 # Only with emission to concentration factors differing
                 # These are held in dictionary
-                erefyr = self.emis[ref_emission_species[tracer][0]][
-                    self.pamset["ref_yr"]
-                ]
+                erefyr = (
+                    self.emis[ref_emission_species[tracer][0]][self.pamset["ref_yr"]]
+                    - self.emis[ref_emission_species[tracer][0]][yr_0]
+                )
                 if erefyr != 0.0:  # pylint: disable=compare-to-zero
-                    frac_em = self.emis[ref_emission_species[tracer][0]][yr] / erefyr
+                    frac_em = (
+                        self.emis[ref_emission_species[tracer][0]][yr]
+                        - self.emis[ref_emission_species[tracer][0]][yr_0]
+                    ) / erefyr
                     q = ref_emission_species[tracer][1] * frac_em
 
             elif (
@@ -572,14 +594,30 @@ class ConcentrationsEmissionsHandler:
                     * self.df_gas["SARF_TO_ERF"][tracer]
                 )  # +forc_pert
             elif tracer == "TROP_O3":
-                q = self.tropospheric_ozone_forcing(yr)
+                q = (
+                    self.tropospheric_ozone_forcing(yr)
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )
             elif tracer == "STRAT_O3":
                 sumcl, sumbr = self.calculate_strat_quantities(yr - 3)
-                q = -(0.287737 * (0.000552 * (sumcl) + 3.048 * sumbr)) / 1000.0
+                # Updated according to IPCC AR4.
+                # Multiply by factor 0.287737 (=-0.05/-0.17377, AR4/SCM)
+                q = (
+                    -(
+                        # self.pamset["qo3"]
+                        0.05
+                        / 0.17377
+                        * (0.000552 * (sumcl) + 3.048 * sumbr)
+                    )
+                    / 1000.0
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )
             elif tracer == "STRAT_H2O":
                 q = (
                     self.pamset["qh2o_ch4"] * self.forc["CH4"][yr - yr_0]
-                )  # + FORC_PERT(yr_ix,trc_ix)
+                ) * self.df_gas["SARF_TO_ERF"][
+                    tracer
+                ]  # + FORC_PERT(yr_ix,trc_ix)
             elif tracer == "OTHER":
                 # Possible with forcing perturbations for other
                 # components such as contrails, cirrus etc...
@@ -670,10 +708,9 @@ class ConcentrationsEmissionsHandler:
             if tracer == "N2O":
                 self.df_gas.at[tracer, "NAT_EM"] = self.nat_emis_n2o["N2O"][yr]
 
-            emis = self.emis[tracer][yr]
-            emis = (
-                emis + self.df_gas["NAT_EM"][tracer]
-            )  # natural emissions, from gasspamfile
+            # natural emissions, from gasspamfile
+            emis = self.emis[tracer][yr] + self.df_gas["NAT_EM"][tracer]
+
             point_conc = emis / self.df_gas["BETA"][tracer]
             # Rewrote this quite a bit from an original loop,
             # but I think it is mathematically equivalent
@@ -711,9 +748,9 @@ class ConcentrationsEmissionsHandler:
                 - 0.000315 * (self.emis["NMVOC"][yr] - self.emis["NMVOC"][2000])
             )
             q = q * (dln_oh + 1)
-        elif self.pamset["lifetime_mode"] == "CONSTANT":
+        elif self.pamset["lifetime_mode"] == "CONSTANT_12":
             q = 1.0 / 12.0
-        else:
+        elif self.pamset["lifetime_mode"] == "WIGLEY":
             q = q * (((conc_local / 1700.0)) ** (ch4_wigley_exp))
 
         q = q + 1.0 / self.df_gas["TAU2"]["CH4"] + 1.0 / self.df_gas["TAU3"]["CH4"]
@@ -733,9 +770,6 @@ class ConcentrationsEmissionsHandler:
         yr : int
           Year for which to calculate
         """
-        # Fertilisation factor
-        beta_f = 0.287
-
         # Area of the ocean (m^2)
         ocean_area = 3.62e14
 
@@ -766,7 +800,7 @@ class ConcentrationsEmissionsHandler:
             # Net emissions, including biogenic fertilization effects
             if it > 0:
                 self.co2_hold["dfnpp"][it] = (
-                    60 * beta_f * np.log(self.co2_hold["xCO2"] / 278.0)
+                    60 * self.pamset["beta_f"] * np.log(self.co2_hold["xCO2"] / 278.0)
                 )
             if it > 0:
                 sumf = float(
@@ -823,9 +857,7 @@ class ConcentrationsEmissionsHandler:
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
         self.conc["CO2"][yr] = self.co2_hold["xCO2"]
 
-    def fill_one_row_conc(
-        self, yr, avoid=[]
-    ):  # pylint: disable=dangerous-default-value
+    def fill_one_row_conc(self, yr, avoid=None):
         """
         Fill in one row of concentrations in conc_dict
 
@@ -845,7 +877,7 @@ class ConcentrationsEmissionsHandler:
              are read from prescribed data.
         """
         for tracer, value_dict in self.conc.items():
-            if tracer in avoid:
+            if avoid and tracer in avoid:
                 continue
             if tracer in self.conc_in:
                 value_dict[yr] = self.conc_in[tracer][yr]
