@@ -4,6 +4,7 @@ Module to perform calibration of the ciceroscm model
 import logging
 
 import numpy as np
+import pandas as pd
 
 from .distributionrun import DistributionRun
 
@@ -124,25 +125,26 @@ class Calibrator:
             datapoint,
         ) in self.calibdata.iterrows():
             if datapoint["Yearstart_change"] == datapoint["Yearend_change"]:
-                vres = (
-                    res.filter(
-                        variable=datapoint["Variable Name"],
-                        year=datapoint["Yearstart_change"],
-                    ).values[0]
-                    - res.filter(
-                        variable=datapoint["Variable Name"],
-                        year=datapoint["Yearstart_norm"],
-                    ).values[0]
-                )
+                vchange = res.filter(
+                    variable=datapoint["Variable Name"],
+                    year=datapoint["Yearstart_change"],
+                ).values[0]
             else:
-                vres = np.mean(
+                vchange = np.mean(
                     res.filter(
                         variable=datapoint["Variable Name"],
                         year=range(
                             datapoint["Yearstart_change"], datapoint["Yearend_change"]
                         ),
-                    ).values
-                ) - np.mean(
+                    )
+                )
+            if datapoint["Yearstart_norm"] == datapoint["Yearend_norm"]:
+                vnorm = res.filter(
+                    variable=datapoint["Variable Name"],
+                    year=datapoint["Yearstart_norm"],
+                ).values[0]
+            else:
+                vnorm = np.mean(
                     res.filter(
                         variable=datapoint["Variable Name"],
                         year=range(
@@ -150,6 +152,7 @@ class Calibrator:
                         ),
                     ).values
                 )
+            vres = vchange - vnorm
             sigma = datapoint["sigma"]
             vexp = datapoint["Central Value"]
             distance = distance + (vres - vexp) ** 2 / sigma**2
@@ -169,7 +172,8 @@ class Calibrator:
         Parameters
         ----------
         results: ScmRun
-            ScmRun for a chunk of model configurations
+
+        ScmRun for a chunk of model configurations
 
         Returns
         -------
@@ -221,7 +225,11 @@ class Calibrator:
             indexer_pre=f"{recurse_num}_",
             numvalues=self.subsamplesize,
         )
-        output_vars = self.calibdata["Variable Name"].values
+        if isinstance(self.calibdata, pd.DataFrame):
+            print(self.calibdata.shape)
+            output_vars = self.calibdata["Variable Name"].unique()
+        else:
+            output_vars = self.calibdata["Variable Name"]
         results = distro_run.run_over_distribution(self.scendata, output_vars)
         kept = self.reject_samples(results)
         current_samples.extend(kept)
