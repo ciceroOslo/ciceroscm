@@ -138,10 +138,6 @@ def check_inputfiles(cfg):
             if not os.path.exists(cfg[key]):
                 if key not in with_defaults:
                     raise FileNotFoundError(f"Input file {key} not found at {cfg[key]}")
-
-                LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
-                    f"Did not find prescribed {key}. Looking in standard path",
-                )
                 fname = f"natemis_{key.split('_')[1]}.txt"
                 cfg[key] = os.path.join(os.getcwd(), "input_OTHER", "NATEMIS", fname)
     return cfg
@@ -272,7 +268,36 @@ class InputHandler:
         ]
         self.set_sun_volc_luc_defaults()
 
+        for nat_emis in ["nat_ch4", "nat_n2o"]:
+            if not self.optional_pam(nat_emis) and self.optional_pam("gaspam"):
+                self.cfg[f"{nat_emis}_data"] = self.get_flat_natural_emissions(
+                    nat_emis.split("_")[1].upper()
+                )
+
         check_inputfiles(self.cfg)
+
+    def get_flat_natural_emissions(self, component):
+        """
+        Read flat natural emissions from gaspam_file
+        if natural emissions are not provided as file or data
+
+        Parameters
+        ----------
+        component : str
+                    String to denote the component, should be
+                    N2O or CH4
+
+        Returns
+        -------
+        pd.Dataframe
+                Dataframe of natural emissions for component with years as index
+        """
+        df_gas = self.get_data("gaspam")
+        value = df_gas.at[component, "NAT_EM"]
+        years = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
+        return pd.DataFrame(
+            data={"year": years, component: np.ones(len(years)) * value}
+        )
 
     def set_sun_volc_luc_defaults(self):
         """
@@ -490,5 +515,5 @@ class InputHandler:
                 volc_datafile, header=None, nrows=nrows, delim_whitespace=True
             )
 
-        df_data.set_axis(labels=indices, inplace=True)
+        df_data.set_axis(labels=indices)
         return df_data

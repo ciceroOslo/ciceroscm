@@ -233,7 +233,7 @@ class Calibrator:
         if recurse_num > self.recurse_max:
             LOGGER.warning(
                 "Reached recurse limit %d with only %d",
-                recurse_num,
+                self.recurse_max,
                 len(current_samples),
             )
             return kept_configs
