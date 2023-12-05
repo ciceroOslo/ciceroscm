@@ -114,12 +114,12 @@ class _ConfigDistro:
         Parameters
         ----------
         distro_array: array
-              2D array, with first index over the parameters that according
+              2D array, with first index over the parameters according
               to the ordering given in the ordering parameter. Second index
               of length 2, and gives the ends of the interval for the
               parameter. If the method is latin, these are assumed to be
-              extent of the parameter dimension. If the method is gaussian
-              These are assumed to be points one standard deviation away
+              extent of the parameter dimension. If the method is gaussian,
+              these are assumed to be points one standard deviation away
               from the center of of the distribution for the parameter
               If the distro_array does not have correct type or dimensions
               the default prior will be used.

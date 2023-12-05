@@ -4,6 +4,7 @@ Energy budget upwelling diffusion model
 import logging
 
 import numpy as np
+from scipy.linalg import solve_banded
 
 from ._utils import cut_and_check_pamset
 
@@ -11,6 +12,29 @@ SEC_DAY = 86400
 DAY_YEAR = 365.0
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _band(a_array, b_array, c_array, d_array):
+    """
+    Calculate band
+
+    Parameters
+    ----------
+    a_array : np.ndarray
+              a_array through ocean layers
+    b_array : np.ndarray
+              b_array through ocean layers
+    c_array : np.ndarray
+              c_array through ocean layers
+    d_array : np.ndarray
+               d_array through ocean layers
+
+    Returns
+    -------
+    np.ndarray
+             band value through ocean layers
+    """
+    return solve_banded((1, 1), np.array([c_array, b_array, a_array]), d_array)
 
 
 def check_pamset(pamset):
@@ -62,118 +86,6 @@ def check_pamset(pamset):
         pamset["rlamda"] + pamset["foas"] * pamset["rlamdo"] + pamset["ebbeta"]
     )
     return pamset
-
-
-def _coefic(s, t, p):
-    """
-    Calculate denisty coefficients
-
-    Coefficient depends on various combinations of
-    s, t and p which are temperature and pressure
-    respectively
-
-    Parameters
-    ----------
-    s : float
-      salinity
-    t : float
-     temperature
-    p : float
-     pressure
-
-    Returns
-    -------
-    float
-         Calculated coefficients
-    """
-    coefic = (
-        19652.21
-        + 148.4206 * t
-        - 2.327105 * t**2
-        + 1.360477e-2 * t**3
-        - 5.155288e-5 * t**4
-        + 3.239908 * p
-        + 1.43713e-3 * t * p
-        + 1.16092e-4 * t**2 * p
-        - 5.77905e-7 * t**3 * p
-        + 8.50935e-5 * p**2
-        - 6.12293e-6 * t * p**2
-        + 5.2787e-8 * t**2 * p**2
-        + 54.6746 * s
-        - 0.603459 * t * s
-        + 1.09987e-2 * t**2 * s
-        - 6.1670e-5 * t**3 * s
-        + 7.944e-2 * s**1.5
-        + 1.6483e-2 * t * s**1.5
-        - 5.3009e-4 * t**2 * s**1.5
-        + 2.2838e-3 * p * s
-        - 1.0981e-5 * t * p * s
-        - 1.6078e-6 * t**2 * p * s
-        + 1.91075e-4 * p * s**1.5
-        - 9.9348e-7 * p**2 * s
-        + 2.0816e-8 * t * p**2 * s
-        + 9.1697e-10 * t**2 * p**2 * s
-    )
-    return coefic
-
-
-def _denso(s, t):
-    """
-    Calculate density at p0=0
-
-    Parameters
-    ----------
-    s : float
-     salinity
-    t : float
-     temperature
-
-    Returns
-    -------
-    float
-         Calculated density
-    """
-    denso = (
-        999.842594
-        + 6.793952e-2 * t
-        - 9.095290e-3 * t**2
-        + 1.001685e-4 * t**3
-        - 1.120083e-6 * t**4
-        + 6.536332e-9 * t**5
-        + 8.24493e-1 * s
-        - 4.0899e-3 * t * s
-        + 7.6438e-5 * t**2 * s
-        - 8.2467e-7 * t**3 * s
-        + 5.3875e-9 * t**4 * s
-        - 5.72466e-3 * s**1.5
-        + 1.0227e-4 * t * s**1.5
-        - 1.6546e-6 * t**2 * s**1.5
-        + 4.8314e-4 * s**2
-    )
-    return denso
-
-
-def _density(p0, t0):
-    """
-    Calculate water denisity from equation of state
-
-    Parameters
-    ----------
-    p0 : float
-      Pressure
-    t0 : float
-      Temperature
-
-    Returns
-    -------
-    float
-         Density from equation of state
-    """
-    s = 35.0
-    return _denso(s, t0) / (1.0 - p0 / _coefic(s, t0, p0))
-
-
-_density_vec = np.vectorize(_density)
 
 
 class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
@@ -242,52 +154,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
         self.dtempprev = 0.0
 
-    def _band(self, a_array, b_array, c_array, d_array):
-        """
-        Calculate band
-
-        Parameters
-        ----------
-        a_array : np.ndarray
-               a_array through ocean layers
-        b_array : np.ndarray
-               b_array through ocean layers
-        c_array : np.ndarray
-               c_array through ocean layers
-        d_array : np.ndarray
-               d_array through ocean layers
-
-        Returns
-        -------
-        np.ndarray
-                  band value through ocean layers
-        """
-        alfa = np.zeros(self.pamset["lm"] - 1)
-        ans = np.zeros(self.pamset["lm"])
-        bbeta = np.zeros(self.pamset["lm"] - 1)
-
-        alfa[0] = -b_array[0] / a_array[0]
-        bbeta[0] = d_array[0] / a_array[0]
-
-        for i in range(1, self.pamset["lm"] - 1):
-            tem = a_array[i] * alfa[i - 1] + b_array[i]
-            alfa[i] = -c_array[i] / tem
-            bbeta[i] = (d_array[i] - a_array[i] * bbeta[i - 1]) / tem
-        tem = (
-            a_array[self.pamset["lm"] - 1] * alfa[self.pamset["lm"] - 2]
-            + b_array[self.pamset["lm"] - 1]
-        )
-        ans[self.pamset["lm"] - 1] = (
-            d_array[self.pamset["lm"] - 1]
-            - a_array[self.pamset["lm"] - 1] * bbeta[self.pamset["lm"] - 2]
-        ) / tem
-
-        for i in range(1, self.pamset["lm"]):
-            j = self.pamset["lm"] - 1 - i
-            ans[j] = alfa[j] * ans[j + 1] + bbeta[j]
-
-        return ans
-
     def get_gam_and_fro_factor_ns(self, northern_hemisphere):
         """
         Get correct gam and fro variables
@@ -328,6 +194,13 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         """
         Calculate a, b c coefficient arrays for hemisphere
 
+        This method has been changed since the fortran version
+        to have the coefficients a be the coefficients for the
+        layer underneath, b be the coefficient for current layer
+        and c be the coefficient for the layer above in such a
+        way that they can represent a banded matrix and solved for
+        as such
+
         Parameters
         ----------
         wcfac : float
@@ -345,19 +218,19 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         c = np.zeros(lm)
         rakapafac = 2 * self.pamset["rakapa"] * self.pamset["dt"]
 
-        b[0] = -rakapafac / (
+        c[1] = -rakapafac / (
             self.dz[0] * (0.0 * self.dz[0] + self.dz[1])
         )  # Can the 0.*dz(0) term be dropped here?
-        a[0] = 1.0 - b[0] + gam_fro_fac - wcfac / self.dz[0]
-        a[1] = -rakapafac / (self.dz[1] ** 2) + wcfac / self.dz[1]
-        a[2:] = -rakapafac / (self.dz[2:] * (self.dz[1 : lm - 1] + self.dz[2:]))
-        c[1 : lm - 1] = (
+        b[0] = 1.0 - c[1] + gam_fro_fac - wcfac / self.dz[0]
+        a[0] = -rakapafac / (self.dz[1] ** 2) + wcfac / self.dz[1]
+        a[1 : lm - 1] = -rakapafac / (self.dz[2:] * (self.dz[1 : lm - 1] + self.dz[2:]))
+        c[2:] = (
             -rakapafac / (self.dz[1 : lm - 1] * (self.dz[1 : lm - 1] + self.dz[2:]))
             - wcfac / self.dz[1 : lm - 1]
         )
-        b[1 : lm - 1] = 1.0 - a[1 : lm - 1] - c[1 : lm - 1]
+        b[1 : lm - 1] = 1.0 - a[: lm - 2] - c[2:]
         b[lm - 1] = (
-            1.0 - a[lm - 1] + wcfac / self.dz[lm - 1]
+            1.0 - a[lm - 2] + wcfac / self.dz[lm - 1]
         )  # Her var det brukt i selvom vi var utenfor loekka, litt uklart hva som er ment...
         return a, b, c
 
@@ -588,13 +461,13 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
             #
             # Where are these being initialised? Ok, I think
-            self.tn = self._band(
+            self.tn = _band(
                 self.varrying["acoeffn"],
                 self.varrying["bcoeffn"],
                 self.varrying["ccoeffn"],
                 dn,
             )
-            self.ts = self._band(
+            self.ts = _band(
                 self.varrying["acoeffs"],
                 self.varrying["bcoeffs"],
                 self.varrying["ccoeffs"],
