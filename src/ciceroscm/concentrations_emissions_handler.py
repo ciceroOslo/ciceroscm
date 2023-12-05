@@ -479,14 +479,19 @@ class ConcentrationsEmissionsHandler:
         tracer = "TROP_O3"
         if yr_ix < yr_emstart:
             # Uses change in CO2_FF emissions
-            q = (
-                (self.emis["CO2_FF"][yr] - self.emis["CO2_FF"][yr_0])
-                / (
-                    self.emis["CO2_FF"][self.pamset["ref_yr"]]
-                    - self.emis["CO2_FF"][yr_0]
+            if self.emis["CO2_FF"][self.pamset["ref_yr"]] != self.emis["CO2_FF"][yr_0]:
+                q = (
+                    (self.emis["CO2_FF"][yr] - self.emis["CO2_FF"][yr_0])
+                    / (
+                        self.emis["CO2_FF"][self.pamset["ref_yr"]]
+                        - self.emis["CO2_FF"][yr_0]
+                    )
+                    * self.pamset["qo3"]
                 )
-                * self.pamset["qo3"]
-            )
+            else:
+                q = (
+                    (self.emis["CO2_FF"][yr] - self.emis["CO2_FF"][yr_0])
+                ) * self.pamset["qo3"]
 
         else:
             # ALOG(1700.0))  !Concentration in 2010 &

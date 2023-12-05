@@ -295,9 +295,7 @@ class InputHandler:
         df_gas = self.get_data("gaspam")
         value = df_gas.at[component, "NAT_EM"]
         years = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
-        return pd.DataFrame(
-            data={"year": years, component: np.ones(len(years)) * value}
-        )
+        return pd.DataFrame(data={component: np.ones(len(years)) * value}, index=years)
 
     def set_sun_volc_luc_defaults(self):
         """
