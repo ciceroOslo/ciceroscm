@@ -81,6 +81,7 @@ def test_ciceroscm_run(tmpdir, test_data_dir):
             "beto": 3.5,
             "lambda": 0.540,
             "mixed": 60.0,
+            "ldtime": 12,
         },
     )
 

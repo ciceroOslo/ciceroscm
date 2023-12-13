@@ -409,7 +409,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         dtyear = 1.0 / self.pamset["ldtime"]
         dn = np.zeros(lm)
         ds = np.zeros(lm)
-
         for im in range(self.pamset["ldtime"]):
             volc_idx = im % len(fn_volc)
             if self.pamset["threstemp"] != 0:  # pylint: disable=compare-to-zero
@@ -479,8 +478,8 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             temp1s = self.ts[0]
             # print("temp1n: %.5e temp1s %.5e"%(temp1n, temp1s))
             templ = (
-                templ + 0.5 * (self.tn + self.ts) / 12.0
-            )  # skulle 12 her vrt ldtime?
+                templ + 0.5 * (self.tn + self.ts) / self.pamset["ldtime"]  # 12.0
+            )  # used to be 12, now ldtime
 
             tempan = (
                 dqn
@@ -507,14 +506,14 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
             # x1=1638.+float(years_since_start)+float(im-1)/12.
 
-            tempn = tempn + tmpn / 12.0
-            temps = temps + tmps / 12.0
+            tempn = tempn + tmpn / self.pamset["ldtime"]  # Previously 12.0
+            temps = temps + tmps / self.pamset["ldtime"]  # Previously 12.0
 
-            tempn_air = tempn_air + tempan / 12.0
-            temps_air = temps_air + tempas / 12.0
+            tempn_air = tempn_air + tempan / self.pamset["ldtime"]  # Previously 12.0
+            temps_air = temps_air + tempas / self.pamset["ldtime"]  # Previously12.0
 
-            tempn_sea = tempn_sea + temp1n / 12.0
-            temps_sea = temps_sea + temp1s / 12
+            tempn_sea = tempn_sea + temp1n / self.pamset["ldtime"]  # Previously 12.0
+            temps_sea = temps_sea + temp1s / self.pamset["ldtime"]  # Previously 12
 
         dtemp = (tempn + temps) / 2.0  # Global temp chg)
 
