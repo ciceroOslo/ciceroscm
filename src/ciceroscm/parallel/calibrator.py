@@ -1,6 +1,7 @@
 """
 Module to perform calibration of the ciceroscm model
 """
+
 import logging
 
 import numpy as np

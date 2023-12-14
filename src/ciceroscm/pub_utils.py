@@ -3,6 +3,7 @@ Module for public utilities
 
 Presently mainly methods to make decay functions from arrays
 """
+
 import logging
 
 import numpy as np

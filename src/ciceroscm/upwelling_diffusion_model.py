@@ -1,6 +1,7 @@
 """
 Energy budget upwelling diffusion model
 """
+
 import logging
 
 import numpy as np
@@ -329,9 +330,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         self.varrying["dtrm3n"] = (
             self.gams / (self.gams * self.gamn - fnsa * blm**2) * c1fac
         )
-        self.varrying["dtrm4n"] = (
-            blm / (self.gams * self.gamn - fnsa * blm**2) * c1fac
-        )
+        self.varrying["dtrm4n"] = blm / (self.gams * self.gamn - fnsa * blm**2) * c1fac
 
         # Southern hemisphere
         self.varrying["dtrm2s"] = (

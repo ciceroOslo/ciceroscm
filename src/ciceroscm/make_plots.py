@@ -1,6 +1,7 @@
 """
 Two functions to make output plots, saves the plots to a sub-folder in the output-folder
 """
+
 import os
 
 import matplotlib.pyplot as plt

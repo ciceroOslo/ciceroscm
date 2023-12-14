@@ -2,6 +2,7 @@
 Module to take care of reading in inputs
 wither from files or as direct objects
 """
+
 import logging
 import os
 
