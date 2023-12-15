@@ -81,7 +81,7 @@ def plot_output1(pamset, results, nystart, nyend):
     axs[1].plot(indices, results["RIB_S"], label="RIB_S", linestyle="--")
     fix_plot(
         axs,
-        [r"W/$\mathrm{m}^2$", r"W/$\mathrm{m}^2$"],
+        [r"W $\mathrm{m}^{-1}$", r"W\mathrm{m}^{-2}$"],
         ["RIB_glob", "RIB_glob"],
         legend=True,
     )
