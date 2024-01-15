@@ -69,8 +69,8 @@ def check_output_just_some_lines(
 def test_ciceroscm_run_emi(tmpdir, test_data_dir):
     cscm = CICEROSCM(
         {
-            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
-            # "gaspam_file": os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt"),
+            # "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt"),
             "nyend": 2100,
             "nystart": 1750,
             "emstart": 1850,
@@ -262,7 +262,7 @@ def test_run_with_data_not_files(tmpdir, test_data_dir):
     cscm = CICEROSCM(
         {
             "gaspam_data": input_handler.read_components(
-                os.path.join(test_data_dir, "gases_v1RCMIP.txt")
+                os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt")
             ),
             "nyend": 2100,
             "nystart": 1750,

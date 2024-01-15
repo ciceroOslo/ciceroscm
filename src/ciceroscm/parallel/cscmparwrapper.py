@@ -1,6 +1,7 @@
 """
 Module for running CICEROSCM in parallel
 """
+
 import logging
 from concurrent.futures import ProcessPoolExecutor
 from itertools import product
