@@ -6,6 +6,19 @@ import numpy as np
 
 from ._utils import cut_and_check_pamset
 
+# Area of the ocean (m^2)
+OCEAN_AREA = 3.62e14
+
+# Gas exchange coefficient (air <--> ocean) (yr^-1*m^-2)
+GE_COEFF = 1.0 / (OCEAN_AREA * 9.06)
+
+
+# Conversion factor ppm/kg --> umol*/m3
+PPMKG_TO_UMOL_PER_VOL = 1.722e17
+
+# USING MIXED LAYER DEPTH = 75 metres # TODO: Should this be synced to what's in the UDM?
+MIXED_LAYER_DEPTH = 75.0
+
 
 def _rs_function(it, idtm=24):
     """
@@ -151,7 +164,7 @@ class CarbonCycleModel:
             for it in range(self.pamset["idtm"] * self.pamset["years_tot"])
         ]
 
-    def co2em2conc(self, yr, em_co2_common):  # pylint: disable=too-many-locals
+    def co2em2conc(self, yr, em_co2_common):
         """
         Calculate co2 concentrations from emissions
 
@@ -172,22 +185,10 @@ class CarbonCycleModel:
         float
              CO2 concetrations for year in question
         """
-        # Area of the ocean (m^2)
-        ocean_area = 3.62e14
-
-        # Gas exchange coefficient (air <--> ocean) (yr^-1*m^-2)
-        coeff = 1.0 / (ocean_area * 9.06)
-
         # TIMESTEP (YR)
         dt = 1.0 / self.pamset["idtm"]
 
-        # Conversion factor ppm/kg --> umol*/m3
-        conv_factor = 1.722e17
-
-        # USING MIXED LAYER DEPTH = 75 metres # TODO: Should this be synced to what's in the UDM?
-        mixed_layer_depth = 75.0
-
-        cc1 = dt * ocean_area * coeff / (1 + dt * ocean_area * coeff / 2.0)
+        cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
         # Monthloop:
         for i in range(self.pamset["idtm"]):
@@ -196,31 +197,34 @@ class CarbonCycleModel:
 
             # Net emissions, including biogenic fertilization effects
             if it > 0:
+                # Net primary production in timestep
                 self.co2_hold["dfnpp"][it] = (
                     60 * self.pamset["beta_f"] * np.log(self.co2_hold["xCO2"] / 278.0)
                 )
-            if it > 0:
+                # Decay from previous primary production
                 sumf = float(
                     np.dot(
                         self.co2_hold["dfnpp"][1:it],
                         np.flip(self.r_functions[1, : it - 1]),
                     )
                 )
-
+            # Total biospheric sink:
             ffer = self.co2_hold["dfnpp"][it] - dt * sumf
+
+            # Sum anthropogenic and biospheric and PPMKG_TO_UMOL_PER_VOLert gC/yr --> ppm/yr
             em_co2 = (em_co2_common - ffer) / 2.123
 
             if it == 0:  # pylint: disable=compare-to-zero
-                self.co2_hold["ss1"] = 0.5 * em_co2 / (ocean_area * coeff)
+                self.co2_hold["ss1"] = 0.5 * em_co2 / (OCEAN_AREA * GE_COEFF)
                 ss2 = self.co2_hold["ss1"]
                 self.co2_hold["sums"] = 0.0
             else:
-                ss2 = 0.5 * em_co2 / (ocean_area * coeff) - self.co2_hold["yCO2"] / (
-                    dt * ocean_area * coeff
+                ss2 = 0.5 * em_co2 / (OCEAN_AREA * GE_COEFF) - self.co2_hold["yCO2"] / (
+                    dt * OCEAN_AREA * GE_COEFF
                 )
                 self.co2_hold["sums"] = (
                     self.co2_hold["sums"]
-                    + self.co2_hold["emCO2_prev"] / (ocean_area * coeff)
+                    + self.co2_hold["emCO2_prev"] / (OCEAN_AREA * GE_COEFF)
                     - self.co2_hold["sCO2"][it - 1]
                 )
             self.co2_hold["sCO2"][it] = cc1 * (
@@ -235,10 +239,10 @@ class CarbonCycleModel:
                 sumz = 0.0
 
             z_co2 = (
-                conv_factor
-                * coeff
+                PPMKG_TO_UMOL_PER_VOL
+                * GE_COEFF
                 * dt
-                / mixed_layer_depth
+                / MIXED_LAYER_DEPTH
                 * (sumz + 0.5 * self.co2_hold["sCO2"][it])
             )
             self.co2_hold["yCO2"] = (
