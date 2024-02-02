@@ -273,7 +273,7 @@ class CarbonCycleModel:
         if conc_run and co2_conc_series is not None:
             dfnpp = np.repeat(
                 [
-                    60 * self.pamset["beta_f"] * np.log(co2_conc) / 278.0
+                    60 * self.pamset["beta_f"] * np.log(co2_conc / 278.0)
                     for co2_conc in co2_conc_series
                 ],
                 self.pamset["idtm"],
