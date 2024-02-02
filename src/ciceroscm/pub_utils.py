@@ -140,7 +140,6 @@ def find_num_cl_in_hcfc(tracer):
         numpart = int(numpart[:-1])
     else:
         numpart = int(numpart)
-    print(numpart)
     double_bonds = numpart // 1000
     bonds_total = ((numpart % 1000) // 100) * 2 + 4
     hydrogen = (numpart % 100) // 10 - 1
