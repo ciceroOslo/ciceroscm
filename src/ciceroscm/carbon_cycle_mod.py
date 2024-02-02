@@ -257,3 +257,62 @@ class CarbonCycleModel:
             )
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
         return self.co2_hold["xCO2"]
+
+    def _get_ffer_timeseries(self, conc_run=False, co2_conc_series=None):
+        """
+        Get the ffer time series
+
+        For emissions runs this yields appropriate amounts only for years for which the
+        model has been run and zeros otherwise. If a concentrations series is used
+        this yields a back calculated estimate of the carbon pool the model
+        estimates given these atmospheric concentrations.
+        """
+        timesteps = self.pamset["idtm"] * self.pamset["years_tot"]
+        dt = 1.0 / self.pamset["idtm"]
+        sumf = np.zeros(timesteps)
+        if conc_run and co2_conc_series is not None:
+            dfnpp = np.repeat(
+                [
+                    60 * self.pamset["beta_f"] * np.log(co2_conc) / 278.0
+                    for co2_conc in co2_conc_series
+                ],
+                self.pamset["idtm"],
+            )
+        else:
+            dfnpp = self.co2_hold["dfnpp"]
+        sumf[1:] = [
+            float(
+                np.dot(
+                    dfnpp[1:it],
+                    np.flip(self.r_functions[1, : it - 1]),
+                )
+            )
+            for it in range(1, timesteps)
+        ]
+        ffer = dfnpp - dt * sumf
+        return ffer
+
+    def get_biosphere_carbon_pool_content(self, conc_run=False, co2_conc_series=None):
+        """
+        Get the carbon amount contained in the biosphere as timeseries over years
+
+        For emissions runs this yields appropriate amounts only for years for which the
+        model has been run and zeros otherwise. If a concentrations series is used
+        this yields a back calculated estimate of the carbon pool the model
+        estimates given these atmospheric concentrations.
+        """
+        ffer = self._get_ffer_timeseries(conc_run, co2_conc_series)
+        biosphere_carbon_pool = [
+            np.sum(ffer[: self.pamset["idtm"] * yrix])
+            for yrix in range(self.pamset["years_tot"])
+        ]
+        return biosphere_carbon_pool
+
+    def back_calculate_emissions(self, co2_conc_series, conc_run=True):
+        """
+        Back calculate emissions from conc_run
+        """
+        # Calculating fertilisation factor for all the time steps:
+        # ffer = _get_ffer_timeseries(conc_run, co2_conc_series, conc_run)
+        # TODO implement
+        pass
