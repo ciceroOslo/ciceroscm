@@ -2,7 +2,10 @@
 Module to handle carbon cycle from CO2 emissions to concentrations
 """
 
+from functools import partial
+
 import numpy as np
+from scipy import optimize
 
 from ._utils import cut_and_check_pamset
 
@@ -18,6 +21,20 @@ PPMKG_TO_UMOL_PER_VOL = 1.722e17
 
 # USING MIXED LAYER DEPTH = 75 metres # TODO: Should this be synced to what's in the UDM?
 MIXED_LAYER_DEPTH = 75.0
+
+
+def xco2_poly_to_solve(z_co2, constant=0):
+    """
+    Define function to invert to get zco2 from xco2y assuming 0th step
+    """
+    return (
+        (1.3021 + 2 * MIXED_LAYER_DEPTH / GE_COEFF / PPMKG_TO_UMOL_PER_VOL) * z_co2
+        + 3.7929e-3 * (z_co2**2)
+        + 9.1193e-6 * (z_co2**3)
+        + 1.488e-8 * (z_co2**4)
+        + 1.2425e-10 * (z_co2**5)
+        + constant
+    )
 
 
 def _rs_function(it, idtm=24):
@@ -134,6 +151,34 @@ class CarbonCycleModel:
             "sums": 0.0,
         }
         self.pamset["beta_f"] = beta_f
+
+    def _set_co2_hold(
+        self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
+    ):  # pylint: disable=too-many-arguments
+        """
+        Reset the CO2 hold scalar values,
+
+        Use this to rerun from same state as before
+        in year not zero. Should only be used for back-calculations
+        """
+        self.co2_hold["yCO2"] = yco2
+        self.co2_hold["xCO2"] = xco2
+        self.co2_hold["emCO2_prev"] = emco2_prev
+        self.co2_hold["ss1"] = ss1
+        self.co2_hold["sums"] = sums
+
+    def _get_co2_hold_values(self):
+        """
+        Get co2_hold scalar values as dictionary
+        """
+        scalar_dict = {
+            "yco2": self.co2_hold["yCO2"],
+            "xco2": self.co2_hold["xCO2"],
+            "emco2_prev": self.co2_hold["emCO2_prev"],
+            "ss1": self.co2_hold["ss1"],
+            "sums": self.co2_hold["sums"],
+        }
+        return scalar_dict
 
     def precalc_r_functions(self):
         """
@@ -267,10 +312,10 @@ class CarbonCycleModel:
         this yields a back calculated estimate of the carbon pool the model
         estimates given these atmospheric concentrations.
         """
-        timesteps = self.pamset["idtm"] * self.pamset["years_tot"]
         dt = 1.0 / self.pamset["idtm"]
-        sumf = np.zeros(timesteps)
+
         if conc_run and co2_conc_series is not None:
+            timesteps = len(co2_conc_series) * self.pamset["idtm"]
             dfnpp = np.repeat(
                 [
                     60 * self.pamset["beta_f"] * np.log(co2_conc / 278.0)
@@ -279,7 +324,13 @@ class CarbonCycleModel:
                 self.pamset["idtm"],
             )
         else:
+            timesteps = self.pamset["idtm"] * self.pamset["years_tot"]
             dfnpp = self.co2_hold["dfnpp"]
+        sumf = np.zeros(timesteps)
+        print(dfnpp)
+        print(len(dfnpp))
+        print(timesteps)
+        print(len(self.r_functions[1, :]))
         sumf[1:] = [
             float(
                 np.dot(
@@ -308,11 +359,80 @@ class CarbonCycleModel:
         ]
         return biosphere_carbon_pool
 
-    def back_calculate_emissions(self, co2_conc_series, conc_run=True):
+    def back_calculate_emissions(self, co2_conc_series):
         """
         Back calculate emissions from conc_run
+
+        co2_conc_series is assumed to be the series of concentrations
+        from the year 0
         """
         # Calculating fertilisation factor for all the time steps:
         # ffer = _get_ffer_timeseries(conc_run, co2_conc_series, conc_run)
         # TODO implement
-        pass
+        prev_co2_conc = 278.0
+        em_series = np.zeros(len(co2_conc_series))
+        ffer = self._get_ffer_timeseries(conc_run=True, co2_conc_series=co2_conc_series)
+        for i, co2_conc in enumerate(co2_conc_series):
+            ffer_here = ffer[i * self.pamset["idtm"]]
+            em_series[i] = (
+                self.guess_emissions_iteration(
+                    co2_conc, prev_co2_conc, yrix=i, ffer=ffer_here
+                )
+                * 2.123
+                + ffer_here
+            )
+            prev_co2_conc = co2_conc
+        return em_series
+
+    def simplified_em_backward(self, co2_conc_now, co2_conc_zero):
+        """
+        Simplified guess solution to find emissions
+        """
+        co2_diff = co2_conc_zero - co2_conc_now
+        poly_of_z = partial(xco2_poly_to_solve, constant=co2_diff)
+        z_solve = optimize.fsolve(poly_of_z, 0)
+        cc1 = OCEAN_AREA * GE_COEFF / (1 + OCEAN_AREA * GE_COEFF / 2.0)
+        return (
+            z_solve * 2 * MIXED_LAYER_DEPTH / PPMKG_TO_UMOL_PER_VOL * OCEAN_AREA / cc1
+        )
+
+    def guess_emissions_iteration(
+        self, co2_conc_now, co2_conc_zero, yrix=0, rtol=1e-7, maxit=100, ffer=None
+    ):  # pylint: disable=too-many-arguments
+        """
+        Iterate to get right emissions
+
+        Make sure the yrix is where you are at
+        """
+        if ffer is None:
+            ffer = self._get_ffer_timeseries([co2_conc_zero, co2_conc_now])[
+                yrix * self.pamset["idtm"]
+            ]
+        min_guess = self.simplified_em_backward(co2_conc_now / 2, co2_conc_zero)
+        max_guess = self.simplified_em_backward(co2_conc_now * 2, co2_conc_zero)
+        guess = self.simplified_em_backward(co2_conc_now, co2_conc_zero)
+        hold_dict = self._get_co2_hold_values()
+        # print(yrix)
+        estimated_conc = self.co2em2conc(
+            self.pamset["nystart"] + yrix, 2.123 * (guess) + ffer
+        )
+        iteration = 0
+        while (
+            iteration < maxit
+            and np.abs(co2_conc_now - estimated_conc) / co2_conc_now > rtol
+        ):
+            if estimated_conc > co2_conc_now:
+                max_guess = guess
+                guess = (guess + min_guess) / 2
+
+            else:
+                min_guess = guess
+                guess = (guess + max_guess) / 2
+            self._set_co2_hold(**hold_dict)
+            estimated_conc = self.co2em2conc(
+                self.pamset["nystart"] + yrix, 2.123 * (guess) + ffer
+            )
+            iteration = iteration + 1
+        # print(yrix)
+        # print(guess)
+        return guess
