@@ -353,11 +353,31 @@ class CarbonCycleModel:
         estimates given these atmospheric concentrations.
         """
         ffer = self._get_ffer_timeseries(conc_run, co2_conc_series)
-        biosphere_carbon_pool = [
-            np.sum(ffer[: self.pamset["idtm"] * yrix])
-            for yrix in range(self.pamset["years_tot"])
-        ]
+        biosphere_carbon_pool = np.array(
+            [
+                np.sum(ffer[: self.pamset["idtm"] * (yrix + 1)])
+                for yrix in range(self.pamset["years_tot"])
+            ]
+        )
         return biosphere_carbon_pool
+
+    def get_ocean_carbon_pool_content(self):
+        """
+        Get ocean carbon pool content
+
+        TODO: Understand and correct this
+        """
+        # ocean_carbon_pool = np.array([
+        #    np.sum(self.co2_hold["sCO2"][: self.pamset["idtm"] * (yrix+1)])
+        #    for yrix in range(self.pamset["years_tot"])
+        # ])
+        ocean_carbon_pool = np.array(
+            [
+                self.co2_hold["sCO2"][self.pamset["idtm"] * (yrix + 1) - 1]
+                for yrix in range(self.pamset["years_tot"])
+            ]
+        )
+        return ocean_carbon_pool
 
     def back_calculate_emissions(self, co2_conc_series):
         """
