@@ -31,7 +31,7 @@ def test_guess_iteration():
         conc_run=True, co2_conc_series=[co2_conc_zero, co2_conc_zero]
     )
     print(ffer)
-    em_guess = ccmod.guess_emissions_iteration(
+    em_guess = ccmod._guess_emissions_iteration(
         co2_conc_now=co2_conc_now, co2_conc_zero=co2_conc_zero
     )
     print(f"Value for em_guess: {em_guess}")

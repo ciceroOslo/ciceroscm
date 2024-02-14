@@ -22,6 +22,9 @@ PPMKG_TO_UMOL_PER_VOL = 1.722e17
 # USING MIXED LAYER DEPTH = 75 metres # TODO: Should this be synced to what's in the UDM?
 MIXED_LAYER_DEPTH = 75.0
 
+# Conversion factor ppm CO2 -> kg
+PPM_CO2_TO_PG_C = 2.123
+
 
 def xco2_poly_to_solve(z_co2, constant=0):
     """
@@ -111,11 +114,49 @@ def take_out_missing(pamset):
     Take out values that are missing from pamset
 
     Needed to take care of rs_function and rb_function
+
+    Parameters
+    ----------
+    pamset : dict
+        parameter set dictionary which might contain the value "missing"
+        for the rs_function and rb_function because of the way we deal
+        with expected values in the parameter set. In this case
+        we need to take them out of the parameterset so they can be run
+        with defaults
+
+    Returns
+    -------
+    dict
+        Updated version of the parameterset with "missing" values deleted
     """
     for key, value in pamset.items():
         if value == "missing":
             del pamset[key]
     return pamset
+
+
+def calculate_airborne_fraction(em_timeseries, conc_timeseries):
+    """
+    Calculate Airborne Fraction of CO2 from emissions timeseries
+
+    Parameters
+    ----------
+    em_timeseries: np.ndarray
+        Emissions timeseries, either inputs or backcalculated for concentration
+        run
+    conc_timeseries : np.ndarray
+        Concentrations timeseries. Should be the same length as the emissions
+        timeseries
+
+    Returns
+    -------
+    np.ndarray
+        Airborne fraction calculated from the em_timeseries and conc_timeseries
+    """
+    airborne_fraction = (
+        (conc_timeseries - 278.0) / np.cumsum(em_timeseries) * PPM_CO2_TO_PG_C
+    )
+    return airborne_fraction
 
 
 class CarbonCycleModel:
@@ -126,6 +167,10 @@ class CarbonCycleModel:
     def __init__(self, pamset):
         """
         Initialise Carbon cycle model
+
+        Parameters
+        ----------
+            pamset : dict
         """
         pamset = take_out_missing(pamset.copy())
         self.pamset = cut_and_check_pamset(
@@ -140,6 +185,10 @@ class CarbonCycleModel:
     def reset_co2_hold(self, beta_f=0.287):
         """
         Reset values of CO2_hold for new run
+
+        This method is mainly called to do a new run with the same cscm instance,
+        in which case you need to reset hold values, and be able to update
+        parameter values for the carbon cycle free parameter beta_f
         """
         self.co2_hold = {
             "yCO2": 0.0,
@@ -160,6 +209,19 @@ class CarbonCycleModel:
 
         Use this to rerun from same state as before
         in year not zero. Should only be used for back-calculations
+
+        Parameters
+        ----------
+        xco2 : float
+            CO2 concentration to set, default is 278.0 which is the start value
+        yco2 : float
+            yco2 value, default is 0.0 which is the start value
+        emco2_prev : float
+            emissions in previous timestep, default is 0.0
+        ss1 : float
+            ss1 value, default is 0.0
+        sums : float
+            sums of ocean uptake inorganic carbon, default is 0.0
         """
         self.co2_hold["yCO2"] = yco2
         self.co2_hold["xCO2"] = xco2
@@ -170,6 +232,12 @@ class CarbonCycleModel:
     def _get_co2_hold_values(self):
         """
         Get co2_hold scalar values as dictionary
+
+        These can be used to reset the values after, this is useful for
+        the back calculation which needs to run the same timestep over
+        and over. This is why the method is private as it is just meant
+        to be called from the back-calculations to get values that can then
+        be sent to the _set_co2 hold function
         """
         scalar_dict = {
             "yco2": self.co2_hold["yCO2"],
@@ -188,10 +256,6 @@ class CarbonCycleModel:
         If functions are sent with keywords rs_function
         or rb_function in the pamset, these must take
         time and number of steps per year as input
-
-        Parameters
-        ----------
-        pamset
         """
         self.r_functions = np.empty(
             (2, self.pamset["idtm"] * self.pamset["years_tot"])
@@ -257,7 +321,7 @@ class CarbonCycleModel:
             ffer = self.co2_hold["dfnpp"][it] - dt * sumf
 
             # Sum anthropogenic and biospheric and PPMKG_TO_UMOL_PER_VOLert gC/yr --> ppm/yr
-            em_co2 = (em_co2_common - ffer) / 2.123
+            em_co2 = (em_co2_common - ffer) / PPM_CO2_TO_PG_C
 
             if it == 0:  # pylint: disable=compare-to-zero
                 self.co2_hold["ss1"] = 0.5 * em_co2 / (OCEAN_AREA * GE_COEFF)
@@ -305,12 +369,26 @@ class CarbonCycleModel:
 
     def _get_ffer_timeseries(self, conc_run=False, co2_conc_series=None):
         """
-        Get the ffer time series
+        Get the biospheric fertilisation (ffer) time series
 
         For emissions runs this yields appropriate amounts only for years for which the
         model has been run and zeros otherwise. If a concentrations series is used
         this yields a back calculated estimate of the carbon pool the model
         estimates given these atmospheric concentrations.
+
+        Parameters
+        ----------
+        conc_run : bool
+            Whether calculation is being done for a conc_run
+            (i.e. a run that has CO2_hold values precalculated, or whether back
+            calculations are needed or co2_conc_series need to be used for calculations)
+        co2_conc_series : np.ndarray
+            Time series of concentrations to calculate ffer from
+
+        Returns
+        -------
+        np.ndarray
+            Biospheric fertilisation factor timeseries
         """
         dt = 1.0 / self.pamset["idtm"]
 
@@ -327,10 +405,6 @@ class CarbonCycleModel:
             timesteps = self.pamset["idtm"] * self.pamset["years_tot"]
             dfnpp = self.co2_hold["dfnpp"]
         sumf = np.zeros(timesteps)
-        print(dfnpp)
-        print(len(dfnpp))
-        print(timesteps)
-        print(len(self.r_functions[1, :]))
         sumf[1:] = [
             float(
                 np.dot(
@@ -351,6 +425,20 @@ class CarbonCycleModel:
         model has been run and zeros otherwise. If a concentrations series is used
         this yields a back calculated estimate of the carbon pool the model
         estimates given these atmospheric concentrations.
+
+        Parameters
+        ----------
+        conc_run : bool
+            Whether calculation is being done for a conc_run
+            (i.e. a run that has CO2_hold values precalculated, or whether back
+            calculations are needed or co2_conc_series need to be used for calculations)
+        co2_conc_series : np.ndarray
+            Time series of concentrations to calculate ffer from
+
+        Returns
+        -------
+        np.ndarray
+            Timeseries of the added carbon content to the biosphere carbon pool
         """
         ffer = self._get_ffer_timeseries(conc_run, co2_conc_series)
         biosphere_carbon_pool = np.array(
@@ -365,7 +453,13 @@ class CarbonCycleModel:
         """
         Get ocean carbon pool content
 
-        TODO: Understand and correct this
+        Returns
+        -------
+        np.ndarray
+            Timeseries of the added carbon content to the ocean carbon pool
+
+        TODO: Understand and correct this, also, this doesn't work for
+        concentration driven runs, so need to deal with that...
         """
         # ocean_carbon_pool = np.array([
         #    np.sum(self.co2_hold["sCO2"][: self.pamset["idtm"] * (yrix+1)])
@@ -385,6 +479,12 @@ class CarbonCycleModel:
 
         co2_conc_series is assumed to be the series of concentrations
         from the year 0
+
+        Parameters
+        ----------
+        co2_conc_series : np.ndarray
+            Timeseries of co2 concentrations for which to back
+            calculate emissions
         """
         # Calculating fertilisation factor for all the time steps:
         # ffer = _get_ffer_timeseries(conc_run, co2_conc_series, conc_run)
@@ -395,10 +495,10 @@ class CarbonCycleModel:
         for i, co2_conc in enumerate(co2_conc_series):
             ffer_here = ffer[i * self.pamset["idtm"]]
             em_series[i] = (
-                self.guess_emissions_iteration(
+                self._guess_emissions_iteration(
                     co2_conc, prev_co2_conc, yrix=i, ffer=ffer_here
                 )
-                * 2.123
+                * PPM_CO2_TO_PG_C
                 + ffer_here
             )
             prev_co2_conc = co2_conc
@@ -406,7 +506,25 @@ class CarbonCycleModel:
 
     def simplified_em_backward(self, co2_conc_now, co2_conc_zero):
         """
-        Simplified guess solution to find emissions
+        Simplified _guess solution to find emissions
+
+        Based on algebraic solution for single timestep which is only
+        valid for the very first timestep
+
+        Parameters
+        ----------
+        co2_conc_now : float
+            Value of CO2 concentration in timestep resulting after
+            the emissions you would like to find are applied
+        co2_conc_zero : float
+            Value of CO2 concentration in timestep before the step
+            for which you want to find the concentrations
+
+        Returns
+        -------
+        float
+            Emissions from the simplified algebraic approach
+        # TODO : Should this be private?
         """
         co2_diff = co2_conc_zero - co2_conc_now
         poly_of_z = partial(xco2_poly_to_solve, constant=co2_diff)
@@ -416,13 +534,43 @@ class CarbonCycleModel:
             z_solve * 2 * MIXED_LAYER_DEPTH / PPMKG_TO_UMOL_PER_VOL * OCEAN_AREA / cc1
         )
 
-    def guess_emissions_iteration(
+    def _guess_emissions_iteration(
         self, co2_conc_now, co2_conc_zero, yrix=0, rtol=1e-7, maxit=100, ffer=None
     ):  # pylint: disable=too-many-arguments
         """
-        Iterate to get right emissions
+        Iterate to get right emissions for a single year
 
         Make sure the yrix is where you are at
+
+        Parameters
+        ----------
+        co2_conc_now : float
+            Value of CO2 concentration in timestep resulting after
+            the emissions you would like to find are applied
+        co2_conc_zero : float
+            Value of CO2 concentration in timestep before the step
+            for which you want to find the concentrations
+        yrix : int
+            Index of year to do back calculation for, should be the
+            year number starting with 0 of the total of years for which
+            the back calculated emissions in total for which this calculation
+            should be made
+        rtol : float
+            Relative tolerance in accuracy between concentrations change from
+            back calculated emissions set and input concentrations
+        maxit : int
+            Maximum number of iterations todo before cutting. This is a
+            safety switch to make sure we don't do infinite looping if
+            the solution doesn't converge
+        ffer : np.ndarray
+            biospheric fertilisation for the given concentrations change
+
+        Returns
+        -------
+        float
+            Back calculated emissions that yields a concentrations change
+            from the conc_co2_zero to conc_co2_now which
+
         """
         if ffer is None:
             ffer = self._get_ffer_timeseries([co2_conc_zero, co2_conc_now])[
@@ -432,9 +580,8 @@ class CarbonCycleModel:
         max_guess = self.simplified_em_backward(co2_conc_now * 2, co2_conc_zero)
         guess = self.simplified_em_backward(co2_conc_now, co2_conc_zero)
         hold_dict = self._get_co2_hold_values()
-        # print(yrix)
         estimated_conc = self.co2em2conc(
-            self.pamset["nystart"] + yrix, 2.123 * (guess) + ffer
+            self.pamset["nystart"] + yrix, PPM_CO2_TO_PG_C * (guess) + ffer
         )
         iteration = 0
         while (
@@ -450,9 +597,7 @@ class CarbonCycleModel:
                 guess = (guess + max_guess) / 2
             self._set_co2_hold(**hold_dict)
             estimated_conc = self.co2em2conc(
-                self.pamset["nystart"] + yrix, 2.123 * (guess) + ffer
+                self.pamset["nystart"] + yrix, PPM_CO2_TO_PG_C * (guess) + ffer
             )
             iteration = iteration + 1
-        # print(yrix)
-        # print(guess)
         return guess

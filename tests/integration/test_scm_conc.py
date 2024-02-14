@@ -168,7 +168,7 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     res = pd.read_csv(file_results, delim_whitespace=True)
     np.testing.assert_equal(res.Year.to_numpy(), exp_index)
 
-    cscm._run({"results_as_dict": True})
+    cscm._run({"results_as_dict": True, "carbon_cycle_outputs": True})
     expected_keys = [
         "emissions",
         "concentrations",
@@ -187,12 +187,29 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "dT_glob_sea",
         "dT_NH_sea",
         "dT_SHsea",
+        "Total_forcing",
         "Solar_forcing",
         "Volcanic_forcing_NH",
         "Volcanic_forcing_SH",
+        "carbon cycle",
     ]
     for key in expected_keys:
         assert key in cscm.results
+    print(cscm.results.keys())
+    for key in cscm.results.keys():
+        assert key in expected_keys
+    print(cscm.results["carbon cycle"]["Airborne fraction CO2"])
+    print(cscm.results["carbon cycle"]["Biosphere carbon pool"])
+    print(cscm.results["carbon cycle"]["Ocean carbon pool"])
+    assert len(cscm.results["carbon cycle"]["Airborne fraction CO2"]) == len(
+        cscm.ce_handler.years
+    )
+    assert len(cscm.results["carbon cycle"]["Biosphere carbon pool"]) == len(
+        cscm.ce_handler.years
+    )
+    assert len(cscm.results["carbon cycle"]["Ocean carbon pool"]) == len(
+        cscm.ce_handler.years
+    )
     # Put this in again, find out what is happening with CF4
     # check_output(
     #    outdir_save,

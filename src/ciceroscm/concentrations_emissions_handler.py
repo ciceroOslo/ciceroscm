@@ -10,7 +10,7 @@ import pandas as pd
 
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
-from .carbon_cycle_mod import CarbonCycleModel
+from .carbon_cycle_mod import CarbonCycleModel, calculate_airborne_fraction
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -786,9 +786,33 @@ class ConcentrationsEmissionsHandler:
             plot_output2("emis", df_emis, outdir, self.df_gas["EM_UNIT"])
             plot_output2("conc", df_conc, outdir, self.df_gas["CONC_UNIT"])
 
-    def add_results_to_dict(self):
+        if "carbon_cycle_outputs" in cfg:
+            # TODO: Add carbon cycle outputs here
+            # Typically back_calculated emissions for conc_run
+            # Airborne fraction
+            # biosphere carbon pool contents
+            # Ocean carbon pool contents
+            # Yearly rather than cumulative values for these? I.e. fluxes?
+            df_carbon_cycle = self.get_carbon_cycle_data()
+
+            df_carbon_cycle.to_csc(
+                os.path.join(outdir, f"{filename_start}_carbon.txt"),
+                sep="\t",
+                index=False,
+                float_format="%.5e",
+            )
+
+    def add_results_to_dict(self, cfg):
         """
         Adding results to results dictionary
+
+        Parameters
+        ----------
+        cfg : dict
+            Configurations to define where to put output
+            files and what prefix to have for file name
+            At the moment this method only needs to know
+            if it's supposed to include carbon cycle outputs
 
         Returns
         -------
@@ -821,4 +845,50 @@ class ConcentrationsEmissionsHandler:
         results["emissions"] = df_emis
         results["concentrations"] = df_conc
         results["forcing"] = df_forc
+
+        if "carbon_cycle_outputs" in cfg:
+            # TODO: Add carbon cycle outputs here
+            # Typically back_calculated emissions for conc_run
+            # Airborne fraction
+            # biosphere carbon pool contents
+            # Ocean carbon pool contents
+            # Yearly rather than cumulative values for these? I.e. fluxes?
+            print("Need to add carbon cycle outputs")
+            results["carbon cycle"] = self.get_carbon_cycle_data()
         return results
+
+    def get_carbon_cycle_data(self):
+        """
+        Get carbon cycle data and put in dataframe for output
+
+        Returns
+        -------
+            Pandas.DataFrame
+            With carbon cycle inputs including Airborne fraction
+            backcalculated emissions (in the case of concenration runs)
+            Biosphere carbon pool content and ocean carbon pool contents
+        """
+        conc_series = np.array([v for k, v in self.conc["CO2"].items()])
+
+        if self.pamset["conc_run"]:
+            em_series = self.carbon_cycle.back_calculate_emissions(conc_series)
+        else:
+            em_series = (
+                self.emis["CO2_FF"][self.years].values
+                + self.emis["CO2_AFOLU"][self.years].values
+            )
+        airborne = calculate_airborne_fraction(em_series, conc_series)
+        df_carbon = pd.DataFrame(
+            data={
+                "Emissions": em_series,
+                "Airborne fraction CO2": airborne,
+                "Biosphere carbon pool": (
+                    self.carbon_cycle.get_biosphere_carbon_pool_content(
+                        conc_run=self.pamset["conc_run"]
+                    )
+                ),
+                "Ocean carbon pool": self.carbon_cycle.get_ocean_carbon_pool_content(),
+            },
+            index=self.years,
+        )
+        return df_carbon
