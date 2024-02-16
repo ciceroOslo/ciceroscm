@@ -19,6 +19,7 @@ The changes listed in this file are categorised as follows:
 ### Added
 
 - Support for flat natural emissions for NO2 and CH4 from gaspamfile as defaults
+- Update script to make natural emissions for NO2 and CH4 using ODE solution
 - Updates to default vulcanoe and solar forcing timeseries
 - Rationalising _band implementation using library for speed and readibility
 - Clearing out unused density realated methods
@@ -27,3 +28,5 @@ The changes listed in this file are categorised as follows:
 - Config distributions support to make parameter distributions
 - Distrobution runner to run over distributions in parallel
 - Calibrator to make calibrated set of configurations based on calibration data
+- Made automatic plots more polished looking
+- Taking out unused parts from gaspam-file

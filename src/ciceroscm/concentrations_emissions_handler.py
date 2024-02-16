@@ -847,13 +847,6 @@ class ConcentrationsEmissionsHandler:
         results["forcing"] = df_forc
 
         if "carbon_cycle_outputs" in cfg:
-            # TODO: Add carbon cycle outputs here
-            # Typically back_calculated emissions for conc_run
-            # Airborne fraction
-            # biosphere carbon pool contents
-            # Ocean carbon pool contents
-            # Yearly rather than cumulative values for these? I.e. fluxes?
-            print("Need to add carbon cycle outputs")
             results["carbon cycle"] = self.get_carbon_cycle_data()
         return results
 

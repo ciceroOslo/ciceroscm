@@ -195,12 +195,8 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     ]
     for key in expected_keys:
         assert key in cscm.results
-    print(cscm.results.keys())
     for key in cscm.results.keys():
         assert key in expected_keys
-    print(cscm.results["carbon cycle"]["Airborne fraction CO2"])
-    print(cscm.results["carbon cycle"]["Biosphere carbon pool"])
-    print(cscm.results["carbon cycle"]["Ocean carbon pool"])
     assert len(cscm.results["carbon cycle"]["Airborne fraction CO2"]) == len(
         cscm.ce_handler.years
     )
@@ -209,6 +205,20 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     )
     assert len(cscm.results["carbon cycle"]["Ocean carbon pool"]) == len(
         cscm.ce_handler.years
+    )
+    carbon_sum = (
+        np.cumsum(
+            cscm.results["carbon cycle"]["Airborne fraction CO2"]
+            * cscm.results["carbon cycle"]["Emissions"]
+        )
+        + cscm.results["carbon cycle"]["Biosphere carbon pool"].values
+        + cscm.results["carbon cycle"]["Ocean carbon pool"].values
+    )
+    print(carbon_sum[-5:])
+    print(np.cumsum(cscm.results["carbon cycle"]["Emissions"])[-5:])
+    # TODO: Why isn't this closer?
+    assert np.allclose(
+        carbon_sum, np.cumsum(cscm.results["carbon cycle"]["Emissions"]), rtol=5e-1
     )
     # Put this in again, find out what is happening with CF4
     # check_output(

@@ -441,11 +441,14 @@ class CarbonCycleModel:
             Timeseries of the added carbon content to the biosphere carbon pool
         """
         ffer = self._get_ffer_timeseries(conc_run, co2_conc_series)
-        biosphere_carbon_pool = np.array(
-            [
-                np.sum(ffer[: self.pamset["idtm"] * (yrix + 1)])
-                for yrix in range(self.pamset["years_tot"])
-            ]
+        biosphere_carbon_pool = (
+            np.array(
+                [
+                    np.sum(ffer[: self.pamset["idtm"] * (yrix + 1)])
+                    for yrix in range(self.pamset["years_tot"])
+                ]
+            )
+            / self.pamset["idtm"]
         )
         return biosphere_carbon_pool
 
@@ -465,11 +468,17 @@ class CarbonCycleModel:
         #    np.sum(self.co2_hold["sCO2"][: self.pamset["idtm"] * (yrix+1)])
         #    for yrix in range(self.pamset["years_tot"])
         # ])
-        ocean_carbon_pool = np.array(
-            [
-                self.co2_hold["sCO2"][self.pamset["idtm"] * (yrix + 1) - 1]
-                for yrix in range(self.pamset["years_tot"])
-            ]
+        ocean_carbon_pool = (
+            np.array(
+                [
+                    np.sum(self.co2_hold["sCO2"][: self.pamset["idtm"] * (yrix + 1)])
+                    for yrix in range(self.pamset["years_tot"])
+                ]
+            )
+            * PPM_CO2_TO_PG_C
+            / self.pamset["idtm"]
+            * GE_COEFF
+            * OCEAN_AREA
         )
         return ocean_carbon_pool
 
