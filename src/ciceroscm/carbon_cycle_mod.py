@@ -439,6 +439,8 @@ class CarbonCycleModel:
         -------
         np.ndarray
             Timeseries of the added carbon content to the biosphere carbon pool
+
+        # TODO: Make this be flux rather than cumulative
         """
         ffer = self._get_ffer_timeseries(conc_run, co2_conc_series)
         biosphere_carbon_pool = (
@@ -452,22 +454,29 @@ class CarbonCycleModel:
         )
         return biosphere_carbon_pool
 
-    def get_ocean_carbon_pool_content(self):
+    def get_ocean_carbon_pool_content(self, conc_run=False, co2_conc_series=None):
         """
         Get ocean carbon pool content
+
+        If this is called from a concentrations either it is
+        assumed that emissions are already back calculated
+        Otherwhise you can send a concentration series to do
+        the back calculations with to set all the values in
+        the sCO2 array
 
         Returns
         -------
         np.ndarray
             Timeseries of the added carbon content to the ocean carbon pool
 
-        TODO: Understand and correct this, also, this doesn't work for
-        concentration driven runs, so need to deal with that...
+        TODO: Have this be flux rather than cumulative
         """
         # ocean_carbon_pool = np.array([
         #    np.sum(self.co2_hold["sCO2"][: self.pamset["idtm"] * (yrix+1)])
         #    for yrix in range(self.pamset["years_tot"])
         # ])
+        if conc_run and co2_conc_series is not None:
+            self.back_calculate_emissions(co2_conc_series)
         ocean_carbon_pool = (
             np.array(
                 [

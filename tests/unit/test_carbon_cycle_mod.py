@@ -104,11 +104,15 @@ def test_carbon_pools(test_data_dir):
     cum_emis = np.cumsum(emis_series)
     biopool = cscm.ce_handler.carbon_cycle.get_biosphere_carbon_pool_content()
     oceanpool = cscm.ce_handler.carbon_cycle.get_ocean_carbon_pool_content()
-    summed_carbon_pools = conc_co2_series + biopool / 2.123 - 278 - oceanpool
+    summed_carbon_pools = conc_co2_series + biopool / 2.123 - 278 - oceanpool / 2.123
     print(summed_carbon_pools[:5])
     print(conc_co2_series[:5] - 278)
     print(biopool[:5] / 2.123)
     print(oceanpool[:5])
     print(cum_emis[:5] / 2.123)
-    # assert np.allclose(summed_carbon_pools, cum_emis/2.123)
+    # TODO : Put tests here back on
+    # assert np.allclose(summed_carbon_pools, cum_emis / 2.123)
     assert True
+
+
+# TODO: Check ocean calculation with and without internal back calculation
