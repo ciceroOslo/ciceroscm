@@ -19,19 +19,16 @@ GE_COEFF = 1.0 / (OCEAN_AREA * 9.06)
 # Conversion factor ppm/kg --> umol*/m3
 PPMKG_TO_UMOL_PER_VOL = 1.722e17
 
-# USING MIXED LAYER DEPTH = 75 metres # TODO: Should this be synced to what's in the UDM?
-MIXED_LAYER_DEPTH = 75.0
-
 # Conversion factor ppm CO2 -> kg
 PPM_CO2_TO_PG_C = 2.123
 
 
-def xco2_poly_to_solve(z_co2, constant=0):
+def xco2_poly_to_solve(z_co2, constant=0, mixed_carbon=0):
     """
     Define function to invert to get zco2 from xco2y assuming 0th step
     """
     return (
-        (1.3021 + 2 * MIXED_LAYER_DEPTH / GE_COEFF / PPMKG_TO_UMOL_PER_VOL) * z_co2
+        (1.3021 + 2 * mixed_carbon / GE_COEFF / PPMKG_TO_UMOL_PER_VOL) * z_co2
         + 3.7929e-3 * (z_co2**2)
         + 9.1193e-6 * (z_co2**3)
         + 1.488e-8 * (z_co2**4)
@@ -182,7 +179,7 @@ class CarbonCycleModel:
         self.reset_co2_hold()
         self.precalc_r_functions()
 
-    def reset_co2_hold(self, beta_f=0.287):
+    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0):
         """
         Reset values of CO2_hold for new run
 
@@ -200,6 +197,7 @@ class CarbonCycleModel:
             "sums": 0.0,
         }
         self.pamset["beta_f"] = beta_f
+        self.pamset["mixed_carbon"] = mixed_carbon
 
     def _set_co2_hold(
         self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -351,7 +349,7 @@ class CarbonCycleModel:
                 PPMKG_TO_UMOL_PER_VOL
                 * GE_COEFF
                 * dt
-                / MIXED_LAYER_DEPTH
+                / self.pamset["mixed_carbon"]
                 * (sumz + 0.5 * self.co2_hold["sCO2"][it])
             )
             self.co2_hold["yCO2"] = (
@@ -549,7 +547,12 @@ class CarbonCycleModel:
         z_solve = optimize.fsolve(poly_of_z, 0)
         cc1 = OCEAN_AREA * GE_COEFF / (1 + OCEAN_AREA * GE_COEFF / 2.0)
         return (
-            z_solve * 2 * MIXED_LAYER_DEPTH / PPMKG_TO_UMOL_PER_VOL * OCEAN_AREA / cc1
+            z_solve
+            * 2
+            * self.pamset["mixed_carbon"]
+            / PPMKG_TO_UMOL_PER_VOL
+            * OCEAN_AREA
+            / cc1
         )
 
     def _guess_emissions_iteration(

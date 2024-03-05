@@ -35,8 +35,9 @@ def check_pamset(pamset):
           Dictionary of parameters to define the physics
           of the run. Values that begin with q are concetration
           or emissions to forcing factors, beta_f is the
-          carbon cycle fertilisation factor, and ref_yr is
-          the reference year for calculations
+          carbon cycle fertilisation factor, mixed_carbon is
+          the depth of the mixed layer in the carbon cycle model
+          and ref_yr is the reference year for calculations
 
     Returns
     -------
@@ -53,6 +54,7 @@ def check_pamset(pamset):
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
         "beta_f": 0.287,
+        "mixed_carbon": 75.0,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -222,7 +224,9 @@ class ConcentrationsEmissionsHandler:
         if preexisting:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
-            self.carbon_cycle.reset_co2_hold(self.pamset["beta_f"])
+            self.carbon_cycle.reset_co2_hold(
+                self.pamset["beta_f"], self.pamset["mixed_carbon"]
+            )
         years_tot = len(self.years)
         self.conc = {}
         self.forc = {}
