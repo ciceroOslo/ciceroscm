@@ -98,7 +98,7 @@ def read_inputfile(input_file, cut_years=False, year_start=1750, year_end=2100):
     df_input = pd.read_csv(input_file, sep=r"\s+", index_col=0, skiprows=[1, 2, 3])
     if cut_years:
         min_year = df_input.index[0]
-        max_year = df_input.index[0]
+        max_year = df_input.index[-1]
         cut_rows = [*range(min_year, year_start), *range(year_end + 1, max_year + 1)]
         df_input.drop(index=cut_rows, inplace=True)
     return df_input
