@@ -28,6 +28,7 @@ prior_flat = {
     "qh2o_ch4": [0.08, 0.1],
     "aerosol_total": [-3.0, -0.5],
     "beta_f": [0.110, 0.465],
+    "mixed_carbon": [25, 125],
 }
 """dict: Containing a default prior for parameters """
 
@@ -46,6 +47,8 @@ prior_flat_array = [
     [0.1, 0.2],
     [-0.1, -0.06],
     [0.08, 0.1],
+    [0.110, 0.465],
+    [25, 125],
 ]
 """array: same as prior_flat, but just as an array ordered according to standard ordering"""
 
@@ -67,6 +70,8 @@ ordering_standard = [
     "qoc",
     "qbmb",
     "qh2o_ch4",
+    "beta_f",
+    "mixed_carbon",
 ]
 """list: Containing a default ordering of parameters """
 

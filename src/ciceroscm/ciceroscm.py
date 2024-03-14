@@ -283,7 +283,7 @@ class CICEROSCM:
             plot_output1(cfg, self.results, self.cfg["nystart"], self.cfg["nyend"])
         if ("results_as_dict" in cfg) and cfg["results_as_dict"]:
             if not self.cfg["rf_run"]:
-                self.results.update(self.ce_handler.add_results_to_dict())
+                self.results.update(self.ce_handler.add_results_to_dict(cfg))
         else:
             if not self.cfg["rf_run"]:
                 self.ce_handler.write_output_to_files(cfg, make_plot)

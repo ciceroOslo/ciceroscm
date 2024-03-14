@@ -36,7 +36,7 @@ def read_components(filename):
     pandas.Dataframe
         Dataframe with gases, and various info on them
     """
-    df_gas = pd.read_csv(filename, delim_whitespace=True, index_col=0)
+    df_gas = pd.read_csv(filename, sep=r"\s+", index_col=0)
     df_gas.rename(
         columns={"TAU1(YEARS)": "TAU1", "NATURAL_EMISSIONS": "NAT_EM"}, inplace=True
     )
@@ -95,12 +95,10 @@ def read_inputfile(input_file, cut_years=False, year_start=1750, year_end=2100):
         Dataframe with the intput from the file, possibly cut
         to relevant years
     """
-    df_input = pd.read_csv(
-        input_file, delim_whitespace=True, index_col=0, skiprows=[1, 2, 3]
-    )
+    df_input = pd.read_csv(input_file, sep=r"\s+", index_col=0, skiprows=[1, 2, 3])
     if cut_years:
         min_year = df_input.index[0]
-        max_year = df_input.index[0]
+        max_year = df_input.index[-1]
         cut_rows = [*range(min_year, year_start), *range(year_end + 1, max_year + 1)]
         df_input.drop(index=cut_rows, inplace=True)
     return df_input
@@ -507,12 +505,10 @@ class InputHandler:
                 header=None,
                 skiprows=skiprows,
                 nrows=nrows,
-                delim_whitespace=True,
+                sep=r"\s+",
             )
         else:
-            df_data = pd.read_csv(
-                volc_datafile, header=None, nrows=nrows, delim_whitespace=True
-            )
+            df_data = pd.read_csv(volc_datafile, header=None, nrows=nrows, sep=r"\s+")
 
         df_data.set_axis(labels=indices)
         return df_data

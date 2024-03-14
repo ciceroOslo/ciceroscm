@@ -16,9 +16,20 @@ The changes listed in this file are categorised as follows:
 
 ## [Unreleased]
 
-### Added
+### Changed
+- Moved carbon cycle functionality out of concentrations_emissions_handler.py to separate module carbon_cycle_mod.py
+
+### Added 
+- Functionality to back calculate CO2 emissions from concentrations
+- Functionality to calculate carbon pool fluxes to ocean and land
+- Functionality to calculate airborne fraction
+- Functionality to output new carbon cycle information 
+
+## [Versions 1.1.1 and v1.1.0]
+### Added 
 
 - Support for flat natural emissions for NO2 and CH4 from gaspamfile as defaults
+- Update script to make natural emissions for NO2 and CH4 using ODE solution
 - Updates to default vulcanoe and solar forcing timeseries
 - Rationalising _band implementation using library for speed and readibility
 - Clearing out unused density realated methods
@@ -27,3 +38,5 @@ The changes listed in this file are categorised as follows:
 - Config distributions support to make parameter distributions
 - Distrobution runner to run over distributions in parallel
 - Calibrator to make calibrated set of configurations based on calibration data
+- Made automatic plots more polished looking
+- Taking out unused parts from gaspam-file
