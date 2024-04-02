@@ -13,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 # TODO: sensible standard priors for q-terms
 prior_flat = {
     "rlamdo": [5, 25],
-    "akapa": [0.06, 0.08],
+    "akapa": [0.06, 0.8],
     "cpi": [0.161, 0.569],
     "W": [0.55, 2.55],
     "beto": [0, 7],
@@ -32,24 +32,26 @@ prior_flat = {
 }
 """dict: Containing a default prior for parameters """
 
-prior_flat_array = [
-    [5, 25],
-    [0.06, 0.08],
-    [0.161, 0.569],
-    [0.55, 2.55],
-    [0, 7],
-    [2 / 3.71, 5 / 3.71],
-    [25, 125],
-    [0, 2],
-    [0.4, 0.6],
-    [-0.55, -0.2],
-    [-1.5, -0.5],
-    [0.1, 0.2],
-    [-0.1, -0.06],
-    [0.08, 0.1],
-    [0.110, 0.465],
-    [25, 125],
-]
+prior_flat_array = np.array(
+    [
+        [5, 25],
+        [0.06, 0.8],
+        [0.161, 0.569],
+        [0.55, 2.55],
+        [0, 7],
+        [2 / 3.71, 5 / 3.71],
+        [25, 125],
+        [0.4, 0.6],
+        [-0.55, -0.2],
+        [-1.5, -0.5],
+        [0.1, 0.2],
+        [-0.1, -0.06],
+        [0.110, 0.465],
+        [25, 125],
+        [0, 2],
+        [0.08, 0.1],
+    ]
+)
 """array: same as prior_flat, but just as an array ordered according to standard ordering"""
 
 ordering_standard = [
@@ -60,18 +62,18 @@ ordering_standard = [
     "beto",
     "lambda",
     "mixed",
-    "threstemp",
-    "lm",
-    "ldtime",
     "qo3",
     "qdirso2",
     "qindso2",
     "qbc",
     "qoc",
-    "qbmb",
-    "qh2o_ch4",
     "beta_f",
     "mixed_carbon",
+    "qbmb",
+    "qh2o_ch4",
+    "threstemp",
+    "lm",
+    "ldtime",
 ]
 """list: Containing a default ordering of parameters """
 
@@ -200,12 +202,12 @@ class _ConfigDistro:
              have setvalues according to the ordering.
         """
         prior = np.zeros([len(self.ordering), 2])
-        len_given = 0
         try:
             len_given = len(distro_array[:, 0])
             prior[:len_given, :] = distro_array
         except (ValueError, TypeError):
             LOGGER.warning("distro_array not 2 dimensional, disregarding")
+            len_given = 0
         for i, pam in enumerate(self.ordering[len_given:]):
             prior[len_given + i, :] = prior_flat[pam]
         return prior
@@ -239,6 +241,8 @@ class _ConfigDistro:
         """
         sampler = qmc.LatinHypercube(d=len(self.ordering))
         samples_unit = sampler.random(n=numvalues)
+        print(self.prior[:, 0])
+        print(self.prior[:, 1])
         samples_scaled = np.array(
             qmc.scale(samples_unit, self.prior[:, 0], self.prior[:, 1])
         )

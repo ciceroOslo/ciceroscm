@@ -347,7 +347,6 @@ class ConcentrationsEmissionsHandler:
         forc_nh, forc_sh = calculate_hemispheric_forcing(
             "three_main", tot_forc, 0.0, 0.0
         )
-
         return tot_forc, forc_nh, forc_sh
 
     def tropospheric_ozone_forcing(self, yr):
@@ -533,7 +532,6 @@ class ConcentrationsEmissionsHandler:
             )
             tot_forc = tot_forc + q
             # print("Forcer: %s, tot_forc: %f, FN: %f, FS: %f, q: %f"%(tracer, tot_forc, forc_nh, forc_sh, q)
-
         # Adding forcing perturbations if they exist:
         if "forc_pert" in self.pamset:
             if self.pamset["forc_pert"].check_if_year_in_pert(yr):
@@ -551,7 +549,6 @@ class ConcentrationsEmissionsHandler:
         self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun
-
         return tot_forc, forc_nh, forc_sh
 
     def emi2conc(self, yr):
@@ -662,6 +659,7 @@ class ConcentrationsEmissionsHandler:
                 - 0.000315 * (self.emis["NMVOC"][yr] - self.emis["NMVOC"][2000])
             )
             q = q * (dln_oh + 1)
+
         elif self.pamset["lifetime_mode"] == "CONSTANT_12":
             q = 1.0 / 12.0
         elif self.pamset["lifetime_mode"] == "WIGLEY":
