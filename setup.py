@@ -31,8 +31,7 @@ REQUIREMENTS = [
 ]
 
 REQUIREMENTS_NOTEBOOKS = [
-    "ipywidgets",
-    "notebook",
+    "jupyter",
     "seaborn",
 ]
 REQUIREMENTS_TESTS = [
