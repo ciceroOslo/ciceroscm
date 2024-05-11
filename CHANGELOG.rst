@@ -16,6 +16,11 @@ The changes listed in this file are categorised as follows:
 
 ## [Unreleased]
 
+### Fixed
+
+- Removed `jupyter nbextension` from `Makefile` causing install errors
+- Locked numpy in requirements to below version 2 to work with scmdata for now
+
 ### Added
 
 - Support for flat natural emissions for NO2 and CH4 from gaspamfile as defaults
