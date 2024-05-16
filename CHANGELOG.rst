@@ -20,6 +20,7 @@ The changes listed in this file are categorised as follows:
 
 - Removed `jupyter nbextension` from `Makefile` causing install errors
 - Locked numpy in requirements to below version 2 to work with scmdata for now
+- Fix error in flat N2O assumption in natural precalculate_natural_emissions.py script
 
 ### Added
 
