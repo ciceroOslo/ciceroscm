@@ -192,7 +192,7 @@ def plot_output2(
             fig.suptitle(title)
             i = 0
             j = 0
-        axs[i, j].plot(years, df_in[comp])
+        axs[i, j].plot(years, df_in[comp])  # pylint: disable=possibly-used-before-assignment
         if comp != "Total_forcing":
             axs[i, j].set_title(comp, fontsize=11, fontweight="bold")
             axs[i, j].set_title(f"{chr(i*4+j+97)})", fontsize=11, loc="left")
@@ -209,7 +209,7 @@ def plot_output2(
                     fig.delaxes(axs[i, j_left])
             fig.tight_layout(pad=4, h_pad=2, w_pad=1)
             fig.supxlabel("Year")
-            fig.savefig(os.path.join(plotdir, fname))
+            fig.savefig(os.path.join(plotdir, fname))  # pylint: disable=possibly-used-before-assignment
         j += 1
         if j == 4:
             j = 0

@@ -32,10 +32,15 @@ jobs:
       run: |
         black --version
         black --check src tests setup.py --exclude ciceroscm/_version.py
+	isort --version
         isort --check-only --quiet --recursive src tests setup.py
+	pydocstyle --version
         pydocstyle src
+	bandit --version
         bandit -c .bandit.yml -r src
+	flake8 --version
         flake8 src tests setup.py
+	pylint --version
         pylint src
     - name: Build docs
       # treat warnings as errors (-W)...
