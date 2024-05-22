@@ -21,9 +21,10 @@ The changes listed in this file are categorised as follows:
 
 ### Added 
 - Functionality to back calculate CO2 emissions from concentrations
-- Functionality to calculate carbon pool fluxes to ocean and land
+- Functionality to calculate carbon fluxes to ocean and land
 - Functionality to calculate airborne fraction
-- Functionality to output new carbon cycle information 
+- Functionality to output new carbon cycle information
+
 
 ### Fixed
 
@@ -31,6 +32,7 @@ The changes listed in this file are categorised as follows:
 - Locked numpy in requirements to below version 2 to work with scmdata for now
 - Fix error in flat N2O assumption in natural precalculate_natural_emissions.py script
 - Change logging messages for misisng parameters from warning to info
+- Fix bug in file cutting for read_inputfile in input_handler
 
 ## [Versions 1.1.1 and v1.1.0]
   
