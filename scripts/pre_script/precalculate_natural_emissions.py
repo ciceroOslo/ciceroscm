@@ -92,7 +92,7 @@ nat_ch4_data = pd.DataFrame(
                 index=np.arange(nystart, nyend + 1),
             )
 nat_n2o_data = pd.DataFrame(
-                data={"CH4": np.ones(nyend - nystart + 1) * 242.09},
+                data={"N2O": np.ones(nyend - nystart + 1) * 11.7027},
                 index=np.arange(nystart, nyend + 1),
             )
 ce_handler = concentrations_emissions_handler.ConcentrationsEmissionsHandler(input_handler.InputHandler({"gaspam_data":gaspam_data, "emissions_data":em_data, "concentrations_data": conc_data, "nat_ch4_data": nat_ch4_data, "nat_n2o_data": nat_n2o_data, "nystart": nystart, "nyend": nyend}), pamset)

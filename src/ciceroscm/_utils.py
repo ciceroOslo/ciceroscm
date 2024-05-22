@@ -31,12 +31,12 @@ def check_numeric_pamset(required, pamset):
     """
     for pam, value in required.items():
         if pam not in pamset:
-            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
+            LOGGER.info(  # pylint: disable=logging-fstring-interpolation
                 f"Parameter {pam} not in pamset. Using default value {value}",
             )
             pamset[pam] = value
         elif not isinstance(pamset[pam], int) and not isinstance(pamset[pam], float):
-            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
+            LOGGER.info(  # pylint: disable=logging-fstring-interpolation
                 f"Parameter {pam} must be a number. Using default value {value}",
             )
             pamset[pam] = value
@@ -69,7 +69,7 @@ def cut_non_required(required, pamset, cut_warnings=False):
         if pam in required:
             new_pamset[pam] = pamset[pam]
         elif cut_warnings:
-            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
+            LOGGER.info(  # pylint: disable=logging-fstring-interpolation
                 f"Parameter {pam} is not used. Please check if you have a typo",
             )
     return new_pamset
