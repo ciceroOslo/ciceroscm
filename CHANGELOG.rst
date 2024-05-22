@@ -25,8 +25,13 @@ The changes listed in this file are categorised as follows:
 - Functionality to calculate airborne fraction
 - Functionality to output new carbon cycle information 
 
+### Fixed
+
+- Removed `jupyter nbextension` from `Makefile` causing install errors
+- Locked numpy in requirements to below version 2 to work with scmdata for now
+
 ## [Versions 1.1.1 and v1.1.0]
-### Added 
+
 
 - Support for flat natural emissions for NO2 and CH4 from gaspamfile as defaults
 - Update script to make natural emissions for NO2 and CH4 using ODE solution
