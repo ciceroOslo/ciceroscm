@@ -11,13 +11,13 @@ def test_rs_and_rb_functions():
     assert carbon_cycle_mod._rb_function(0) == -3.599999999991197e-06
 
 
-def test_get_biosphere_carbon_pool_content():
+def test_get_biosphere_carbon_flux():
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
     co2_conc_series = np.ones(ccmod.pamset["years_tot"]) * 278.0
-    bio_carbon_pool = ccmod.get_biosphere_carbon_pool_content(
+    bio_carbon_flux = ccmod.get_biosphere_carbon_flux(
         conc_run=True, co2_conc_series=co2_conc_series
     )
-    assert np.allclose(bio_carbon_pool, np.zeros(ccmod.pamset["years_tot"]))
+    assert np.allclose(bio_carbon_flux, np.zeros(ccmod.pamset["years_tot"]))
     # co2_conc_series = [278*(1.01)**(n) for n in ]
 
 
@@ -102,13 +102,18 @@ def test_carbon_pools(test_data_dir):
     conc_co2_series = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
     cum_emis = np.cumsum(emis_series)
-    biopool = cscm.ce_handler.carbon_cycle.get_biosphere_carbon_pool_content()
-    oceanpool = cscm.ce_handler.carbon_cycle.get_ocean_carbon_pool_content()
-    summed_carbon_pools = conc_co2_series + biopool / 2.123 - 278 - oceanpool / 2.123
+    bioflux = cscm.ce_handler.carbon_cycle.get_biosphere_carbon_flux()
+    oceanflux = cscm.ce_handler.carbon_cycle.get_ocean_carbon_flux()
+    summed_carbon_pools = (
+        conc_co2_series
+        + np.cumsum(bioflux) / 2.123
+        - 278
+        - np.cumsum(oceanflux) / 2.123
+    )
     print(summed_carbon_pools[:5])
     print(conc_co2_series[:5] - 278)
-    print(biopool[:5] / 2.123)
-    print(oceanpool[:5])
+    print(bioflux[:5] / 2.123)
+    print(oceanflux[:5])
     print(cum_emis[:5] / 2.123)
     # TODO : Put tests here back on
     # assert np.allclose(summed_carbon_pools, cum_emis / 2.123)

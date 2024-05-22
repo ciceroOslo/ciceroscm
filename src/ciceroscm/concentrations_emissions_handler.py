@@ -789,12 +789,12 @@ class ConcentrationsEmissionsHandler:
             plot_output2("conc", df_conc, outdir, self.df_gas["CONC_UNIT"])
 
         if "carbon_cycle_outputs" in cfg:
-            # TODO: Add carbon cycle outputs here
+            # Adding carbon cycle outputs here
             # Typically back_calculated emissions for conc_run
             # Airborne fraction
-            # biosphere carbon pool contents
-            # Ocean carbon pool contents
-            # Yearly rather than cumulative values for these? I.e. fluxes?
+            # biosphere carbon flux
+            # Ocean carbon flux
+            # Yearly fluxes?
             df_carbon_cycle = self.get_carbon_cycle_data()
 
             df_carbon_cycle.to_csc(
@@ -861,7 +861,7 @@ class ConcentrationsEmissionsHandler:
             Pandas.DataFrame
             With carbon cycle inputs including Airborne fraction
             backcalculated emissions (in the case of concenration runs)
-            Biosphere carbon pool content and ocean carbon pool contents
+            Biosphere carbon flux and ocean carbon flux
         """
         conc_series = np.array([v for k, v in self.conc["CO2"].items()])
 
@@ -877,12 +877,10 @@ class ConcentrationsEmissionsHandler:
             data={
                 "Emissions": em_series,
                 "Airborne fraction CO2": airborne,
-                "Biosphere carbon pool": (
-                    self.carbon_cycle.get_biosphere_carbon_pool_content(
-                        conc_run=self.pamset["conc_run"]
-                    )
+                "Biosphere carbon flux": self.carbon_cycle.get_biosphere_carbon_flux(
+                    conc_run=self.pamset["conc_run"]
                 ),
-                "Ocean carbon pool": self.carbon_cycle.get_ocean_carbon_pool_content(),
+                "Ocean carbon flux": self.carbon_cycle.get_ocean_carbon_flux(),
             },
             index=self.years,
         )

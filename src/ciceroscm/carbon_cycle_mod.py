@@ -415,13 +415,13 @@ class CarbonCycleModel:
         ffer = dfnpp - dt * sumf
         return ffer
 
-    def get_biosphere_carbon_pool_content(self, conc_run=False, co2_conc_series=None):
+    def get_biosphere_carbon_flux(self, conc_run=False, co2_conc_series=None):
         """
-        Get the carbon amount contained in the biosphere as timeseries over years
+        Get the carbon flux to the biosphere as timeseries over years
 
         For emissions runs this yields appropriate amounts only for years for which the
         model has been run and zeros otherwise. If a concentrations series is used
-        this yields a back calculated estimate of the carbon pool the model
+        this yields a back calculated estimate of the carbon flux the model
         estimates given these atmospheric concentrations.
 
         Parameters
@@ -436,25 +436,30 @@ class CarbonCycleModel:
         Returns
         -------
         np.ndarray
-            Timeseries of the added carbon content to the biosphere carbon pool
-
-        # TODO: Make this be flux rather than cumulative
+            Timeseries of the yearly carbon flux to the biosphere
         """
         ffer = self._get_ffer_timeseries(conc_run, co2_conc_series)
-        biosphere_carbon_pool = (
+        biosphere_carbon_flux = (
             np.array(
                 [
-                    np.sum(ffer[: self.pamset["idtm"] * (yrix + 1)])
+                    np.sum(
+                        ffer[
+                            self.pamset["idtm"]
+                            * yrix : self.pamset["idtm"]
+                            * (yrix + 1)
+                        ]
+                    )
                     for yrix in range(self.pamset["years_tot"])
                 ]
             )
             / self.pamset["idtm"]
         )
-        return biosphere_carbon_pool
 
-    def get_ocean_carbon_pool_content(self, conc_run=False, co2_conc_series=None):
+        return biosphere_carbon_flux
+
+    def get_ocean_carbon_flux(self, conc_run=False, co2_conc_series=None):
         """
-        Get ocean carbon pool content
+        Get yearly timeseries of ocean carbon flux
 
         If this is called from a concentrations either it is
         assumed that emissions are already back calculated
@@ -465,20 +470,21 @@ class CarbonCycleModel:
         Returns
         -------
         np.ndarray
-            Timeseries of the added carbon content to the ocean carbon pool
-
-        TODO: Have this be flux rather than cumulative
+            Timeseries of the added carbon content to the yearly
+            ocean carbon flux
         """
-        # ocean_carbon_pool = np.array([
-        #    np.sum(self.co2_hold["sCO2"][: self.pamset["idtm"] * (yrix+1)])
-        #    for yrix in range(self.pamset["years_tot"])
-        # ])
         if conc_run and co2_conc_series is not None:
             self.back_calculate_emissions(co2_conc_series)
-        ocean_carbon_pool = (
+        ocean_carbon_flux = (
             np.array(
                 [
-                    np.sum(self.co2_hold["sCO2"][: self.pamset["idtm"] * (yrix + 1)])
+                    np.sum(
+                        self.co2_hold["sCO2"][
+                            self.pamset["idtm"]
+                            * yrix : self.pamset["idtm"]
+                            * (yrix + 1)
+                        ]
+                    )
                     for yrix in range(self.pamset["years_tot"])
                 ]
             )
@@ -487,7 +493,7 @@ class CarbonCycleModel:
             * GE_COEFF
             * OCEAN_AREA
         )
-        return ocean_carbon_pool
+        return ocean_carbon_flux
 
     def back_calculate_emissions(self, co2_conc_series):
         """
@@ -502,9 +508,6 @@ class CarbonCycleModel:
             Timeseries of co2 concentrations for which to back
             calculate emissions
         """
-        # Calculating fertilisation factor for all the time steps:
-        # ffer = _get_ffer_timeseries(conc_run, co2_conc_series, conc_run)
-        # TODO implement
         prev_co2_conc = 278.0
         em_series = np.zeros(len(co2_conc_series))
         ffer = self._get_ffer_timeseries(conc_run=True, co2_conc_series=co2_conc_series)

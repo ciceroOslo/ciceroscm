@@ -200,10 +200,10 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     assert len(cscm.results["carbon cycle"]["Airborne fraction CO2"]) == len(
         cscm.ce_handler.years
     )
-    assert len(cscm.results["carbon cycle"]["Biosphere carbon pool"]) == len(
+    assert len(cscm.results["carbon cycle"]["Biosphere carbon flux"]) == len(
         cscm.ce_handler.years
     )
-    assert len(cscm.results["carbon cycle"]["Ocean carbon pool"]) == len(
+    assert len(cscm.results["carbon cycle"]["Ocean carbon flux"]) == len(
         cscm.ce_handler.years
     )
     carbon_sum = (
@@ -211,8 +211,8 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
             cscm.results["carbon cycle"]["Airborne fraction CO2"]
             * cscm.results["carbon cycle"]["Emissions"]
         )
-        + cscm.results["carbon cycle"]["Biosphere carbon pool"].values
-        + cscm.results["carbon cycle"]["Ocean carbon pool"].values
+        + cscm.results["carbon cycle"]["Biosphere carbon flux"].values
+        + cscm.results["carbon cycle"]["Ocean carbon flux"].values
     )
     print(carbon_sum[-5:])
     print(np.cumsum(cscm.results["carbon cycle"]["Emissions"])[-5:])
