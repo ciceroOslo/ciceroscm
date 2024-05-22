@@ -213,8 +213,9 @@ def plot_output2(
             fig.supxlabel("Year")
             fig.savefig(
                 os.path.join(
-                    plotdir, fname
-                )  # pylint: disable=possibly-used-before-assignment
+                    plotdir,
+                    fname,  # pylint: disable=possibly-used-before-assignment
+                )
             )
         j += 1
         if j == 4:
