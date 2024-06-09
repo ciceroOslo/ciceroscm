@@ -3,7 +3,7 @@ Module to handle carbon cycle from CO2 emissions to concentrations
 """
 
 from functools import partial
-
+import traceback
 import numpy as np
 from scipy import optimize
 
@@ -151,7 +151,7 @@ def calculate_airborne_fraction(em_timeseries, conc_timeseries):
         Airborne fraction calculated from the em_timeseries and conc_timeseries
     """
     airborne_fraction = (
-        (conc_timeseries - 278.0) / np.cumsum(em_timeseries) * PPM_CO2_TO_PG_C
+        (conc_timeseries - 278.0) / (1e-10+np.cumsum(em_timeseries)) * PPM_CO2_TO_PG_C
     )
     return airborne_fraction
 
@@ -597,8 +597,8 @@ class CarbonCycleModel:
             ffer = self._get_ffer_timeseries([co2_conc_zero, co2_conc_now])[
                 yrix * self.pamset["idtm"]
             ]
-        min_guess = self.simplified_em_backward(co2_conc_now / 2, co2_conc_zero)
-        max_guess = self.simplified_em_backward(co2_conc_now * 2, co2_conc_zero)
+        min_guess = self.simplified_em_backward(co2_conc_now / 1.2, co2_conc_zero)
+        max_guess = self.simplified_em_backward(co2_conc_now * 1.2, co2_conc_zero)
         guess = self.simplified_em_backward(co2_conc_now, co2_conc_zero)
         hold_dict = self._get_co2_hold_values()
         estimated_conc = self.co2em2conc(
