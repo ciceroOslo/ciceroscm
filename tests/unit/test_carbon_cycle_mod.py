@@ -5,12 +5,6 @@ import numpy as np
 from ciceroscm import CICEROSCM, carbon_cycle_mod
 
 
-def test_rs_and_rb_functions():
-    assert carbon_cycle_mod._rs_function(0) == 1.0
-    assert carbon_cycle_mod._rs_function(3.0) == 0.6884435390654896
-    assert carbon_cycle_mod._rb_function(0) == -3.599999999991197e-06
-
-
 def test_get_biosphere_carbon_flux():
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
     co2_conc_series = np.ones(ccmod.pamset["years_tot"]) * 278.0

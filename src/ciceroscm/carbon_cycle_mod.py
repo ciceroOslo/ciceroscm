@@ -8,6 +8,8 @@ import numpy as np
 from scipy import optimize
 
 from ._utils import cut_and_check_pamset
+from .pub_utils import _check_array_consistency
+from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
 
 # Area of the ocean (m^2)
 OCEAN_AREA = 3.62e14
@@ -35,75 +37,6 @@ def xco2_poly_to_solve(z_co2, constant=0, mixed_carbon=0):
         + 1.2425e-10 * (z_co2**5)
         + constant
     )
-
-
-def _rs_function(it, idtm=24):
-    """
-    Calculate pulse response function for mixed layer
-
-    Calculate pulse response function for mixed layer
-    time is the year index*idtm + i, i.e. the month number
-
-    Parameters
-    ----------
-    it : int
-      is the time index, there are idtm time points per yer
-    idtm : int
-        Number of time points per year, default is 24
-
-    Returns
-    -------
-    float
-         The pulse_response function for this time
-    """
-    time = it / idtm
-    if time < 2.0:
-        pulse_response = (
-            0.12935
-            + 0.21898 * np.exp(-time / 0.034569)
-            + 0.17003 * np.exp(-time / 0.26936)
-            + 0.24071 * np.exp(-time / 0.96083)
-            + 0.24093 * np.exp(-time / 4.9792)
-        )
-    else:
-        pulse_response = (
-            0.022936
-            + 0.24278 * np.exp(-time / 1.2679)
-            + 0.13963 * np.exp(-time / 5.2528)
-            + 0.089318 * np.exp(-time / 18.601)
-            + 0.03782 * np.exp(-time / 68.736)
-            + 0.035549 * np.exp(-time / 232.3)
-        )
-    return pulse_response
-
-
-def _rb_function(it, idtm=24):
-    """
-    Calculate biotic decay function
-
-    Calculate biotic decay function
-    time is the year index*idtm + i, i.e. the month number
-
-    Parameters
-    ----------
-    it : int
-      is the time index, there are idtm time points per yer
-    idtm : int
-        Number of time points per year, default is 24
-
-    Returns
-    -------
-    float
-        The biotic decay function value for this time
-    """
-    time = it / idtm
-    biotic_decay = (
-        0.70211 * np.exp(-0.35 * time)
-        + 13.4141e-3 * np.exp(-time / 20.0)
-        - 0.71846 * np.exp(-55 * time / 120.0)
-        + 2.9323e-3 * np.exp(-time / 100.0)
-    )
-    return biotic_decay
 
 
 def take_out_missing(pamset):
@@ -169,14 +102,22 @@ class CarbonCycleModel:
         ----------
             pamset : dict
         """
-        pamset = take_out_missing(pamset.copy())
-        self.pamset = cut_and_check_pamset(
-            {"idtm": 24, "nystart": 1750},
+        pamset = cut_and_check_pamset(
+            {
+                "idtm": 24,
+                "nystart": 1750,
+                "nyend": 2100,
+                "beta_f": 0.287,
+                "mixed_carbon": 75.0,
+            },
             pamset,
-            used={"rs_function": _rs_function, "rb_function": _rb_function},
+            used={"rs_function": "missing", "rb_function": "missing"},
         )
+        self.pamset = take_out_missing(pamset.copy())
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
-        self.reset_co2_hold()
+        self.reset_co2_hold(
+            beta_f=pamset["beta_f"], mixed_carbon=pamset["mixed_carbon"]
+        )
         self.precalc_r_functions()
 
     def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0):
@@ -259,17 +200,40 @@ class CarbonCycleModel:
             (2, self.pamset["idtm"] * self.pamset["years_tot"])
         )  # if speedup, get this to reflect number of years
         if "rs_function" not in self.pamset:
-            self.pamset["rs_function"] = _rs_function
+            # self.pamset["rs_function"] = rs_function_array
+            self.r_functions[0, :] = rs_function_array(
+                np.arange(self.pamset["idtm"] * self.pamset["years_tot"]),
+                self.pamset["idtm"],
+            )
+        else:
+            coeffs, timscales = _check_array_consistency(
+                self.pamset["rs_function"]["coeffs"],
+                self.pamset["rs_function"]["timescales"],
+                for_rs=True,
+            )
+            self.r_functions[0, :] = rs_function2(
+                np.arange(self.pamset["idtm"] * self.pamset["years_tot"]),
+                rs_coef=coeffs,
+                rs_tim=timscales,
+                idtm=self.pamset["idtm"],
+            )
+
         if "rb_function" not in self.pamset:
-            self.pamset["rb_function"] = _rb_function
-        self.r_functions[0, :] = [
-            self.pamset["rs_function"](it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * self.pamset["years_tot"])
-        ]
-        self.r_functions[1, :] = [
-            self.pamset["rb_function"](it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * self.pamset["years_tot"])
-        ]
+            self.r_functions[1, :] = rb_function(
+                np.arange(self.pamset["idtm"] * self.pamset["years_tot"]),
+                self.pamset["idtm"],
+            )
+        else:
+            coeffs, timscales = _check_array_consistency(
+                self.pamset["rb_function"]["coeffs"],
+                self.pamset["rb_function"]["timescales"],
+            )
+            self.r_functions[1, :] = rb_function2(
+                np.arange(self.pamset["idtm"] * self.pamset["years_tot"]),
+                rb_coef=coeffs,
+                rb_tim=timscales,
+                idtm=self.pamset["idtm"],
+            )
 
     def co2em2conc(self, yr, em_co2_common):
         """
