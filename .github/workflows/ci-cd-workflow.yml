@@ -103,7 +103,7 @@ jobs:
     - name: Test notebooks strictly
       if: matrix.python-version == 3.8
       run: |
-          pytest notebooks -r a --nbval --sanitize-with tests/notebook-tests.cfg --no-cov
+          pytest notebooks -r a --nbval --nbval-sanitize-with tests/notebook-tests.cfg --no-cov
 
 
   test-install:
