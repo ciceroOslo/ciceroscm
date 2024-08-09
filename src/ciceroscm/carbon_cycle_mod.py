@@ -88,6 +88,27 @@ def calculate_airborne_fraction(em_timeseries, conc_timeseries):
     )
     return airborne_fraction
 
+def linear_fnpp_from_temp(fnpp_temp_coeff=0, dtemp=0):
+    """
+    Linear temperature dependence function for fnpp
+
+    Parameters
+    ----------
+    fnpp_temp_coeff : float
+        Coefficient of linear growth / decline of
+        fnpp with temperature change
+    dtemp : float
+        Degrees of temperature since start of run
+    
+    Returns
+    -------
+    float
+        fnpp at given temperature for assumed linear
+        relationship
+    """
+
+    return 60 + fnpp_temp_coeff*dtemp
+
 
 class CarbonCycleModel:
     """
@@ -109,6 +130,7 @@ class CarbonCycleModel:
                 "nyend": 2100,
                 "beta_f": 0.287,
                 "mixed_carbon": 75.0,
+                "fnpp_temp_coeff": 0
             },
             pamset,
             used={"rs_function": "missing", "rb_function": "missing"},
@@ -116,11 +138,11 @@ class CarbonCycleModel:
         self.pamset = take_out_missing(pamset.copy())
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
         self.reset_co2_hold(
-            beta_f=pamset["beta_f"], mixed_carbon=pamset["mixed_carbon"]
+            beta_f=pamset["beta_f"], mixed_carbon=pamset["mixed_carbon"], fnpp_temp_coeff=pamset["fnpp_temp_coeff"]      
         )
         self.precalc_r_functions()
 
-    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0):
+    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0, fnpp_temp_coeff= 0):
         """
         Reset values of CO2_hold for new run
 
@@ -139,6 +161,7 @@ class CarbonCycleModel:
         }
         self.pamset["beta_f"] = beta_f
         self.pamset["mixed_carbon"] = mixed_carbon
+        self.pamset["fnpp_temp_coeff"] = fnpp_temp_coeff
 
     def _set_co2_hold(
         self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -235,7 +258,7 @@ class CarbonCycleModel:
                 idtm=self.pamset["idtm"],
             )
 
-    def co2em2conc(self, yr, em_co2_common):
+    def co2em2conc(self, yr, em_co2_common, dtemp = 0):
         """
         Calculate co2 concentrations from emissions
 
@@ -250,6 +273,10 @@ class CarbonCycleModel:
         em_co2_common : float
              Sum of CO2 emissions from fossil fuels, land use change and natural emissions
              for the year in question
+        fnpp : float
+            Global terrestrial NPP, classically static at 60 PgC / yr
+            but can be sent as a parameter to give temperature dependence
+            for biosphere production
 
         Returns
         -------
@@ -261,6 +288,7 @@ class CarbonCycleModel:
 
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
+        fnpp = linear_fnpp_from_temp(fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"], dtemp=dtemp)
         # Monthloop:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
@@ -270,7 +298,7 @@ class CarbonCycleModel:
             if it > 0:
                 # Net primary production in timestep
                 self.co2_hold["dfnpp"][it] = (
-                    60 * self.pamset["beta_f"] * np.log(self.co2_hold["xCO2"] / 278.0)
+                    fnpp * self.pamset["beta_f"] * np.log(self.co2_hold["xCO2"] / 278.0)
                 )
                 # Decay from previous primary production
                 sumf = float(
@@ -439,7 +467,7 @@ class CarbonCycleModel:
         """
         if conc_run and co2_conc_series is not None:
             self.back_calculate_emissions(co2_conc_series)
-        ocean_carbon_flux = (
+        ocean_carbon_flux = linear_fnpp_from_temp(
             np.array(
                 [
                     np.sum(

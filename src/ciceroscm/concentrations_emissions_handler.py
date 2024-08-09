@@ -36,7 +36,9 @@ def check_pamset(pamset):
           of the run. Values that begin with q are concetration
           or emissions to forcing factors, beta_f is the
           carbon cycle fertilisation factor, mixed_carbon is
-          the depth of the mixed layer in the carbon cycle model
+          the depth of the mixed layer in the carbon cycle model,
+          fnpp_temp_coeff is a linear coefficient
+          for the temperature dependence of fnpp
           and ref_yr is the reference year for calculations
 
     Returns
@@ -55,6 +57,8 @@ def check_pamset(pamset):
         "ref_yr": 2010,
         "beta_f": 0.287,
         "mixed_carbon": 75.0,
+        "fnpp_temp_coeff": 0.0
+
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -225,7 +229,7 @@ class ConcentrationsEmissionsHandler:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
             self.carbon_cycle.reset_co2_hold(
-                self.pamset["beta_f"], self.pamset["mixed_carbon"]
+                self.pamset["beta_f"], self.pamset["mixed_carbon"], self.pamset["fnpp_temp_coeff"]
             )
         years_tot = len(self.years)
         self.conc = {}
@@ -551,7 +555,7 @@ class ConcentrationsEmissionsHandler:
         forc_sh = forc_sh + rf_sun
         return tot_forc, forc_nh, forc_sh
 
-    def emi2conc(self, yr):
+    def emi2conc(self, yr, dtemp= 0):
         """
         Calculate concentrations from emissions
 
@@ -585,6 +589,7 @@ class ConcentrationsEmissionsHandler:
                 self.emis["CO2_FF"][yr]
                 + self.emis["CO2_AFOLU"][yr]
                 + self.df_gas["NAT_EM"]["CO2"],
+                dtemp=dtemp
             )
             self.fill_one_row_conc(yr, avoid=["CO2"])
             return
