@@ -6,10 +6,11 @@ from ciceroscm import CICEROSCM, carbon_cycle_mod
 
 
 def test_linear_fnpp_from_temp():
-    assert carbon_cycle_mod.linear_fnpp_from_temp() == 60.
-    assert carbon_cycle_mod.linear_fnpp_from_temp(fnpp_temp_coeff=1) == 60.
-    assert carbon_cycle_mod.linear_fnpp_from_temp(dtemp=1) == 60.
-    assert carbon_cycle_mod.linear_fnpp_from_temp(fnpp_temp_coeff=2, dtemp=3) == 66.
+    assert carbon_cycle_mod.linear_fnpp_from_temp() == 60.0
+    assert carbon_cycle_mod.linear_fnpp_from_temp(fnpp_temp_coeff=1) == 60.0
+    assert carbon_cycle_mod.linear_fnpp_from_temp(dtemp=1) == 60.0
+    assert carbon_cycle_mod.linear_fnpp_from_temp(fnpp_temp_coeff=2, dtemp=3) == 66.0
+
 
 def test_default_pamset_values(test_data_dir):
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
@@ -29,7 +30,7 @@ def test_default_pamset_values(test_data_dir):
     ccmod_inside = cscm.ce_handler.carbon_cycle
     assert ccmod_inside.pamset["beta_f"] == 0.287
     assert ccmod_inside.pamset["mixed_carbon"] == 75.0
-    assert ccmod_inside.pamset["fnpp_temp_coeff"] == 0    
+    assert ccmod_inside.pamset["fnpp_temp_coeff"] == 0
 
 
 def test_get_biosphere_carbon_flux():

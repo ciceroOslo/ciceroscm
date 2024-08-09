@@ -255,6 +255,7 @@ class CICEROSCM:
         self.initialise_output_arrays()
         # Setting up UDM
         udm = UpwellingDiffusionModel(pamset_udm)
+        values = None
         if not self.cfg["rf_run"]:
             pamset_emiconc["emstart"] = self.cfg["emstart"]
             pamset_emiconc["nystart"] = self.cfg["nystart"]
@@ -262,7 +263,7 @@ class CICEROSCM:
             self.ce_handler.reset_with_new_pams(pamset_emiconc)
         for yr in range(self.cfg["nystart"], self.cfg["nyend"] + 1):
             if not self.cfg["rf_run"]:
-                if yr > self.cfg["nystart"]:
+                if values is not None:
                     self.ce_handler.emi2conc(yr, dtemp=values["dtemp"])
                 else:
                     self.ce_handler.emi2conc(yr)
