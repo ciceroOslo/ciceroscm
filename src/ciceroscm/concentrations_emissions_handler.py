@@ -228,9 +228,9 @@ class ConcentrationsEmissionsHandler:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
             self.carbon_cycle.reset_co2_hold(
-                self.pamset["beta_f"],
-                self.pamset["mixed_carbon"],
-                self.pamset["fnpp_temp_coeff"],
+                beta_f=self.pamset["beta_f"],
+                mixed_carbon=self.pamset["mixed_carbon"],
+                fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"],
             )
         years_tot = len(self.years)
         self.conc = {}
