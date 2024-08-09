@@ -262,7 +262,10 @@ class CICEROSCM:
             self.ce_handler.reset_with_new_pams(pamset_emiconc)
         for yr in range(self.cfg["nystart"], self.cfg["nyend"] + 1):
             if not self.cfg["rf_run"]:
-                self.ce_handler.emi2conc(yr)
+                if yr > self.cfg["nystart"]:
+                    self.ce_handler.emi2conc(yr, dtemp=values["dtemp"])
+                else:
+                    self.ce_handler.emi2conc(yr)
                 forc, fn, fs = self.ce_handler.conc2forc(
                     yr,
                     self.rf_luc.iloc[yr - self.cfg["nystart"], 0],

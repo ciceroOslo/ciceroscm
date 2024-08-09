@@ -216,6 +216,9 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     )
     print(carbon_sum[:5])
     print(np.cumsum(cscm.results["carbon cycle"]["Emissions"])[:5])
+    print(np.cumsum(cscm.results["carbon cycle"]["Airborne fraction CO2"])[:5])
+    print(cscm.results["carbon cycle"]["Biosphere carbon flux"][:5])
+    print(cscm.results["carbon cycle"]["Ocean carbon flux"][:5])
     print(carbon_sum[-5:])
     print(np.cumsum(cscm.results["carbon cycle"]["Emissions"])[-5:])
     # TODO: Why isn't this closer?

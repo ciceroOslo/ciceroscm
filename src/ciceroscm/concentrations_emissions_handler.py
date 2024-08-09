@@ -569,6 +569,8 @@ class ConcentrationsEmissionsHandler:
         ----------
         yr : int
           Year for which to calculate
+        dtemp : float
+            temperature change from start of run at previous timestep
         """
         # Do per tracer emissions to concentrations, update concentrations df
         # NBNB! Remember to move calculation of  Trop_O3 concentration

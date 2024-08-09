@@ -273,10 +273,8 @@ class CarbonCycleModel:
         em_co2_common : float
              Sum of CO2 emissions from fossil fuels, land use change and natural emissions
              for the year in question
-        fnpp : float
-            Global terrestrial NPP, classically static at 60 PgC / yr
-            but can be sent as a parameter to give temperature dependence
-            for biosphere production
+        dtemp : float
+            temperature change from start of run at previous timestep
 
         Returns
         -------
