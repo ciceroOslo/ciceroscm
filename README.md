@@ -1,3 +1,8 @@
+## This is the version of CICERO-SCM used to provide ensemble input to flat10-MIP.
+Scripts to calibrate CICERO-SCM based on historical emissions  and temperature are stored in 'notebooks/calibration pipeline'
+The series of scripts runs an initial perturbed ensemble, builds an emulator of response metrics and calibrates the model.
+Finally, '6 - run flat10.ipynb' runs the flat10 experiments which are used in the Flat10MIP description paper.
+
 # ciceroscm
 Python version of the CICERO-SCM simple climate model/emulator
 
