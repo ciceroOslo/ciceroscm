@@ -168,7 +168,7 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     res = pd.read_csv(file_results, delim_whitespace=True)
     np.testing.assert_equal(res.Year.to_numpy(), exp_index)
 
-    cscm._run({"results_as_dict": True})
+    cscm._run({"results_as_dict": True, "carbon_cycle_outputs": True})
     expected_keys = [
         "emissions",
         "concentrations",
@@ -187,12 +187,39 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "dT_glob_sea",
         "dT_NH_sea",
         "dT_SHsea",
+        "Total_forcing",
         "Solar_forcing",
         "Volcanic_forcing_NH",
         "Volcanic_forcing_SH",
+        "carbon cycle",
     ]
     for key in expected_keys:
         assert key in cscm.results
+    for key in cscm.results.keys():
+        assert key in expected_keys
+    assert len(cscm.results["carbon cycle"]["Airborne fraction CO2"]) == len(
+        cscm.ce_handler.years
+    )
+    assert len(cscm.results["carbon cycle"]["Biosphere carbon flux"]) == len(
+        cscm.ce_handler.years
+    )
+    assert len(cscm.results["carbon cycle"]["Ocean carbon flux"]) == len(
+        cscm.ce_handler.years
+    )
+    carbon_sum = (
+        np.cumsum(
+            cscm.results["carbon cycle"]["Airborne fraction CO2"]
+            * cscm.results["carbon cycle"]["Emissions"]
+        )
+        + cscm.results["carbon cycle"]["Biosphere carbon flux"].values
+        + cscm.results["carbon cycle"]["Ocean carbon flux"].values
+    )
+    print(carbon_sum[-5:])
+    print(np.cumsum(cscm.results["carbon cycle"]["Emissions"])[-5:])
+    # TODO: Why isn't this closer?
+    assert np.allclose(
+        carbon_sum, np.cumsum(cscm.results["carbon cycle"]["Emissions"]), rtol=5e-1
+    )
     # Put this in again, find out what is happening with CF4
     # check_output(
     #    outdir_save,

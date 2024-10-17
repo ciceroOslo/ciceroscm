@@ -16,16 +16,33 @@ The changes listed in this file are categorised as follows:
 
 ## [Unreleased]
 
+### Changed
+- Moved carbon cycle functionality out of concentrations_emissions_handler.py to separate module carbon_cycle_mod.py
+- Changed methodology for parametrised decay functions for biotic decay (rb_function) and mixed layer pulse response rs_function, imposing a few more consistency criteria on them and makeing them changable by a dictionary for each with keys "coeffs" and "timescales" with values that should be lists or np.arrays of coefficient and timescale values 
+
+### Added 
+- Functionality to back calculate CO2 emissions from concentrations
+- Functionality to calculate carbon fluxes to ocean and land
+- Functionality to calculate airborne fraction
+- Functionality to output new carbon cycle information
+- Changeable parameter for the depth of the mixed_layer ocean seen by the carbon cycle
+
+
 ### Fixed
 
 - Removed `jupyter nbextension` from `Makefile` causing install errors
 - Locked numpy in requirements to below version 2 to work with scmdata for now
 - Fix error in flat N2O assumption in natural precalculate_natural_emissions.py script
 - Change logging messages for misisng parameters from warning to info
+- Fix bug in file cutting for read_inputfile in input_handler
+
+## [Versions 1.1.1 and v1.1.0]
   
 ### Added
 
+
 - Support for flat natural emissions for NO2 and CH4 from gaspamfile as defaults
+- Update script to make natural emissions for NO2 and CH4 using ODE solution
 - Updates to default vulcanoe and solar forcing timeseries
 - Rationalising _band implementation using library for speed and readibility
 - Clearing out unused density realated methods
@@ -34,3 +51,5 @@ The changes listed in this file are categorised as follows:
 - Config distributions support to make parameter distributions
 - Distrobution runner to run over distributions in parallel
 - Calibrator to make calibrated set of configurations based on calibration data
+- Made automatic plots more polished looking
+- Taking out unused parts from gaspam-file

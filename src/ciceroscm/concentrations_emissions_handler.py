@@ -10,6 +10,7 @@ import pandas as pd
 
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
+from .carbon_cycle_mod import CarbonCycleModel, calculate_airborne_fraction
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -19,75 +20,6 @@ from .perturbations import (
 from .pub_utils import make_cl_and_br_dictionaries
 
 LOGGER = logging.getLogger(__name__)
-
-
-def _rs_function(it, idtm=24):
-    """
-    Calculate pulse response function for mixed layer
-
-    Calculate pulse response function for mixed layer
-    time is the year index*idtm + i, i.e. the month number
-
-    Parameters
-    ----------
-    it : int
-      is the time index, there are idtm time points per yer
-    idtm : int
-        Number of time points per year, default is 24
-
-    Returns
-    -------
-    float
-         The pulse_response function for this time
-    """
-    time = it / idtm
-    if time < 2.0:
-        pulse_response = (
-            0.12935
-            + 0.21898 * np.exp(-time / 0.034569)
-            + 0.17003 * np.exp(-time / 0.26936)
-            + 0.24071 * np.exp(-time / 0.96083)
-            + 0.24093 * np.exp(-time / 4.9792)
-        )
-    else:
-        pulse_response = (
-            0.022936
-            + 0.24278 * np.exp(-time / 1.2679)
-            + 0.13963 * np.exp(-time / 5.2528)
-            + 0.089318 * np.exp(-time / 18.601)
-            + 0.03782 * np.exp(-time / 68.736)
-            + 0.035549 * np.exp(-time / 232.3)
-        )
-    return pulse_response
-
-
-def _rb_function(it, idtm=24):
-    """
-    Calculate biotic decay function
-
-    Calculate biotic decay function
-    time is the year index*idtm + i, i.e. the month number
-
-    Parameters
-    ----------
-    it : int
-      is the time index, there are idtm time points per yer
-    idtm : int
-        Number of time points per year, default is 24
-
-    Returns
-    -------
-    float
-        The biotic decay function value for this time
-    """
-    time = it / idtm
-    biotic_decay = (
-        0.70211 * np.exp(-0.35 * time)
-        + 13.4141e-3 * np.exp(-time / 20.0)
-        - 0.71846 * np.exp(-55 * time / 120.0)
-        + 2.9323e-3 * np.exp(-time / 100.0)
-    )
-    return biotic_decay
 
 
 def check_pamset(pamset):
@@ -103,8 +35,9 @@ def check_pamset(pamset):
           Dictionary of parameters to define the physics
           of the run. Values that begin with q are concetration
           or emissions to forcing factors, beta_f is the
-          carbon cycle fertilisation factor, and ref_yr is
-          the reference year for calculations
+          carbon cycle fertilisation factor, mixed_carbon is
+          the depth of the mixed layer in the carbon cycle model
+          and ref_yr is the reference year for calculations
 
     Returns
     -------
@@ -121,6 +54,7 @@ def check_pamset(pamset):
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
         "beta_f": 0.287,
+        "mixed_carbon": 75.0,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -252,7 +186,7 @@ class ConcentrationsEmissionsHandler:
         self.pamset = cut_and_check_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
-            used={"rs_function": _rs_function, "rb_function": _rb_function},
+            used={"rs_function": "missing", "rb_function": "missing"},
             cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
@@ -263,10 +197,10 @@ class ConcentrationsEmissionsHandler:
             perturb_emissions(input_handler, self.emis)
         if input_handler.optional_pam("perturb_forc"):
             self.pamset["forc_pert"] = ForcingPerturbation(input_handler, self.years[0])
-        self.precalc_r_functions()
         self.pamset["cl_dict"], self.pamset["br_dict"] = make_cl_and_br_dictionaries(
             self.df_gas.index
         )
+        self.carbon_cycle = CarbonCycleModel(self.pamset)
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
 
@@ -290,6 +224,9 @@ class ConcentrationsEmissionsHandler:
         if preexisting:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
+            self.carbon_cycle.reset_co2_hold(
+                self.pamset["beta_f"], self.pamset["mixed_carbon"]
+            )
         years_tot = len(self.years)
         self.conc = {}
         self.forc = {}
@@ -298,45 +235,6 @@ class ConcentrationsEmissionsHandler:
                 self.conc[tracer] = {}
                 self.forc[tracer] = np.zeros(years_tot)
         self.forc["Total_forcing"] = np.zeros(years_tot)
-        self.co2_hold = {
-            "yCO2": 0.0,
-            "xCO2": 278.0,
-            "sCO2": np.zeros(self.pamset["idtm"] * years_tot),
-            "emCO2_prev": 0.0,
-            "dfnpp": np.zeros(self.pamset["idtm"] * years_tot),
-            "ss1": 0.0,
-            "sums": 0.0,
-        }
-
-    def precalc_r_functions(self):
-        """
-        Precalculate decay functions either
-        sent in pamset or from default
-
-        If functions are sent with keywords rs_function
-        or rb_function in the pamset, these must take
-        time and number of steps per year as input
-
-        Parameters
-        ----------
-        pamset
-        """
-        years_tot = len(self.years)
-        self.r_functions = np.empty(
-            (2, self.pamset["idtm"] * years_tot)
-        )  # if speedup, get this to reflect number of years
-        if "rs_function" not in self.pamset:
-            self.pamset["rs_function"] = _rs_function
-        if "rb_function" not in self.pamset:
-            self.pamset["rb_function"] = _rb_function
-        self.r_functions[0, :] = [
-            self.pamset["rs_function"](it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * years_tot)
-        ]
-        self.r_functions[1, :] = [
-            self.pamset["rb_function"](it, self.pamset["idtm"])
-            for it in range(self.pamset["idtm"] * years_tot)
-        ]
 
     def calculate_strat_quantities(self, yr):
         """
@@ -449,7 +347,6 @@ class ConcentrationsEmissionsHandler:
         forc_nh, forc_sh = calculate_hemispheric_forcing(
             "three_main", tot_forc, 0.0, 0.0
         )
-
         return tot_forc, forc_nh, forc_sh
 
     def tropospheric_ozone_forcing(self, yr):
@@ -478,7 +375,7 @@ class ConcentrationsEmissionsHandler:
         yr_emstart = emstart - yr_0
         yr_ix = yr - yr_0
         tracer = "TROP_O3"
-        if yr_ix < yr_emstart:
+        if yr_ix < yr_emstart or self.pamset["conc_run"]:
             # Uses change in CO2_FF emissions
             if self.emis["CO2_FF"][self.pamset["ref_yr"]] != self.emis["CO2_FF"][yr_0]:
                 q = (
@@ -635,7 +532,6 @@ class ConcentrationsEmissionsHandler:
             )
             tot_forc = tot_forc + q
             # print("Forcer: %s, tot_forc: %f, FN: %f, FS: %f, q: %f"%(tracer, tot_forc, forc_nh, forc_sh, q)
-
         # Adding forcing perturbations if they exist:
         if "forc_pert" in self.pamset:
             if self.pamset["forc_pert"].check_if_year_in_pert(yr):
@@ -653,7 +549,6 @@ class ConcentrationsEmissionsHandler:
         self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun
-
         return tot_forc, forc_nh, forc_sh
 
     def emi2conc(self, yr):
@@ -685,7 +580,12 @@ class ConcentrationsEmissionsHandler:
             return
         # Before emissions start
         if yr < self.pamset["emstart"]:
-            self.co2em2conc(yr)
+            self.conc["CO2"][yr] = self.carbon_cycle.co2em2conc(
+                yr,
+                self.emis["CO2_FF"][yr]
+                + self.emis["CO2_AFOLU"][yr]
+                + self.df_gas["NAT_EM"]["CO2"],
+            )
             self.fill_one_row_conc(yr, avoid=["CO2"])
             return
         self.add_row_of_zeros_conc(yr)
@@ -696,7 +596,12 @@ class ConcentrationsEmissionsHandler:
                 # Forcing calculated from emissions
                 continue
             if tracer == "CO2":
-                self.co2em2conc(yr)
+                self.conc["CO2"][yr] = self.carbon_cycle.co2em2conc(
+                    yr,
+                    self.emis["CO2_FF"][yr]
+                    + self.emis["CO2_AFOLU"][yr]
+                    + self.df_gas["NAT_EM"]["CO2"],
+                )
                 continue
             if yr < self.pamset["emstart"]:
                 self.fill_one_row_conc(yr)
@@ -754,6 +659,7 @@ class ConcentrationsEmissionsHandler:
                 - 0.000315 * (self.emis["NMVOC"][yr] - self.emis["NMVOC"][2000])
             )
             q = q * (dln_oh + 1)
+
         elif self.pamset["lifetime_mode"] == "CONSTANT_12":
             q = 1.0 / 12.0
         elif self.pamset["lifetime_mode"] == "WIGLEY":
@@ -762,106 +668,6 @@ class ConcentrationsEmissionsHandler:
         q = q + 1.0 / self.df_gas["TAU2"]["CH4"] + 1.0 / self.df_gas["TAU3"]["CH4"]
 
         return q
-
-    def co2em2conc(self, yr):  # pylint: disable=too-many-locals
-        """
-        Calculate co2 concentrations from emissions
-
-        Method to calculate co2 concentrations from emissions
-        Implementing a rudimentary carbon cycle which loops over
-        idtm (usually 24) timesteps a year
-
-        Parameters
-        ----------
-        yr : int
-          Year for which to calculate
-        """
-        # Area of the ocean (m^2)
-        ocean_area = 3.62e14
-
-        # Gas exchange coefficient (air <--> ocean) (yr^-1*m^-2)
-        coeff = 1.0 / (ocean_area * 9.06)
-
-        # TIMESTEP (YR)
-        dt = 1.0 / self.pamset["idtm"]
-
-        # Conversion factor ppm/kg --> umol*/m3
-        conv_factor = 1.722e17
-
-        # USING MIXED LAYER DEPTH = 75 metres
-        mixed_layer_depth = 75.0
-
-        cc1 = dt * ocean_area * coeff / (1 + dt * ocean_area * coeff / 2.0)
-        yr_ix = yr - self.years[0]
-        # Monthloop:
-        em_co2_common = (
-            self.emis["CO2_FF"][yr]
-            + self.emis["CO2_AFOLU"][yr]
-            + self.df_gas["NAT_EM"]["CO2"]
-        )
-        for i in range(self.pamset["idtm"]):
-            it = yr_ix * self.pamset["idtm"] + i
-            sumf = 0.0
-
-            # Net emissions, including biogenic fertilization effects
-            if it > 0:
-                self.co2_hold["dfnpp"][it] = (
-                    60 * self.pamset["beta_f"] * np.log(self.co2_hold["xCO2"] / 278.0)
-                )
-            if it > 0:
-                sumf = float(
-                    np.dot(
-                        self.co2_hold["dfnpp"][1:it],
-                        np.flip(self.r_functions[1, : it - 1]),
-                    )
-                )
-
-            ffer = self.co2_hold["dfnpp"][it] - dt * sumf
-            em_co2 = (em_co2_common - ffer) / 2.123
-
-            if it == 0:  # pylint: disable=compare-to-zero
-                self.co2_hold["ss1"] = 0.5 * em_co2 / (ocean_area * coeff)
-                ss2 = self.co2_hold["ss1"]
-                self.co2_hold["sums"] = 0.0
-            else:
-                ss2 = 0.5 * em_co2 / (ocean_area * coeff) - self.co2_hold["yCO2"] / (
-                    dt * ocean_area * coeff
-                )
-                self.co2_hold["sums"] = (
-                    self.co2_hold["sums"]
-                    + self.co2_hold["emCO2_prev"] / (ocean_area * coeff)
-                    - self.co2_hold["sCO2"][it - 1]
-                )
-            self.co2_hold["sCO2"][it] = cc1 * (
-                self.co2_hold["sums"] + self.co2_hold["ss1"] + ss2
-            )
-            self.co2_hold["emCO2_prev"] = em_co2
-            if it > 0:
-                sumz = np.dot(
-                    self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
-                )
-            else:
-                sumz = 0.0
-
-            z_co2 = (
-                conv_factor
-                * coeff
-                * dt
-                / mixed_layer_depth
-                * (sumz + 0.5 * self.co2_hold["sCO2"][it])
-            )
-            self.co2_hold["yCO2"] = (
-                1.3021 * z_co2
-                + 3.7929e-3 * (z_co2**2)
-                + 9.1193e-6 * (z_co2**3)
-                + 1.488e-8 * (z_co2**4)
-                + 1.2425e-10 * (z_co2**5)
-            )
-            self.co2_hold["xCO2"] = (
-                self.co2_hold["sCO2"][it] + self.co2_hold["yCO2"] + 278.0
-            )
-            # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
-        self.conc["CO2"][yr] = self.co2_hold["xCO2"]
 
     def fill_one_row_conc(self, yr, avoid=None):
         """
@@ -982,9 +788,33 @@ class ConcentrationsEmissionsHandler:
             plot_output2("emis", df_emis, outdir, self.df_gas["EM_UNIT"])
             plot_output2("conc", df_conc, outdir, self.df_gas["CONC_UNIT"])
 
-    def add_results_to_dict(self):
+        if "carbon_cycle_outputs" in cfg:
+            # Adding carbon cycle outputs here
+            # Typically back_calculated emissions for conc_run
+            # Airborne fraction
+            # biosphere carbon flux
+            # Ocean carbon flux
+            # Yearly fluxes?
+            df_carbon_cycle = self.get_carbon_cycle_data()
+
+            df_carbon_cycle.to_csc(
+                os.path.join(outdir, f"{filename_start}_carbon.txt"),
+                sep="\t",
+                index=False,
+                float_format="%.5e",
+            )
+
+    def add_results_to_dict(self, cfg):
         """
         Adding results to results dictionary
+
+        Parameters
+        ----------
+        cfg : dict
+            Configurations to define where to put output
+            files and what prefix to have for file name
+            At the moment this method only needs to know
+            if it's supposed to include carbon cycle outputs
 
         Returns
         -------
@@ -1017,4 +847,41 @@ class ConcentrationsEmissionsHandler:
         results["emissions"] = df_emis
         results["concentrations"] = df_conc
         results["forcing"] = df_forc
+
+        if "carbon_cycle_outputs" in cfg:
+            results["carbon cycle"] = self.get_carbon_cycle_data()
         return results
+
+    def get_carbon_cycle_data(self):
+        """
+        Get carbon cycle data and put in dataframe for output
+
+        Returns
+        -------
+            Pandas.DataFrame
+            With carbon cycle inputs including Airborne fraction
+            backcalculated emissions (in the case of concenration runs)
+            Biosphere carbon flux and ocean carbon flux
+        """
+        conc_series = np.array([v for k, v in self.conc["CO2"].items()])
+
+        if self.pamset["conc_run"]:
+            em_series = self.carbon_cycle.back_calculate_emissions(conc_series)
+        else:
+            em_series = (
+                self.emis["CO2_FF"][self.years].values
+                + self.emis["CO2_AFOLU"][self.years].values
+            )
+        airborne = calculate_airborne_fraction(em_series, conc_series)
+        df_carbon = pd.DataFrame(
+            data={
+                "Emissions": em_series,
+                "Airborne fraction CO2": airborne,
+                "Biosphere carbon flux": self.carbon_cycle.get_biosphere_carbon_flux(
+                    conc_run=self.pamset["conc_run"]
+                ),
+                "Ocean carbon flux": self.carbon_cycle.get_ocean_carbon_flux(),
+            },
+            index=self.years,
+        )
+        return df_carbon

@@ -17,7 +17,6 @@ def test_config_distro_methods():
             "qh2o_ch4": 0.091915,
         },
     )
-
     assert np.array_equal(
         config_full.prior,
         np.array(
@@ -31,6 +30,8 @@ def test_config_distro_methods():
                 [25, 125],
                 [0.1, 0.2],
                 [-0.1, -0.06],
+                [0.110, 0.465],
+                [25, 125],
             ]
         ),
     )
@@ -44,6 +45,8 @@ def test_config_distro_methods():
         "mixed",
         "qbc",
         "qoc",
+        "beta_f",
+        "mixed_carbon",
     ]
 
     num_latin = 100
