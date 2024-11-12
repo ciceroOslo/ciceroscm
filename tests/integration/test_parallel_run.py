@@ -62,20 +62,17 @@ def test_ciceroscm_run_parallel_many_scenarios(test_data_dir):
         scenarios.append(new_scen)
     output_variables = ["Heat Content|Ocean", "Surface Air Temperature Change"]
     results = run_ciceroscm_parallel(scenarios, cfgs, output_variables)
-    print(results)
-    assert set(results.get_unique_meta("variable")) == set(
+    assert set(results["variable"].unique()) == set(
         ["Heat Content|Ocean", "Surface Air Temperature Change"]
     )
-    assert set(results.get_unique_meta("scenario")) == set(
+    assert set(results["scenario"].unique()) == set(
         [f"ssp245-plus-{d}-percent" for d in range(20)]
     )
-    test_length = results.filter(
-        variable="Surface Air Temperature Change",
-        scenario="ssp245-plus-1-percent",
-        run_id="13555_old_NR_rounded",
+    test_length = results.query(
+        'variable=="Surface Air Temperature Change" & scenario=="ssp245-plus-1-percent" & run_id=="13555_old_NR_rounded"'
     )
-    test_not_empty = results.filter(year=2000)
-    assert len(test_length.values[0]) == 151
+    test_not_empty = results[2000]
+    assert len(test_length.values[0]) == 158
     assert test_not_empty.values.any()
 
 
@@ -255,7 +252,7 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
     output_variables = ["Heat Content|Ocean", "Surface Air Temperature Change"]
     results = run_ciceroscm_parallel(scenarios, cfgs, output_variables)
     print(results)
-    assert set(results.get_unique_meta("run_id")) == set(
+    assert set(results["run_id"].unique()) == set(
         [
             "13555_old_NR_rounded",
             "13555_old_NR_improved",
@@ -336,7 +333,7 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
     output_variables = ["Heat Content|Ocean", "Surface Air Temperature Change"]
     results = run_ciceroscm_parallel(scenarios, cfgs, output_variables)
     print(results)
-    assert set(results.get_unique_meta("scenario")) == set(
+    assert set(results["scenario"].unique()) == set(
         [
             "forc_data_test_forcing_hemisplit",
             "forc_data_CO2_1pros",
@@ -345,9 +342,7 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
             "forc_data_test_forcing",
         ]
     )
-    test_length = results.filter(
-        variable="Surface Air Temperature Change",
-        scenario="forc_data_zero_forcing",
-        run_id="10496_old_NR_rounded",
+    test_length = results.query(
+        'variable=="Surface Air Temperature Change" & scenario=="forc_data_zero_forcing" & run_id=="10496_old_NR_rounded"'
     )
-    assert len(test_length.values[0]) == 351
+    assert len(test_length.values[0]) == 358
