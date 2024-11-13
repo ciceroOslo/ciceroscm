@@ -7,8 +7,6 @@ from concurrent.futures import ProcessPoolExecutor
 from itertools import product
 
 import pandas as pd
-
-# import scmdata
 from openscm_runner.adapters.ciceroscm_py_adapter.make_scenario_data import (
     SCENARIODATAGETTER,
 )
