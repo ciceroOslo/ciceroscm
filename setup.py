@@ -24,7 +24,6 @@ REQUIREMENTS = [
     "openscm-units>=0.5.0",
     "pyam-iamc",
     "python-dotenv",
-    "scmdata>=0.7.4",
     "tqdm",
     "matplotlib>=3.4",
     "openscm_runner",
