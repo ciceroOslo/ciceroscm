@@ -7,7 +7,6 @@ from concurrent.futures import ProcessPoolExecutor
 from itertools import product
 
 import pandas as pd
-import scmdata
 from openscm_runner.adapters.ciceroscm_py_adapter.make_scenario_data import (
     SCENARIODATAGETTER,
 )
@@ -114,7 +113,8 @@ def run_ciceroscm_parallel(scendata, cfgs, output_vars, max_workers=4):
         )
 
     LOGGER.info("Appending CICERO-SCM results into a single ScmRun")
-    result = scmdata.run_append([r for r in result if r is not None])
+
+    result = pd.concat([r for r in result if r is not None])
 
     return result
 
@@ -185,19 +185,25 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
                 )
                 if isinstance(years, pd.DataFrame) and years.empty:  # pragma: no cover
                     continue  # pragma: no cover
-                runs.append(
-                    scmdata.ScmRun(
-                        pd.Series(timeseries, index=years),
-                        columns={
-                            "climate_model": "CICERO-SCM-PY",
-                            "model": self.model,
-                            "run_id": pamset["Index"],
-                            "scenario": self.scen,
-                            "region": ["World"],
-                            "variable": [variable],
-                            "unit": [unit],
-                        },
-                    )
-                )
-
-        return scmdata.run_append(runs)
+                data = [
+                    "CICERO-SCM-PY",
+                    self.model,
+                    pamset["Index"],
+                    self.scen,
+                    "World",
+                    variable,
+                    unit,
+                ]
+                data.extend(timeseries)
+                index = [
+                    "climate_model",
+                    "model",
+                    "run_id",
+                    "scenario",
+                    "region",
+                    "variable",
+                    "unit",
+                ]
+                index.extend(years)
+                runs.append(pd.Series(data=data, index=index))
+        return pd.concat(runs, axis=1).transpose()
