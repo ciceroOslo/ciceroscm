@@ -255,14 +255,17 @@ class CICEROSCM:
         self.initialise_output_arrays()
         # Setting up UDM
         udm = UpwellingDiffusionModel(pamset_udm)
+        # Tempdiff since previous step for permafrost feedback
+        tdiff = 0.0
         if not self.cfg["rf_run"]:
+
             pamset_emiconc["emstart"] = self.cfg["emstart"]
             pamset_emiconc["nystart"] = self.cfg["nystart"]
             pamset_emiconc["nyend"] = self.cfg["nyend"]
             self.ce_handler.reset_with_new_pams(pamset_emiconc)
         for yr in range(self.cfg["nystart"], self.cfg["nyend"] + 1):
             if not self.cfg["rf_run"]:
-                self.ce_handler.emi2conc(yr)
+                self.ce_handler.emi2conc(yr, tdiff)
                 forc, fn, fs = self.ce_handler.conc2forc(
                     yr,
                     self.rf_luc.iloc[yr - self.cfg["nystart"], 0],
@@ -277,6 +280,7 @@ class CICEROSCM:
                 np.array(self.rf_volc_sun["volc_n"].iloc[yr - self.cfg["nystart"], :]),
                 np.array(self.rf_volc_sun["volc_s"].iloc[yr - self.cfg["nystart"], :]),
             )
+            tdiff = values["dtemp"] - tdiff
             self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 
         if make_plot:
