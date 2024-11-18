@@ -109,6 +109,7 @@ class CarbonCycleModel:
                 "nyend": 2100,
                 "beta_f": 0.287,
                 "mixed_carbon": 75.0,
+                "fpermf": 0.0,
             },
             pamset,
             used={"rs_function": "missing", "rb_function": "missing"},
@@ -116,11 +117,13 @@ class CarbonCycleModel:
         self.pamset = take_out_missing(pamset.copy())
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
         self.reset_co2_hold(
-            beta_f=pamset["beta_f"], mixed_carbon=pamset["mixed_carbon"]
+            beta_f=pamset["beta_f"],
+            mixed_carbon=pamset["mixed_carbon"],
+            fpermf=pamset["fpermf"],
         )
         self.precalc_r_functions()
 
-    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0):
+    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0, fpermf=0.0):
         """
         Reset values of CO2_hold for new run
 
@@ -139,6 +142,7 @@ class CarbonCycleModel:
         }
         self.pamset["beta_f"] = beta_f
         self.pamset["mixed_carbon"] = mixed_carbon
+        self.pamset["fpermf"] = fpermf
 
     def _set_co2_hold(
         self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -235,7 +239,7 @@ class CarbonCycleModel:
                 idtm=self.pamset["idtm"],
             )
 
-    def co2em2conc(self, yr, em_co2_common):
+    def co2em2conc(self, yr, em_co2_common, tdiff=0.0):
         """
         Calculate co2 concentrations from emissions
 
@@ -250,6 +254,8 @@ class CarbonCycleModel:
         em_co2_common : float
              Sum of CO2 emissions from fossil fuels, land use change and natural emissions
              for the year in question
+        tdiff : float
+            Difference in temperature since previous timestep
 
         Returns
         -------
@@ -261,6 +267,9 @@ class CarbonCycleModel:
 
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
+        # Permafrost feedback
+        em_co2_common = em_co2_common + tdiff * self.pamset["fpermf"]
+
         # Monthloop:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
