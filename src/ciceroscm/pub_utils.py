@@ -10,6 +10,14 @@ import numpy as np
 
 LOGGER = logging.getLogger(__name__)
 
+REG_MAPPING_DEFAULT = {
+    "ASIA": "EAS",
+    "LAM": "SAM",
+    "MAF": "NAF",
+    "OECD": "NAM",
+    "REF": "RBU",
+}
+
 
 def _check_array_consistency(coeffs, timescales, for_rs=False):
     """
@@ -138,3 +146,41 @@ def make_cl_and_br_dictionaries(gases_index):
                 brom_dict[tracer] = 1
 
     return chlor_dict, brom_dict
+
+
+def make_regional_aerosol_gaspamdata(
+    gases_data,
+    reg_aerosol_rf_data,
+    reg_mapping=None,
+    unit_conversion=1e9,
+):
+    """
+    Make regional aerosol gaspamdata from existing gaspam and some regional data
+
+    Parameters
+    ----------
+    gases_data : pd.DataFrame
+        Original gaspamdata without regional aerosols
+    reg_aerosol_rf_data : pd.DataFrame
+        Dataframe with regional forcing for aerosols
+    reg_mapping : dict
+        Mapping between regional data and expected input regional data
+    unit_conversion : float
+        Unit conversion factor
+
+    Returns
+    -------
+    pd.DataFrame
+        New gaspam dataframe with extra entries for the added regional aerosols
+    """
+    if reg_mapping is None:
+        reg_mapping = REG_MAPPING_DEFAULT
+    gases_new = gases_data.copy()
+    for column in reg_aerosol_rf_data.columns:
+        row_start = gases_data.loc[column]
+        for key, expression in reg_mapping.items():
+            row_start["ALPHA"] = (
+                reg_aerosol_rf_data[column][expression] * unit_conversion
+            )
+            gases_new.loc[f"{column}_{key}"] = row_start
+    return gases_new
