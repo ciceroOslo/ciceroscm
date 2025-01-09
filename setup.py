@@ -42,7 +42,7 @@ REQUIREMENTS_TESTS = [
     "pytest>=4.0",
     "xlrd",
 ]
-REQUIREMENTS_DOCS = ["sphinx>=1.4", "sphinx_rtd_theme", "sphinx-click"]
+REQUIREMENTS_DOCS = ["sphinx>=5", "sphinx_rtd_theme", "sphinx-click"]
 REQUIREMENTS_DEPLOY = ["twine>=1.11.0", "setuptools>=41.2", "wheel>=0.31.0"]
 
 REQUIREMENTS_DEV = [
