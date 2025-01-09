@@ -28,6 +28,12 @@ CiceroSCM
     input_handler
     perturbations
     make_plots
+    carbon_cycle_mod
+    pub_utils
+    rfuns
+    parallel.calibrator
+    parallel.cscmwrapper
+    parallel.distributionrun
 
 .. toctree::
     :maxdepth: 2
