@@ -20,6 +20,7 @@ class CarbonCycleModel:
         """
         Return a dummy CO2 concentration value.
         """
+        co2conc= 278.0 + em_co2_common
         return 285.0
 
     def back_calculate_emissions(self, co2_conc_series):
