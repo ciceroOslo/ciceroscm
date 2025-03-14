@@ -142,7 +142,7 @@ class CarbonCycleModel:
 
     def _set_co2_hold(
         self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
         """
         Reset the CO2 hold scalar values,
 
@@ -524,7 +524,7 @@ class CarbonCycleModel:
 
     def _guess_emissions_iteration(
         self, co2_conc_now, co2_conc_zero, yrix=0, rtol=1e-7, maxit=100, ffer=None
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
         """
         Iterate to get right emissions for a single year
 
