@@ -142,7 +142,7 @@ class CarbonCycleModel:
 
     def _set_co2_hold(
         self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
-    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
+    ):  # pylint: disable=too-many-positional-arguments, too-many-arguments
         """
         Reset the CO2 hold scalar values,
 
