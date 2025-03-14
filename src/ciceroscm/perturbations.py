@@ -166,7 +166,6 @@ class ForcingPerturbation:
     def add_forcing_pert(
         self, totforc, forc_nh, forc_sh, forc, yr
     ):  # pylint: disable=too-many-positional-arguments, too-many-arguments
-
         """
         Add forcing perturbations to precalculated forcing
 
