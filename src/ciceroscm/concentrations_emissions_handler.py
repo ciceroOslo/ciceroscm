@@ -224,9 +224,6 @@ class ConcentrationsEmissionsHandler:
         if preexisting:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
-            self.carbon_cycle.reset_co2_hold(
-                self.pamset["beta_f"], self.pamset["mixed_carbon"]
-            )
         years_tot = len(self.years)
         self.conc = {}
         self.forc = {}
@@ -876,12 +873,7 @@ class ConcentrationsEmissionsHandler:
         df_carbon = pd.DataFrame(
             data={
                 "Emissions": em_series,
-                "Airborne fraction CO2": airborne,
-                "Biosphere carbon flux": self.carbon_cycle.get_biosphere_carbon_flux(
-                    conc_run=self.pamset["conc_run"]
-                ),
-                "Ocean carbon flux": self.carbon_cycle.get_ocean_carbon_flux(),
-            },
+                "Airborne fraction CO2": airborne },
             index=self.years,
         )
         return df_carbon
