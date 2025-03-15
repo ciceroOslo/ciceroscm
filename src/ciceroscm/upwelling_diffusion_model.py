@@ -1,12 +1,12 @@
 """
-Simplest possible thermal diffusion model
+Simplest possible thermal model
 """
 
 import numpy as np
 
 class UpwellingDiffusionModel:
     """
-    Simplified UpwellingDiffusionModel that returns dummy values.
+    Highly Simplified UpwellingDiffusionModel 
     """
 
     def __init__(self, params):
@@ -21,7 +21,7 @@ class UpwellingDiffusionModel:
         self.tn = np.zeros(self.pamset["lm"])
         self.ts = np.zeros(self.pamset["lm"])
         self.fdb = 1.0 / params["lambda"]
-        self.c1 = 1/200
+        self.c1 = 1/500
         self.prev_values = {
             "fn": 0.0,
             "fs": 0.0,
@@ -32,15 +32,15 @@ class UpwellingDiffusionModel:
 
     def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc):
         """
-        Return dummy energy budget results.
+        Return energy budget results.
         """
         forc=forc_nh+forc_sh
         dtemp=self.dtempprev+(forc-self.dtempprev/self.fdb)*self.c1
         self.dtempprev=dtemp
         return {
             "dtemp": dtemp,
-            "dtempnh": 0.0,
-            "dtempsh": 0.0,
+            "dtempnh": dtemp,
+            "dtempsh": dtemp,
             "dtemp_air": 0.0,
             "dtempnh_air": 0.0,
             "dtempsh_air": 0.0,
@@ -50,7 +50,7 @@ class UpwellingDiffusionModel:
             "RIBN": 0.0,
             "RIBS": 0.0,
             "RIB": 0.0,
-            "OHC700": 0.0,
+            "OHC700": dtemp*self.c1,
             "OHCTOT": 0.0,
         }
 

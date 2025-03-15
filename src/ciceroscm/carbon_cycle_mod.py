@@ -11,7 +11,7 @@ from ._utils import cut_and_check_pamset
 from .pub_utils import _check_array_consistency
 from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
 
-GE_COEFF = 1e3 
+GE_COEFF = 4000
 
 # Conversion factor ppm/kg --> umol*/m3
 PPMKG_TO_UMOL_PER_VOL = 1.722e17
@@ -119,57 +119,12 @@ class CarbonCycleModel:
         }
 
 
-    def _set_co2_hold(
-        self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
-    ):  # pylint: disable=too-many-arguments
-        """
-        Reset the CO2 hold scalar values,
 
-        Use this to rerun from same state as before
-        in year not zero. Should only be used for back-calculations
-
-        Parameters
-        ----------
-        xco2 : float
-            CO2 concentration to set, default is 278.0 which is the start value
-        yco2 : float
-            yco2 value, default is 0.0 which is the start value
-        emco2_prev : float
-            emissions in previous timestep, default is 0.0
-        ss1 : float
-            ss1 value, default is 0.0
-        sums : float
-            sums of ocean uptake inorganic carbon, default is 0.0
-        """
-        self.co2_hold["yCO2"] = yco2
-        self.co2_hold["xCO2"] = xco2
-        self.co2_hold["emCO2_prev"] = emco2_prev
-        self.co2_hold["ss1"] = ss1
-        self.co2_hold["sums"] = sums
-
-    def _get_co2_hold_values(self):
-        """
-        Get co2_hold scalar values as dictionary
-
-        These can be used to reset the values after, this is useful for
-        the back calculation which needs to run the same timestep over
-        and over. This is why the method is private as it is just meant
-        to be called from the back-calculations to get values that can then
-        be sent to the _set_co2 hold function
-        """
-        scalar_dict = {
-            "yco2": self.co2_hold["yCO2"],
-            "xco2": self.co2_hold["xCO2"],
-            "emco2_prev": self.co2_hold["emCO2_prev"],
-            "ss1": self.co2_hold["ss1"],
-            "sums": self.co2_hold["sums"],
-        }
-        return scalar_dict
 
 
     def co2em2conc(self, yr, em_co2_common):
         """
-        Calculate co2 concentrations from emissions
+        Calculate co2 concentrations from emissions, single slab ocean - no land
 
         Method to calculate co2 concentrations from emissions
         Implementing a rudimentary carbon cycle which loops over
