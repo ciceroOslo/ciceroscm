@@ -11,7 +11,7 @@ from ._utils import cut_and_check_pamset
 from .pub_utils import _check_array_consistency
 from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
 
-GE_COEFF = 1e-3 
+GE_COEFF = 1e3 
 
 # Conversion factor ppm/kg --> umol*/m3
 PPMKG_TO_UMOL_PER_VOL = 1.722e17
@@ -205,8 +205,8 @@ class CarbonCycleModel:
 
      
             self.co2_hold["xCO2"] = (
-                self.co2_hold["xCO2"]  + em_co2-(self.co2_hold["xCO2"]-self.co2_hold["yCO2"])/GE_COEFF
-            )
+                self.co2_hold["xCO2"] ) + em_co2-(self.co2_hold["xCO2"]-self.co2_hold["yCO2"])/GE_COEFF
+            #)
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
         return self.co2_hold["xCO2"]
 

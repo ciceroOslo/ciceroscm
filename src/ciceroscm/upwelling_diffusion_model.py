@@ -1,5 +1,5 @@
 """
-Stub version of the UpwellingDiffusionModel.
+Simplest possible thermal diffusion model
 """
 
 import numpy as np
@@ -9,22 +9,22 @@ class UpwellingDiffusionModel:
     Simplified UpwellingDiffusionModel that returns dummy values.
     """
 
-
     def __init__(self, params):
         """
-        Intialise
-
-        Setting up heights first, then starting up empty dict and
-        arrays , and some starting values
-
-        Parameters
-        ----------
-        params : dict
-              Physical parameters to define the instance
+        Initialize with minimal parameters.
         """
-
-        # Dict of values to keep from one year to the next
+        self.pamset = {
+            "lm": 40,
+            "ldtime": 12,
+        }
+        self.dz = np.ones(self.pamset["lm"]) * 100.0
+        self.tn = np.zeros(self.pamset["lm"])
+        self.ts = np.zeros(self.pamset["lm"])
+        self.fdb = 1.0 / params["lambda"]
+        self.c1 = 1/200
         self.prev_values = {
+            "fn": 0.0,
+            "fs": 0.0,
             "dtemp": 0.0,
         }
 
@@ -35,8 +35,8 @@ class UpwellingDiffusionModel:
         Return dummy energy budget results.
         """
         forc=forc_nh+forc_sh
-        dtemp = self.prev_values['dtemp']#+(forc-self.prev_values['dtemp']/1.1)/1e20
-        self.prev_values['dtemp'] = dtemp
+        dtemp=self.dtempprev+(forc-self.dtempprev/self.fdb)*self.c1
+        self.dtempprev=dtemp
         return {
             "dtemp": dtemp,
             "dtempnh": 0.0,
