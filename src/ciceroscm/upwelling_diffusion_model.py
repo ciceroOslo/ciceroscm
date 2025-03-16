@@ -1,47 +1,70 @@
 """
-Simplest possible thermal model
+2 layer model
 """
 
 import numpy as np
 
 class UpwellingDiffusionModel:
     """
-    Highly Simplified UpwellingDiffusionModel 
+    Two layer Model with 2 thermal timescales.
     """
 
     def __init__(self, params):
         """
-        Initialize with minimal parameters.
-        """
-        self.pamset = {
-            "lm": 40,
-            "ldtime": 12,
-        }
-        self.dz = np.ones(self.pamset["lm"]) * 100.0
-        self.tn = np.zeros(self.pamset["lm"])
-        self.ts = np.zeros(self.pamset["lm"])
-        self.fdb = 1.0 / params["lambda"]
-        self.c1 = 1/500
-        self.prev_values = {
-            "fn": 0.0,
-            "fs": 0.0,
-            "dtemp": 0.0,
-        }
+        Initialize with parameters for multiple thermal timescales.
 
-        self.dtempprev = 0.0
+        Parameters
+        ----------
+        params : dict
+            Dictionary containing model parameters:
+            - lambda: Climate feedback parameter (W/m^2/K)
+            - c_fast: Heat capacity of the fast-response layer (J/m^2/K)
+            - c_slow: Heat capacity of the slow-response layer (J/m^2/K)
+            - k: Coupling coefficient between fast and slow layers (W/m^2/K)
+        """
+        self.lambda_ = params.get("lambda",3.74 / 3)
+        self.c_fast = params.get("mixed", 50)*1000*4181/(365*24*3600)  
+        self.c_slow = params.get("deep", 1200)*1000*4181/(365*24*3600)   # Default value: 100.0
+        self.k = params.get("k", 0.5)  # eta, Default value: 0.5
+
+        # Initialize temperatures for fast and slow layers
+        self.temp_fast = 0.0
+        self.temp_slow = 0.0
 
     def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc):
         """
-        Return energy budget results.
+        Calculate temperature response with multiple thermal timescales.
+
+        Parameters
+        ----------
+        forc : float
+            Radiative forcing (W/m^2).
+
+        Returns
+        -------
+        dict
+            Dictionary containing temperature changes for fast and slow layers.
         """
-        forc=forc_nh+forc_sh
-        dtemp=self.dtempprev+(forc-self.dtempprev/self.fdb)*self.c1
-        self.dtempprev=dtemp
+
+        forc=(forc_nh+forc_sh)/2+np.mean(fn_volc+fs_volc)
+        
+        # Fast layer temperature change
+        dtemp_fast = (forc - self.temp_fast * self.lambda_ - self.k * (self.temp_fast - self.temp_slow)) / self.c_fast
+
+        # Slow layer temperature change
+        dtemp_slow = self.k * (self.temp_fast - self.temp_slow) / self.c_slow
+
+        # Update temperatures
+        self.temp_fast += dtemp_fast
+        self.temp_slow += dtemp_slow
+
         return {
-            "dtemp": dtemp,
-            "dtempnh": dtemp,
-            "dtempsh": dtemp,
+            "dtemp": self.temp_fast,  # Global mean temperature change
+            "dtemp_fast": self.temp_fast,
+            "dtemp_slow": self.temp_slow,
             "dtemp_air": 0.0,
+            "dtempnh": 0.0,
+            "dtempsh": 0.0,
             "dtempnh_air": 0.0,
             "dtempsh_air": 0.0,
             "dtemp_sea": 0.0,
@@ -50,15 +73,7 @@ class UpwellingDiffusionModel:
             "RIBN": 0.0,
             "RIBS": 0.0,
             "RIB": 0.0,
-            "OHC700": dtemp*self.c1,
-            "OHCTOT": 0.0,
-        }
-
-    def ocean_temperature(self):
-        """
-        Return dummy ocean temperature results.
-        """
-        return {
             "OHC700": 0.0,
-            "OHCTOT": 0.0,
+            "OHCTOT": 0.0
         }
+    

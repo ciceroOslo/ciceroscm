@@ -1,14 +1,13 @@
 """
-Stub version of the CarbonCycleModel.
+Simple CarbonCycleModel with temperature feedback and no pre-computed pulse response functions.
 """
-from ._utils import cut_and_check_pamset
+
 import numpy as np
-PPM_CO2_TO_PG_C = 2.123
 
-GE_COEFF = 4000
+PPM_CO2_TO_PG_C = 2.123  # Conversion factor ppm CO2 -> PgC
+OCEAN_AREA = 3.62e14  # Area of the ocean in m^2
+GE_COEFF = 1.0 / (OCEAN_AREA * 9.06)  # Gas exchange coefficient (yr^-1*m^-2)
 
-# Conversion factor ppm/kg --> umol*/m3
-PPMKG_TO_UMOL_PER_VOL = 1.722e17
 
 def calculate_airborne_fraction(em_timeseries, conc_timeseries):
     """
@@ -34,134 +33,140 @@ def calculate_airborne_fraction(em_timeseries, conc_timeseries):
     return airborne_fraction
 
 
-def take_out_missing(pamset):
-    """
-    Take out values that are missing from pamset
-
-    Needed to take care of rs_function and rb_function
-
-    Parameters
-    ----------
-    pamset : dict
-        parameter set dictionary which might contain the value "missing"
-        for the rs_function and rb_function because of the way we deal
-        with expected values in the parameter set. In this case
-        we need to take them out of the parameterset so they can be run
-        with defaults
-
-    Returns
-    -------
-    dict
-        Updated version of the parameterset with "missing" values deleted
-    """
-    for key, value in pamset.items():
-        if value == "missing":
-            del pamset[key]
-    return pamset
-
 class CarbonCycleModel:
     """
-    Simplified CarbonCycleModel that returns dummy values.
+    CarbonCycleModel with explicit carbon pools and temperature-dependent dynamics.
     """
 
     def __init__(self, pamset):
         """
-        Initialise Carbon cycle model
+        Initialize the Carbon Cycle Model.
 
         Parameters
         ----------
-            pamset : dict
+        pamset : dict
+            Parameter set for the model, containing:
+            - idtm: Number of subyearly timesteps (e.g., 24 for monthly steps).
+            - nystart: Start year of the simulation.
+            - nyend: End year of the simulation.
+            - beta_f: CO2 fertilization factor (affects land carbon uptake).
+            - land_temp_sensitivity: Sensitivity of NPP to temperature (PgC/K).
+            - soil_respiration_rate: Rate of soil carbon decay (yr^-1).
+            - ocean_mixed_layer_depth: Depth of the ocean mixed layer (m).
+            - ocean_exchange_rate: Rate of carbon exchange between mixed layer and deep ocean (yr^-1).
+            - vegetation_to_soil_fraction: Fraction of vegetation carbon transferred to soil per year.
+            - ocean_solubility_base: Base solubility of CO2 in the ocean (PgC/ppm).
+            - ocean_solubility_temp_coeff: Temperature sensitivity of ocean CO2 solubility.
         """
-        pamset = cut_and_check_pamset(
-            {
-                "idtm": 24,
-                "nystart": 1750,
-                "nyend": 2100,
-                "mixed_carbon": 75.0,
-            },
-            pamset,
-            used={"rs_function": "missing", "rb_function": "missing"},
-        )
-        self.pamset = take_out_missing(pamset.copy())
-        self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
-        self.reset_co2_hold()
-
-        
-    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0,fnpp_temp_coeff=np.NaN):
-        """
-        Reset values of CO2_hold for new run
-
-        This method is mainly called to do a new run with the same cscm instance,
-        in which case you need to reset hold values, and be able to update
-        parameter values for the carbon cycle free parameter beta_f
-        """
-        self.co2_hold = {
-            "yCO2": 278.0,
-            "xCO2": 278.0,
-            "sCO2": np.zeros(self.pamset["idtm"] * self.pamset["years_tot"]),
-            "emCO2_prev": 0.0,
-            "dfnpp": np.zeros(self.pamset["idtm"] * self.pamset["years_tot"]),
-            "ss1": 0.0,
-            "sums": 0.0,
+        self.pamset = {
+            "idtm": pamset.get("idtm", 24),
+            "nystart": pamset.get("nystart", 1750),
+            "nyend": pamset.get("nyend", 2100),
+            "beta_f": pamset.get("beta_f", 0.287),
+            "land_temp_sensitivity": pamset.get("land_temp_sensitivity", .1),
+            "soil_respiration_rate": pamset.get("soil_respiration_rate", 0.02),
+            "ocean_mixed_layer_depth": pamset.get("ocean_mixed_layer_depth", 25.0),
+            "ocean_exchange_rate": pamset.get("ocean_exchange_rate", 0.01),
+            "vegetation_to_soil_fraction": pamset.get("vegetation_to_soil_fraction", 0.1),
+            "ocean_solubility_base": pamset.get("ocean_solubility_base", 0.02),
+            "ocean_solubility_temp_coeff": pamset.get("ocean_solubility_temp_coeff", -0.01),
         }
-   
+        self.pamset["years_tot"] = self.pamset["nyend"] - self.pamset["nystart"] + 1
+
+        # Initialize carbon pools
+        self.atmospheric_co2 = 278.0  # Pre-industrial CO2 concentration (ppm)
+        self.vegetation_carbon = 600.0  # Vegetation carbon pool (PgC)
+        self.soil_carbon = 3000.0  # Soil carbon pool (PgC)
+        self.ocean_mixed_layer_carbon = 0.0  # Ocean mixed layer carbon anomaly (PgC)
+        self.ocean_deep_carbon = 0.0  # Deep ocean carbon anomaly (PgC)
+
     def co2em2conc(self, yr, em_co2_common, dtemp=0):
         """
-        Calculate co2 concentrations from emissions, single slab ocean - no land
-
-        Method to calculate co2 concentrations from emissions
-        Implementing a rudimentary carbon cycle which loops over
-        idtm (usually 24) timesteps a year
+        Calculate CO2 concentrations from emissions.
 
         Parameters
         ----------
         yr : int
-          Year for which to calculate
+            Year for which to calculate.
         em_co2_common : float
-             Sum of CO2 emissions from fossil fuels, land use change and natural emissions
-             for the year in question
+            Total CO2 emissions (GtC/yr).
+        dtemp : float
+            Global mean temperature difference from pre-industrial (K).
 
         Returns
         -------
         float
-             CO2 concetrations for year in question
+            Updated atmospheric CO2 concentration (ppm).
         """
-        # TIMESTEP (YR)
-        dt = 1.0 / self.pamset["idtm"]
+        
+        dt = 1.0# / self.pamset["idtm"]  # Timestep length (years)
 
-        yr_ix = yr - self.pamset["nystart"]
-        # Monthloop:
-        for i in range(self.pamset["idtm"]):
-            it = yr_ix * self.pamset["idtm"] + i
-            sumf = 0.0
+        # Convert emissions from GtC/yr to PgC/yr
+        emissions = em_co2_common
 
-  
-            # Sum anthropogenic and biospheric and PPMKG_TO_UMOL_PER_VOLert gC/yr --> ppm/yr
-            em_co2 = (em_co2_common) / PPM_CO2_TO_PG_C/self.pamset["idtm"]
+        # Land carbon fluxes
+        npp = self.calculate_npp(dtemp)  # Net Primary Production (PgC/yr)
+        vegetation_to_soil = self.vegetation_carbon * self.pamset["vegetation_to_soil_fraction"]  # Fraction of vegetation carbon transferred to soil
+        soil_respiration = self.soil_carbon * self.pamset["soil_respiration_rate"]  # Soil carbon decay (PgC/yr)
 
-            self.co2_hold["yco2"] = self.co2_hold["yCO2"]+(self.co2_hold["xCO2"]-self.co2_hold["yCO2"])/GE_COEFF
+        # Update land carbon pools
+        self.vegetation_carbon += (npp - vegetation_to_soil) * dt
+        self.soil_carbon += (vegetation_to_soil - soil_respiration) * dt
 
-     
-            self.co2_hold["xCO2"] = (
-                self.co2_hold["xCO2"] ) + em_co2-(self.co2_hold["xCO2"]-self.co2_hold["yCO2"])/GE_COEFF
-            #)
-            # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
-        return self.co2_hold["xCO2"]
+        # Ocean carbon fluxes
+        ocean_uptake = self.calculate_ocean_uptake(dtemp)  # Ocean carbon uptake (PgC/yr)
+        mixed_to_deep = self.ocean_mixed_layer_carbon * self.pamset["ocean_exchange_rate"]  # Mixed to deep ocean flux
+        deep_to_mixed = self.ocean_deep_carbon * self.pamset["ocean_exchange_rate"]  # Deep to mixed ocean flux
 
-    def get_biosphere_carbon_flux(self, conc_run=False, co2_conc_series=None):
+        # Update ocean carbon pools
+        self.ocean_mixed_layer_carbon += (ocean_uptake - mixed_to_deep + deep_to_mixed) * dt
+        self.ocean_deep_carbon += (mixed_to_deep - deep_to_mixed) * dt
+
+        # Net flux to atmosphere
+        net_flux = emissions - ocean_uptake + soil_respiration - npp
+
+        # Update atmospheric CO2 concentration (ppm)
+        self.atmospheric_co2 += net_flux / PPM_CO2_TO_PG_C * dt
+        return self.atmospheric_co2
+
+    def calculate_npp(self, dtemp):
         """
-        Return a dummy biosphere carbon flux timeseries.
-        """
-        return np.zeros(self.pamset["years_tot"])
+        Calculate Net Primary Production (NPP) as a function of temperature and CO2.
 
-    def get_ocean_carbon_flux(self, conc_run=False, co2_conc_series=None):
-        """
-        Return a dummy ocean carbon flux timeseries.
-        """
-        return np.zeros(self.pamset["years_tot"])
+        Parameters
+        ----------
+        dtemp : float
+            Global mean temperature difference from pre-industrial (K).
 
-    def back_calculate_emissions(self, co2_conc_series):
+        Returns
+        -------
+        float
+            NPP (PgC/yr).
         """
-        Return a dummy emissions timeseries.
+        co2_fertilization = self.pamset["beta_f"] * np.log(self.atmospheric_co2 / 278.0)
+        temp_effect = self.pamset["land_temp_sensitivity"] * dtemp
+        return max(0.0, 60.0 + co2_fertilization - temp_effect)  # Ensure NPP is non-negative
+
+    def calculate_ocean_uptake(self, dtemp):
         """
-        return np.zeros(len(co2_conc_series))
+        Calculate ocean carbon uptake as a function of temperature and CO2.
+
+        Parameters
+        ----------
+        dtemp : float
+            Global mean temperature difference from pre-industrial (K).
+
+        Returns
+        -------
+        float
+            Ocean carbon uptake (PgC/yr).
+        """
+        solubility = self.pamset["ocean_solubility_base"] * (
+            1 + self.pamset["ocean_solubility_temp_coeff"] * dtemp
+        )  # Solubility decreases with warming
+        return solubility * (self.atmospheric_co2 - 278.0)  # Uptake proportional to CO2 difference
+    
+    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0, fnpp_temp_coeff=0):
+        """
+        stub
+        """

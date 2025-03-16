@@ -609,6 +609,7 @@ class ConcentrationsEmissionsHandler:
                     self.emis["CO2_FF"][yr]
                     + self.emis["CO2_AFOLU"][yr]
                     + self.df_gas["NAT_EM"]["CO2"],
+                    dtemp=dtemp,
                 )
                 continue
             if yr < self.pamset["emstart"]:
