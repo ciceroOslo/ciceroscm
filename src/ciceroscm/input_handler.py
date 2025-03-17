@@ -453,7 +453,24 @@ class InputHandler:
         if "conc_run" in self.cfg:
             return self.cfg["conc_run"]
         return False
+    
+    def carbon_model(self):
+        """
+        Check if configurations includes conc_run option
 
+        Checking if configurations includes conc_run option
+        If included, its value is returned, otherwise False
+        is returned
+
+        Returns
+        -------
+        bool
+            Whether this is rf_run or not
+        """
+        if "carbon_cycle_model" in self.cfg:
+            return self.cfg["carbon_cycle_model"]
+        return False
+    
     def optional_pam(self, which):
         """
         Check if data that can be sent optionally is included

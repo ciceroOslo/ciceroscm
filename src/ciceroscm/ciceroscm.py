@@ -13,6 +13,8 @@ from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
 from .input_handler import InputHandler
 from .make_plots import plot_output1
 from .upwelling_diffusion_model import UpwellingDiffusionModel
+from .carbon_cycle_factory import create_carbon_cycle_model
+
 
 LOGGER = logging.getLogger(__name__)
 

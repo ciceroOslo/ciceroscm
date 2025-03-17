@@ -10,7 +10,9 @@ import pandas as pd
 
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
-from .carbon_cycle_mod import CarbonCycleModel, calculate_airborne_fraction
+from .carbon_cycle_factory import create_carbon_cycle_model
+
+from .carbon_cycle_mod_box import CarbonCycleModel, calculate_airborne_fraction
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -196,6 +198,11 @@ class ConcentrationsEmissionsHandler:
         self.conc_in = input_handler.get_data("concentrations")
         self.emis = input_handler.get_data("emissions")
         self.pamset["conc_run"] = input_handler.conc_run()
+        if input_handler.carbon_model():
+            self.pamset["carbon_cycle_model"] = input_handler.carbon_cycle_model()
+        else:
+            self.pamset["carbon_cycle_model"] = "default"
+
         if input_handler.optional_pam("perturb_em"):
             perturb_emissions(input_handler, self.emis)
         if input_handler.optional_pam("perturb_forc"):
@@ -203,7 +210,9 @@ class ConcentrationsEmissionsHandler:
         self.pamset["cl_dict"], self.pamset["br_dict"] = make_cl_and_br_dictionaries(
             self.df_gas.index
         )
-        self.carbon_cycle = CarbonCycleModel(self.pamset)
+        model_type =  self.pamset["carbon_cycle_model"]  # Default to "default"
+        self.carbon_cycle = create_carbon_cycle_model(model_type, self.pamset)
+        #self.carbon_cycle = CarbonCycleModel(self.pamset)
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
 
