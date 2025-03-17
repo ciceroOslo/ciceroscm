@@ -2,18 +2,18 @@ import os
 
 import numpy as np
 
-from ciceroscm import CICEROSCM, carbon_cycle_mod_box
+from ciceroscm import CICEROSCM, carbon_cycle_mod
 
 
 def test_linear_fnpp_from_temp():
-    assert carbon_cycle_mod_box.linear_fnpp_from_temp() == 60.0
-    assert carbon_cycle_mod_box.linear_fnpp_from_temp(fnpp_temp_coeff=1) == 60.0
-    assert carbon_cycle_mod_box.linear_fnpp_from_temp(dtemp=1) == 60.0
-    assert carbon_cycle_mod_box.linear_fnpp_from_temp(fnpp_temp_coeff=2, dtemp=3) == 66.0
+    assert carbon_cycle_mod.linear_fnpp_from_temp() == 60.0
+    assert carbon_cycle_mod.linear_fnpp_from_temp(fnpp_temp_coeff=1) == 60.0
+    assert carbon_cycle_mod.linear_fnpp_from_temp(dtemp=1) == 60.0
+    assert carbon_cycle_mod.linear_fnpp_from_temp(fnpp_temp_coeff=2, dtemp=3) == 66.0
 
 
 def test_default_pamset_values(test_data_dir):
-    ccmod = carbon_cycle_mod_box.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
+    ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
     assert ccmod.pamset["beta_f"] == 0.287
     assert ccmod.pamset["mixed_carbon"] == 75.0
     assert ccmod.pamset["fnpp_temp_coeff"] == 0
@@ -34,7 +34,7 @@ def test_default_pamset_values(test_data_dir):
 
 
 def test_get_biosphere_carbon_flux():
-    ccmod = carbon_cycle_mod_box.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
+    ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
     co2_conc_series = np.ones(ccmod.pamset["years_tot"]) * 278.0
     bio_carbon_flux = ccmod.get_biosphere_carbon_flux(
         conc_run=True, co2_conc_series=co2_conc_series
@@ -45,7 +45,7 @@ def test_get_biosphere_carbon_flux():
 
 def test_guess_iteration():
     co2_conc_zero = 278.0
-    ccmod = carbon_cycle_mod_box.CarbonCycleModel({"nyend": 2015, "nystart": 1750})
+    ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1750})
     em_0 = 0.00259244 + 0.08112671
     co2_conc_now = 277.147003174
     # co2_conc_now = 277.188000997
@@ -76,7 +76,7 @@ def test_guess_iteration():
 
 def test_simplified_em_backwards():
     co2_conc_zero = 278.0
-    ccmod = carbon_cycle_mod_box.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
+    ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
     print(
         ccmod.simplified_em_backward(
             co2_conc_now=co2_conc_zero, co2_conc_zero=co2_conc_zero
@@ -104,7 +104,7 @@ def test_back_calculate_emissions(test_data_dir):
     cscm._run({"results_as_dict": True})
     conc_co2_series = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
-    ccmod = carbon_cycle_mod_box.CarbonCycleModel({"nyend": 2100, "nystart": 1750})
+    ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2100, "nystart": 1750})
     em_back_calculated = ccmod.back_calculate_emissions(conc_co2_series)
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
 
