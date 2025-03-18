@@ -11,7 +11,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../", "src"))
 from ciceroscm import CICEROSCM
 
 data_dir = os.path.join(os.path.dirname(__file__), "../", "tests", "test-data")
-#os.getcwd() gets the path of where you are running from
+# os.getcwd() gets the path of where you are running from
 outdir = os.path.join(os.getcwd(), "output_test")
 cscm = CICEROSCM(
     {
@@ -21,7 +21,7 @@ cscm = CICEROSCM(
         "emissions_file": os.path.join(data_dir, "ssp245_em_RCMIP.txt"),
         "nat_ch4_file": os.path.join(data_dir, "natemis_ch4.txt"),
         "nat_n2o_file": os.path.join(data_dir, "natemis_n2o.txt"),
-        "idtm": 24
+        "idtm": 24,
     },
 )
 

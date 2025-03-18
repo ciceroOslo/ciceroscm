@@ -7,7 +7,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../", "src"))
 from ciceroscm import CICEROSCM
 
 data_dir = os.path.join(os.path.dirname(__file__), "../", "tests", "test-data")
-outdir = os.path.join(os.getcwd(), "output_test") 
+outdir = os.path.join(os.getcwd(), "output_test")
 cscm = CICEROSCM(
     {
         "gaspam_file": os.path.join(data_dir, "gases_v1RCMIP.txt"),
@@ -21,4 +21,3 @@ cscm = CICEROSCM(
 
 
 cscm._run({"output_folder": outdir})
-

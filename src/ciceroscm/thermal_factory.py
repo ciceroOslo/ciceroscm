@@ -1,6 +1,7 @@
 from .upwelling_diffusion_model import UpwellingDiffusionModel
 from .two_layer_ocean import TwoLayerOceanModel
 
+
 def create_thermal_model(model_type):
     """
     Factory function to create a ThermalModel instance.

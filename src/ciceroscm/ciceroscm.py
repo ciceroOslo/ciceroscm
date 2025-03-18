@@ -86,39 +86,40 @@ class CICEROSCM:
               or emission runs, and start and end of run etc.
 
         """
-        
+
         self.cfg = cut_and_check_pamset(
-            {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24}, cfg,
-            {"carbon_cycle_model":"default","thermal_model":"default"}
+            {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24},
+            cfg,
+            {"carbon_cycle_model": "default", "thermal_model": "default"},
         )
         cfg.update(self.cfg)
-        
+
         input_handler = InputHandler(cfg)
         self.cfg["rf_run"] = input_handler.optional_pam("forc")
         if input_handler.thermal_model(self.cfg):
             self.cfg["thermal_model"] = input_handler.thermal_model(self.cfg)
         else:
-            self.cfg["thermal_model"] = 'default'
+            self.cfg["thermal_model"] = "default"
         if input_handler.carbon_model(self.cfg):
             self.cfg["carbon_cycle_model"] = input_handler.carbon_model(self.cfg)
         else:
-            self.cfg["carbon_cycle_model"]='default'
-        
-        print('Thermal Model='+self.cfg['thermal_model'])
-        
+            self.cfg["carbon_cycle_model"] = "default"
+
+        print("Thermal Model=" + self.cfg["thermal_model"])
+
         if self.cfg["rf_run"]:
             self.rf = input_handler.get_data("forc")
         else:
             # cfg = check_inputfiles(cfg)
             pamset_emiconc = {}
-            
+
             pamset_emiconc["thermal_model"] = self.cfg["thermal_model"]
             pamset_emiconc["carbon_cycle_model"] = self.cfg["carbon_cycle_model"]
             pamset_emiconc["emstart"] = self.cfg["emstart"]
             pamset_emiconc["nystart"] = self.cfg["nystart"]
             pamset_emiconc["nyend"] = self.cfg["nyend"]
             pamset_emiconc["idtm"] = self.cfg["idtm"]
-            
+
             for key, value in cfg.items():
                 if key in ["rs_function", "rb_function"]:
                     pamset_emiconc[key] = value
@@ -135,7 +136,7 @@ class CICEROSCM:
 
         # Add support for sending filename in cfg
         self.rf_luc = input_handler.get_data("rf_luc")
-        self.thermal=create_thermal_model(self.cfg["thermal_model"])
+        self.thermal = create_thermal_model(self.cfg["thermal_model"])
         self.initialise_output_arrays()
 
     def initialise_output_arrays(self):
@@ -275,11 +276,10 @@ class CICEROSCM:
         """
         self.initialise_output_arrays()
         # Setting up UDM
-        #udm = UpwellingDiffusionModel(pamset_udm)
-        
-        
-        #udm = create_thermal_model(self.cfg["thermal_model"], pamset_udm)
-        udm=self.thermal(pamset_udm)
+        # udm = UpwellingDiffusionModel(pamset_udm)
+
+        # udm = create_thermal_model(self.cfg["thermal_model"], pamset_udm)
+        udm = self.thermal(pamset_udm)
         values = None
         if not self.cfg["rf_run"]:
             pamset_emiconc["emstart"] = self.cfg["emstart"]

@@ -25,7 +25,7 @@ cscm = CICEROSCM(
         "emissions_file": os.path.join(data_dir, "ssp245_em_RCMIP.txt"),
         "nat_ch4_file": os.path.join(data_dir, "natemis_ch4.txt"),
         "nat_n2o_file": os.path.join(data_dir, "natemis_n2o.txt"),
-        "perturb_em_file": os.path.join(pert_dir, "pertem_test.txt"),        
+        "perturb_em_file": os.path.join(pert_dir, "pertem_test.txt"),
     },
 )
 
@@ -42,7 +42,7 @@ cscm = CICEROSCM(
         "emissions_file": os.path.join(data_dir, "ssp245_em_RCMIP.txt"),
         "nat_ch4_file": os.path.join(data_dir, "natemis_ch4.txt"),
         "nat_n2o_file": os.path.join(data_dir, "natemis_n2o.txt"),
-        "perturb_forc_file": os.path.join(pert_dir, "pertforc_test.txt"),        
+        "perturb_forc_file": os.path.join(pert_dir, "pertforc_test.txt"),
     },
 )
 

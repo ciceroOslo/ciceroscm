@@ -63,13 +63,17 @@ class CarbonCycleModel:
             "nystart": pamset.get("nystart", 1750),
             "nyend": pamset.get("nyend", 2100),
             "beta_f": pamset.get("beta_f", 0.287),
-            "land_temp_sensitivity": pamset.get("land_temp_sensitivity", .1),
+            "land_temp_sensitivity": pamset.get("land_temp_sensitivity", 0.1),
             "soil_respiration_rate": pamset.get("soil_respiration_rate", 0.02),
             "ocean_mixed_layer_depth": pamset.get("ocean_mixed_layer_depth", 25.0),
             "ocean_exchange_rate": pamset.get("ocean_exchange_rate", 0.01),
-            "vegetation_to_soil_fraction": pamset.get("vegetation_to_soil_fraction", 0.1),
+            "vegetation_to_soil_fraction": pamset.get(
+                "vegetation_to_soil_fraction", 0.1
+            ),
             "ocean_solubility_base": pamset.get("ocean_solubility_base", 0.02),
-            "ocean_solubility_temp_coeff": pamset.get("ocean_solubility_temp_coeff", -0.01),
+            "ocean_solubility_temp_coeff": pamset.get(
+                "ocean_solubility_temp_coeff", -0.01
+            ),
         }
         self.pamset["years_tot"] = self.pamset["nyend"] - self.pamset["nystart"] + 1
 
@@ -98,28 +102,40 @@ class CarbonCycleModel:
         float
             Updated atmospheric CO2 concentration (ppm).
         """
-        
-        dt = 1.0# / self.pamset["idtm"]  # Timestep length (years)
+
+        dt = 1.0  # / self.pamset["idtm"]  # Timestep length (years)
 
         # Convert emissions from GtC/yr to PgC/yr
         emissions = em_co2_common
 
         # Land carbon fluxes
         npp = self.calculate_npp(dtemp)  # Net Primary Production (PgC/yr)
-        vegetation_to_soil = self.vegetation_carbon * self.pamset["vegetation_to_soil_fraction"]  # Fraction of vegetation carbon transferred to soil
-        soil_respiration = self.soil_carbon * self.pamset["soil_respiration_rate"]  # Soil carbon decay (PgC/yr)
+        vegetation_to_soil = (
+            self.vegetation_carbon * self.pamset["vegetation_to_soil_fraction"]
+        )  # Fraction of vegetation carbon transferred to soil
+        soil_respiration = (
+            self.soil_carbon * self.pamset["soil_respiration_rate"]
+        )  # Soil carbon decay (PgC/yr)
 
         # Update land carbon pools
         self.vegetation_carbon += (npp - vegetation_to_soil) * dt
         self.soil_carbon += (vegetation_to_soil - soil_respiration) * dt
 
         # Ocean carbon fluxes
-        ocean_uptake = self.calculate_ocean_uptake(dtemp)  # Ocean carbon uptake (PgC/yr)
-        mixed_to_deep = self.ocean_mixed_layer_carbon * self.pamset["ocean_exchange_rate"]  # Mixed to deep ocean flux
-        deep_to_mixed = self.ocean_deep_carbon * self.pamset["ocean_exchange_rate"]  # Deep to mixed ocean flux
+        ocean_uptake = self.calculate_ocean_uptake(
+            dtemp
+        )  # Ocean carbon uptake (PgC/yr)
+        mixed_to_deep = (
+            self.ocean_mixed_layer_carbon * self.pamset["ocean_exchange_rate"]
+        )  # Mixed to deep ocean flux
+        deep_to_mixed = (
+            self.ocean_deep_carbon * self.pamset["ocean_exchange_rate"]
+        )  # Deep to mixed ocean flux
 
         # Update ocean carbon pools
-        self.ocean_mixed_layer_carbon += (ocean_uptake - mixed_to_deep + deep_to_mixed) * dt
+        self.ocean_mixed_layer_carbon += (
+            ocean_uptake - mixed_to_deep + deep_to_mixed
+        ) * dt
         self.ocean_deep_carbon += (mixed_to_deep - deep_to_mixed) * dt
 
         # Net flux to atmosphere
@@ -145,7 +161,9 @@ class CarbonCycleModel:
         """
         co2_fertilization = self.pamset["beta_f"] * np.log(self.atmospheric_co2 / 278.0)
         temp_effect = self.pamset["land_temp_sensitivity"] * dtemp
-        return max(0.0, 60.0 + co2_fertilization - temp_effect)  # Ensure NPP is non-negative
+        return max(
+            0.0, 60.0 + co2_fertilization - temp_effect
+        )  # Ensure NPP is non-negative
 
     def calculate_ocean_uptake(self, dtemp):
         """
@@ -164,8 +182,10 @@ class CarbonCycleModel:
         solubility = self.pamset["ocean_solubility_base"] * (
             1 + self.pamset["ocean_solubility_temp_coeff"] * dtemp
         )  # Solubility decreases with warming
-        return solubility * (self.atmospheric_co2 - 278.0)  # Uptake proportional to CO2 difference
-    
+        return solubility * (
+            self.atmospheric_co2 - 278.0
+        )  # Uptake proportional to CO2 difference
+
     def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0, fnpp_temp_coeff=0):
         """
         stub
