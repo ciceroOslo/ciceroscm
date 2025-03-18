@@ -243,7 +243,7 @@ class InputHandler:
             "rf_luc": self.read_data_on_year_row,
             "rf_sun": self.read_data_on_year_row,
             "rf_volc_n": self.read_data_on_year_row,
-            "rf_volc_s": self.read_data_on_year_row
+            "rf_volc_s": self.read_data_on_year_row,
         }
         used = {
             "sunvolc": 0,
@@ -254,7 +254,13 @@ class InputHandler:
             used[f"{key}_file"] = 0
             used[f"{key}_data"] = 0
         self.cfg = cut_and_check_pamset(
-            {"nystart": 1750, "nyend": 2100, "emstart": 1850, "carbon_cycle_model":"default",'thermal_model':"default"},
+            {
+                "nystart": 1750,
+                "nyend": 2100,
+                "emstart": 1850,
+                "carbon_cycle_model": "default",
+                "thermal_model": "default",
+            },
             cfg,
             used=used,
             cut_warnings=True,
@@ -453,8 +459,8 @@ class InputHandler:
         if "conc_run" in self.cfg:
             return self.cfg["conc_run"]
         return False
-    
-    def thermal_model(self,cfg):
+
+    def thermal_model(self, cfg):
         """
         Check if configurations includes conc_run option
 
@@ -470,8 +476,8 @@ class InputHandler:
         if "thermal_model" in cfg:
             return cfg["thermal_model"]
         return False
-    
-    def carbon_model(self,cfg):
+
+    def carbon_model(self, cfg):
         """
         Check if configurations includes conc_run option
 
@@ -487,7 +493,7 @@ class InputHandler:
         if "carbon_cycle_model" in cfg:
             return cfg["carbon_cycle_model"]
         return False
-    
+
     def optional_pam(self, which):
         """
         Check if data that can be sent optionally is included

@@ -4,6 +4,7 @@
 
 import numpy as np
 
+
 class TwoLayerOceanModel:
     """
     Two layer Model with 2 thermal timescales.
@@ -22,9 +23,11 @@ class TwoLayerOceanModel:
             - c_slow: Heat capacity of the slow-response layer (J/m^2/K)
             - k: Coupling coefficient between fast and slow layers (W/m^2/K)
         """
-        self.lambda_ = params.get("lambda",3.74 / 3)
-        self.c_fast = params.get("mixed", 50)*1000*4181/(365*24*3600)  
-        self.c_slow = params.get("deep", 1200)*1000*4181/(365*24*3600)   # Default value: 100.0
+        self.lambda_ = params.get("lambda", 3.74 / 3)
+        self.c_fast = params.get("mixed", 50) * 1000 * 4181 / (365 * 24 * 3600)
+        self.c_slow = (
+            params.get("deep", 1200) * 1000 * 4181 / (365 * 24 * 3600)
+        )  # Default value: 100.0
         self.k = params.get("k", 0.5)  # eta, Default value: 0.5
 
         # Initialize temperatures for fast and slow layers
@@ -46,10 +49,14 @@ class TwoLayerOceanModel:
             Dictionary containing temperature changes for fast and slow layers.
         """
 
-        forc=(forc_nh+forc_sh)/2+np.mean(fn_volc+fs_volc)
-        
+        forc = (forc_nh + forc_sh) / 2 + np.mean(fn_volc + fs_volc)
+
         # Fast layer temperature change
-        dtemp_fast = (forc - self.temp_fast * self.lambda_ - self.k * (self.temp_fast - self.temp_slow)) / self.c_fast
+        dtemp_fast = (
+            forc
+            - self.temp_fast * self.lambda_
+            - self.k * (self.temp_fast - self.temp_slow)
+        ) / self.c_fast
 
         # Slow layer temperature change
         dtemp_slow = self.k * (self.temp_fast - self.temp_slow) / self.c_slow
@@ -74,6 +81,5 @@ class TwoLayerOceanModel:
             "RIBS": 0.0,
             "RIB": 0.0,
             "OHC700": 0.0,
-            "OHCTOT": 0.0
+            "OHCTOT": 0.0,
         }
-    

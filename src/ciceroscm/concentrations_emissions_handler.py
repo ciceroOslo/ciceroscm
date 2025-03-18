@@ -188,11 +188,15 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
-        print('Carbon Model='+pamset["carbon_cycle_model"])
+        print("Carbon Model=" + pamset["carbon_cycle_model"])
         self.pamset = cut_and_check_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
-            used={"rs_function": "missing", "rb_function": "missing","carbon_cycle_model":"default"},
+            used={
+                "rs_function": "missing",
+                "rb_function": "missing",
+                "carbon_cycle_model": "default",
+            },
             cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
@@ -206,10 +210,10 @@ class ConcentrationsEmissionsHandler:
         self.pamset["cl_dict"], self.pamset["br_dict"] = make_cl_and_br_dictionaries(
             self.df_gas.index
         )
-        model_type =  self.pamset["carbon_cycle_model"]  # Default to "default"
-        
+        model_type = self.pamset["carbon_cycle_model"]  # Default to "default"
+
         self.carbon_cycle = create_carbon_cycle_model(model_type, self.pamset)
-        #self.carbon_cycle = CarbonCycleModel(self.pamset)
+        # self.carbon_cycle = CarbonCycleModel(self.pamset)
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
 

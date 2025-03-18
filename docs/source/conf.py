@@ -17,7 +17,14 @@ from _version import get_versions  # isort:skip # append path before
 # -- Project information -----------------------------------------------------
 
 project = "Ciceroscm"
-authors = ", ".join(["Ane Nordlie Johansen", "Benjaminn M. Sanderson", "Marit Sandstad", "Ragnhild Bieltvedt Skeie"])
+authors = ", ".join(
+    [
+        "Ane Nordlie Johansen",
+        "Benjaminn M. Sanderson",
+        "Marit Sandstad",
+        "Ragnhild Bieltvedt Skeie",
+    ]
+)
 copyright_year = "2022"
 copyright = "{}, {}".format(copyright_year, authors)
 author = authors
@@ -140,9 +147,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, "ciceroscm", "CICEROSCM Documentation", [author], 1)
-]
+man_pages = [(master_doc, "ciceroscm", "CICEROSCM Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -191,8 +196,8 @@ intersphinx_mapping = {
     "numpy": ("https://docs.scipy.org/doc/numpy", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
     "python": ("https://docs.python.org/3", None),
-    #"pyam": ("https://pyam-iamc.readthedocs.io/en/latest", None), #Put back if in use later
-    #"scmdata": ("https://scmdata.readthedocs.io/en/latest", None), #Put back if in use later
+    # "pyam": ("https://pyam-iamc.readthedocs.io/en/latest", None), #Put back if in use later
+    # "scmdata": ("https://scmdata.readthedocs.io/en/latest", None), #Put back if in use later
     # "pint": ("https://pint.readthedocs.io/en/latest", None), # no full API doc here, unfortunately
 }
 napoleon_google_docstring = False
