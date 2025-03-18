@@ -105,8 +105,6 @@ class CICEROSCM:
         else:
             self.cfg["carbon_cycle_model"] = "default"
 
-        print("Thermal Model=" + self.cfg["thermal_model"])
-
         if self.cfg["rf_run"]:
             self.rf = input_handler.get_data("forc")
         else:
