@@ -188,21 +188,17 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
+        print('Carbon Model='+pamset["carbon_cycle_model"])
         self.pamset = cut_and_check_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
-            used={"rs_function": "missing", "rb_function": "missing"},
+            used={"rs_function": "missing", "rb_function": "missing","carbon_cycle_model":"default"},
             cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
         self.conc_in = input_handler.get_data("concentrations")
         self.emis = input_handler.get_data("emissions")
         self.pamset["conc_run"] = input_handler.conc_run()
-        if input_handler.carbon_model():
-            self.pamset["carbon_cycle_model"] = input_handler.carbon_cycle_model()
-        else:
-            self.pamset["carbon_cycle_model"] = "default"
-
         if input_handler.optional_pam("perturb_em"):
             perturb_emissions(input_handler, self.emis)
         if input_handler.optional_pam("perturb_forc"):
@@ -211,6 +207,7 @@ class ConcentrationsEmissionsHandler:
             self.df_gas.index
         )
         model_type =  self.pamset["carbon_cycle_model"]  # Default to "default"
+        
         self.carbon_cycle = create_carbon_cycle_model(model_type, self.pamset)
         #self.carbon_cycle = CarbonCycleModel(self.pamset)
         # not really needed, but I guess the linter will complain...
