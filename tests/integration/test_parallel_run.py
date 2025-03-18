@@ -75,6 +75,7 @@ def test_ciceroscm_run_parallel_many_scenarios(test_data_dir):
         run_id="13555_old_NR_rounded",
     )
     test_not_empty = results.filter(year=2000)
+
     assert len(test_length.values[0]) == 151
     assert test_not_empty.values.any()
 

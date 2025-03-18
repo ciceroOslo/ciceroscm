@@ -254,7 +254,13 @@ class InputHandler:
             used[f"{key}_file"] = 0
             used[f"{key}_data"] = 0
         self.cfg = cut_and_check_pamset(
-            {"nystart": 1750, "nyend": 2100, "emstart": 1850},
+            {
+                "nystart": 1750,
+                "nyend": 2100,
+                "emstart": 1850,
+                "carbon_cycle_model": "default",
+                "thermal_model": "default",
+            },
             cfg,
             used=used,
             cut_warnings=True,
@@ -452,6 +458,40 @@ class InputHandler:
         """
         if "conc_run" in self.cfg:
             return self.cfg["conc_run"]
+        return False
+
+    def thermal_model(self, cfg):
+        """
+        Check if configurations includes conc_run option
+
+        Checking if configurations includes conc_run option
+        If included, its value is returned, otherwise False
+        is returned
+
+        Returns
+        -------
+        bool
+            Whether this is rf_run or not
+        """
+        if "thermal_model" in cfg:
+            return cfg["thermal_model"]
+        return False
+
+    def carbon_model(self, cfg):
+        """
+        Check if configurations includes conc_run option
+
+        Checking if configurations includes conc_run option
+        If included, its value is returned, otherwise False
+        is returned
+
+        Returns
+        -------
+        bool
+            Whether this is rf_run or not
+        """
+        if "carbon_cycle_model" in cfg:
+            return cfg["carbon_cycle_model"]
         return False
 
     def optional_pam(self, which):
