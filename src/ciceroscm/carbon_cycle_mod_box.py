@@ -74,6 +74,10 @@ class CarbonCycleModel:
             "ocean_solubility_temp_coeff": pamset.get(
                 "ocean_solubility_temp_coeff", -0.01
             ),
+            "permafrost_initial_carbon": pamset.get("permafrost_initial_carbon", 500.0),  # Initial permafrost carbon pool (PgC)
+            "permafrost_temp_sensitivity": pamset.get("permafrost_temp_sensitivity", 0.05),  # Sensitivity of permafrost carbon release to temperature (PgC/K)
+            "permafrost_release_delay": pamset.get("permafrost_release_delay", 50.0),  # Time constant for delayed release (years)
+       
         }
         self.pamset["years_tot"] = self.pamset["nyend"] - self.pamset["nystart"] + 1
 
@@ -83,7 +87,7 @@ class CarbonCycleModel:
         self.soil_carbon = 3000.0  # Soil carbon pool (PgC)
         self.ocean_mixed_layer_carbon = 0.0  # Ocean mixed layer carbon anomaly (PgC)
         self.ocean_deep_carbon = 0.0  # Deep ocean carbon anomaly (PgC)
-
+        self.permafrost_carbon = self.pamset["permafrost_initial_carbon"]  # Permafrost carbon pool (PgC)
     def co2em2conc(self, yr, em_co2_common, dtemp=0):
         """
         Calculate CO2 concentrations from emissions.
@@ -120,7 +124,7 @@ class CarbonCycleModel:
         # Update land carbon pools
         self.vegetation_carbon += (npp - vegetation_to_soil) * dt
         self.soil_carbon += (vegetation_to_soil - soil_respiration) * dt
-
+        
         # Ocean carbon fluxes
         ocean_uptake = self.calculate_ocean_uptake(
             dtemp
@@ -138,8 +142,11 @@ class CarbonCycleModel:
         ) * dt
         self.ocean_deep_carbon += (mixed_to_deep - deep_to_mixed) * dt
 
+        # Permafrost carbon release
+        permafrost_release = self.calculate_permafrost_release(dtemp, dt)
+
         # Net flux to atmosphere
-        net_flux = emissions - ocean_uptake + soil_respiration - npp
+        net_flux = emissions - ocean_uptake + soil_respiration - npp + permafrost_release
 
         # Update atmospheric CO2 concentration (ppm)
         self.atmospheric_co2 += net_flux / PPM_CO2_TO_PG_C * dt
@@ -164,7 +171,33 @@ class CarbonCycleModel:
         return max(
             0.0, 60.0 + co2_fertilization - temp_effect
         )  # Ensure NPP is non-negative
+    def calculate_permafrost_release(self, dtemp, dt):
+        """
+        Calculate permafrost carbon release as a function of temperature and time.
 
+        Parameters
+        ----------
+        dtemp : float
+            Global mean temperature difference from pre-industrial (K).
+        dt : float
+            Timestep length (years).
+
+        Returns
+        -------
+        float
+            Permafrost carbon release (PgC/yr).
+        """
+        # Temperature-dependent release rate
+        temp_effect = self.pamset["permafrost_temp_sensitivity"] * dtemp
+
+        # Delayed release using exponential decay
+        release_rate = temp_effect * (self.permafrost_carbon / self.pamset["permafrost_release_delay"])
+
+        # Update the permafrost carbon pool
+        self.permafrost_carbon -= release_rate * dt
+        self.permafrost_carbon = max(0.0, self.permafrost_carbon)  # Ensure non-negative pool
+
+        return release_rate
     def calculate_ocean_uptake(self, dtemp):
         """
         Calculate ocean carbon uptake as a function of temperature and CO2.
