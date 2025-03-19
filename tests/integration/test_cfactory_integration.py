@@ -1,5 +1,5 @@
-import pytest
 import os
+
 from ciceroscm import CICEROSCM
 from ciceroscm.carbon_cycle_mod import CarbonCycleModel as DefaultCarbonCycleModel
 from ciceroscm.carbon_cycle_mod_box import CarbonCycleModel as BoxCarbonCycleModel

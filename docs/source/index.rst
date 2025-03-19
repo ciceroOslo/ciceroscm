@@ -28,6 +28,9 @@ CiceroSCM
     input_handler
     perturbations
     make_plots
+    carbon_cycle_mod
+    pub_utils
+    rfuns
 
 .. toctree::
     :maxdepth: 2

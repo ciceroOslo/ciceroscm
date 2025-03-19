@@ -1,8 +1,8 @@
-import pytest
 import os
+
 from ciceroscm import CICEROSCM
-from ciceroscm.upwelling_diffusion_model import UpwellingDiffusionModel
 from ciceroscm.two_layer_ocean import TwoLayerOceanModel
+from ciceroscm.upwelling_diffusion_model import UpwellingDiffusionModel
 
 
 def test_ciceroscm_with_default_thermal_model(tmpdir, test_data_dir):

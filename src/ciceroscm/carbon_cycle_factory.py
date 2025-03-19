@@ -1,10 +1,12 @@
+"""Carbon cycle factory function"""
+
 from .carbon_cycle_mod import CarbonCycleModel as DefaultCarbonCycleModel
 from .carbon_cycle_mod_box import CarbonCycleModel as BoxCarbonCycleModel
 
 
 def create_carbon_cycle_model(model_type, pamset):
     """
-    Factory function to create a CarbonCycleModel instance.
+    Create a CarbonCycleModel instance (factory function).
 
     Parameters
     ----------
@@ -17,10 +19,14 @@ def create_carbon_cycle_model(model_type, pamset):
     -------
     CarbonCycleModel
         An instance of the selected carbon cycle model.
+
+    Raises
+    ------
+    ValueError
+        If an undefined carbon cycle model_type is called for
     """
     if model_type == "default":
         return DefaultCarbonCycleModel(pamset)
-    elif model_type == "box":
+    if model_type == "box":
         return BoxCarbonCycleModel(pamset)
-    else:
-        raise ValueError(f"Unknown model type: {model_type}")
+    raise ValueError(f"Unknown model type: {model_type}")

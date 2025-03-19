@@ -11,8 +11,7 @@ import pandas as pd
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
 from .carbon_cycle_factory import create_carbon_cycle_model
-
-from .carbon_cycle_mod_box import CarbonCycleModel, calculate_airborne_fraction
+from .carbon_cycle_mod_box import calculate_airborne_fraction
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -390,7 +389,7 @@ class ConcentrationsEmissionsHandler:
         yr_emstart = emstart - yr_0
         yr_ix = yr - yr_0
         tracer = "TROP_O3"
-        if yr_ix < yr_emstart:
+        if yr_ix < yr_emstart or self.pamset["conc_run"]:
             # Uses change in CO2_FF emissions
             if self.emis["CO2_FF"][self.pamset["ref_yr"]] != self.emis["CO2_FF"][yr_0]:
                 q = (
