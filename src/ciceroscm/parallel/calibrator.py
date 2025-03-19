@@ -126,32 +126,26 @@ class Calibrator:
             datapoint,
         ) in self.calibdata.iterrows():
             if datapoint["Yearstart_change"] == datapoint["Yearend_change"]:
-                vchange = res.filter(
-                    variable=datapoint["Variable Name"],
-                    year=datapoint["Yearstart_change"],
-                ).values[0]
+                vchange = res[(res["variable"] == datapoint["Variable Name"])][
+                    datapoint["Yearstart_change"]
+                ].values
             else:
                 vchange = np.mean(
-                    res.filter(
-                        variable=datapoint["Variable Name"],
-                        year=range(
+                    res[(res["variable"] == datapoint["Variable Name"])][
+                        range(
                             datapoint["Yearstart_change"], datapoint["Yearend_change"]
-                        ),
-                    )
+                        )
+                    ].values
                 )
             if datapoint["Yearstart_norm"] == datapoint["Yearend_norm"]:
-                vnorm = res.filter(
-                    variable=datapoint["Variable Name"],
-                    year=datapoint["Yearstart_norm"],
-                ).values[0]
+                vnorm = res[(res["variable"] == datapoint["Variable Name"])][
+                    datapoint["Yearstart_norm"]
+                ].values
             else:
                 vnorm = np.mean(
-                    res.filter(
-                        variable=datapoint["Variable Name"],
-                        year=range(
-                            datapoint["Yearstart_norm"], datapoint["Yearend_norm"]
-                        ),
-                    ).values
+                    res[(res["variable"] == datapoint["Variable Name"])][
+                        range(datapoint["Yearstart_norm"], datapoint["Yearend_norm"])
+                    ].values
                 )
             vres = vchange - vnorm
             sigma = datapoint["sigma"]
@@ -182,7 +176,7 @@ class Calibrator:
             A list of the configuration indices that passed
             the test
         """
-        indices = results.get_unique_meta("run_id")
+        indices = results["run_id"].unique()
 
         draws = np.square(
             np.random.normal(size=(len(indices)))
@@ -190,7 +184,7 @@ class Calibrator:
         )
         keep = []
         for i, index in enumerate(indices):
-            distance = self.find_distance(results.filter(run_id=index))
+            distance = self.find_distance(results[results["run_id"] == index])
             if draws[i] * len(self.calibdata) > distance:
                 keep.append(index)
         return keep
@@ -227,7 +221,6 @@ class Calibrator:
             numvalues=self.subsamplesize,
         )
         if isinstance(self.calibdata, pd.DataFrame):
-            print(self.calibdata.shape)
             output_vars = self.calibdata["Variable Name"].unique()
         else:
             output_vars = self.calibdata["Variable Name"]

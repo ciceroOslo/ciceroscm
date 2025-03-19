@@ -51,6 +51,7 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
         },
     )
     print("Attempting to change parameters in carbon_cycle_model")
+
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True},
         pamset_emiconc={"beta_f": 0.3},
