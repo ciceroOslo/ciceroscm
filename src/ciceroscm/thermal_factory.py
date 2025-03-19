@@ -1,26 +1,30 @@
-from .upwelling_diffusion_model import UpwellingDiffusionModel
+"""Thermal model factory function"""
+
 from .two_layer_ocean import TwoLayerOceanModel
+from .upwelling_diffusion_model import UpwellingDiffusionModel
 
 
 def create_thermal_model(model_type):
     """
-    Factory function to create a ThermalModel instance.
+    Create a ThermalModel instance (factory function).
 
     Parameters
     ----------
     model_type : str
         The type of carbon cycle model to create ("default" or "box").
-    pamset : dict
-        Parameter set for the model.
 
     Returns
     -------
     CarbonCycleModel
         An instance of the selected carbon cycle model.
+
+    Raises
+    ------
+    ValueError
+        If an undefined thermal model_type is called for
     """
     if model_type == "default":
         return UpwellingDiffusionModel
-    elif model_type == "twolayer":
+    if model_type == "twolayer":
         return TwoLayerOceanModel
-    else:
-        raise ValueError(f"Unknown model type: {model_type}")
+    raise ValueError(f"Unknown model type: {model_type}")

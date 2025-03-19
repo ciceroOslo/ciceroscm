@@ -11,8 +11,7 @@ import pandas as pd
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
 from .carbon_cycle_factory import create_carbon_cycle_model
-
-from .carbon_cycle_mod_box import CarbonCycleModel, calculate_airborne_fraction
+from .carbon_cycle_mod_box import calculate_airborne_fraction
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,

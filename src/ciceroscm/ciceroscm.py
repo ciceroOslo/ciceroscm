@@ -12,8 +12,6 @@ from ._utils import cut_and_check_pamset
 from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
 from .input_handler import InputHandler
 from .make_plots import plot_output1
-from .upwelling_diffusion_model import UpwellingDiffusionModel
-from .carbon_cycle_factory import create_carbon_cycle_model
 from .thermal_factory import create_thermal_model
 
 LOGGER = logging.getLogger(__name__)
@@ -86,7 +84,6 @@ class CICEROSCM:
               or emission runs, and start and end of run etc.
 
         """
-
         self.cfg = cut_and_check_pamset(
             {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24},
             cfg,
