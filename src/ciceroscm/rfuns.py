@@ -11,6 +11,7 @@ def rb_function(it, idtm=24):
 
     Calculate biotic decay function
     time is the year index*idtm + i, i.e. the month number
+
     Parameters
     ----------
     it : int
@@ -38,6 +39,7 @@ def rb_function2(it, rb_coef, rb_tim, idtm=24):
     Calculate biotic decay function
     Calculate biotic decay function
     time is the year index*idtm + i, i.e. the month number
+
     Parameters
     ----------
     it : int
@@ -122,8 +124,10 @@ rs_function_array = np.vectorize(rs_function)
 def rs_function2(it, rs_coef, rs_tim, idtm=24):
     """
     Calculate pulse response function for mixed layer
+
     Calculate pulse response function for mixed layer
     time is the year index*idtm + i, i.e. the month number
+
     Parameters
     ----------
     it : int
