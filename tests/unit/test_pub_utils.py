@@ -18,10 +18,6 @@ def test_making_biotic_decay_function():
         - 0.71846 * np.exp(-55.0 / 120)
         + 2.9323e-3 * np.exp(-1 / 100.0)
     )
-    print(rb_func[24])
-    print(expected)
-    print(rb_func[0])
-    print(np.dot(rb_C, np.exp(-1.0 / rb_T)))
     assert rb_func[0] == 0.0
     assert np.allclose(rb_func[24], expected, rtol=1e-2)
     # assert (rb_func(24, 24) - expected) / expected < 1.0e-9
@@ -41,8 +37,6 @@ def test_making_carbon_pool_decay_function():
     ) / np.sum(rs_C)
     assert rs_func[0] == 1.0
     assert rs_func[1000] < 1.0
-    print(expected)
-    print(rs_func[24])
     assert (rs_func[24] - expected) / expected < 1e-7
 
 

@@ -102,7 +102,6 @@ class CarbonCycleModel:
         float
             Updated atmospheric CO2 concentration (ppm).
         """
-
         dt = 1.0  # / self.pamset["idtm"]  # Timestep length (years)
 
         # Convert emissions from GtC/yr to PgC/yr
@@ -188,5 +187,5 @@ class CarbonCycleModel:
 
     def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0, fnpp_temp_coeff=0):
         """
-        stub
+        Stub
         """

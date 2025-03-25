@@ -40,15 +40,20 @@ class TwoLayerOceanModel:
 
         Parameters
         ----------
-        forc : float
-            Radiative forcing (W/m^2).
+        forc_nh : float
+               Northern hemispheric forcing (W/m^2)
+        forc_sh : float
+               Southern hemispheric forcing (W/m^2)
+        fn_volc : float
+               Northern hemispheric volcanic forcing (W/m^2)
+        fs_volc : float
+               Northern hemispheric volcanic forcing (W/m^2)
 
         Returns
         -------
         dict
             Dictionary containing temperature changes for fast and slow layers.
         """
-
         forc = (forc_nh + forc_sh) / 2 + np.mean(fn_volc + fs_volc)
 
         # Fast layer temperature change
