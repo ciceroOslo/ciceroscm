@@ -11,8 +11,8 @@ from openscm_runner.adapters.ciceroscm_py_adapter.make_scenario_data import (
     SCENARIODATAGETTER,
 )
 from openscm_runner.adapters.ciceroscm_py_adapter.read_results import CSCMREADER
-from openscm_runner.adapters.utils._parallel_process import _parallel_process
 
+from ._parallel_process import _parallel_process
 from .._utils import check_numeric_pamset
 from ..ciceroscm import CICEROSCM
 
