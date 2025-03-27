@@ -205,16 +205,16 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     carbon_sum = (
         np.cumsum(
             cscm.results["carbon cycle"]["Airborne fraction CO2"]
-            * cscm.results["carbon cycle"]["Emissions"]
+            * cscm.results["emissions"]["CO2"]
         )
         + cscm.results["carbon cycle"]["Biosphere carbon flux"].values
         + cscm.results["carbon cycle"]["Ocean carbon flux"].values
     )
     print(carbon_sum[-5:])
-    print(np.cumsum(cscm.results["carbon cycle"]["Emissions"])[-5:])
+    print(np.cumsum(cscm.results["emissions"]["CO2"])[-5:])
     # TODO: Why isn't this closer?
     assert np.allclose(
-        carbon_sum, np.cumsum(cscm.results["carbon cycle"]["Emissions"]), rtol=5e-1
+        carbon_sum, np.cumsum(cscm.results["emissions"]["CO2"]), rtol=5e-1
     )
     # Put this in again, find out what is happening with CF4
     # check_output(

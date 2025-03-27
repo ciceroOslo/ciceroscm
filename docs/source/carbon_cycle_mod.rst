@@ -3,4 +3,4 @@
 Carbon cycle module API
 ----------------------------------------
 
-.. automodule:: ciceroscm.carbon_cycle_mod
+.. automodule:: ciceroscm.carbon_cycle.carbon_cycle_mod
