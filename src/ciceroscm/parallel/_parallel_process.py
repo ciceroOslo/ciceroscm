@@ -1,6 +1,7 @@
 """
 Code to support running in parallel
 """
+
 import logging
 import time
 from concurrent.futures import as_completed
@@ -40,6 +41,7 @@ def progress(*args, **kwargs):
     kwargs = {**_default_tqdm_params, **kwargs}
     return tqdm(*args, **kwargs)
 
+
 def _run_serial(func, configs, config_are_kwargs, desc):
     LOGGER.debug("Entering _run_serial")
 
@@ -54,7 +56,7 @@ def _run_serial(func, configs, config_are_kwargs, desc):
     return res
 
 
-def _run_parallel(  # pylint:disable=too-many-arguments
+def _run_parallel(  # pylint:disable=too-many-arguments,too-many-positional-arguments
     pool, timeout, func, configs, config_are_kwargs, desc, bar_start
 ):
     LOGGER.debug("Entering _run_parallel")
@@ -95,7 +97,7 @@ def _run_parallel(  # pylint:disable=too-many-arguments
     return res
 
 
-def _parallel_process(  # pylint:disable=too-many-arguments
+def _parallel_process(  # pylint:disable=too-many-arguments,too-many-positional-arguments
     func,
     configuration,
     pool=None,
@@ -107,7 +109,7 @@ def _parallel_process(  # pylint:disable=too-many-arguments
     """
     Run a process in parallel with a progress bar.
 
-    Borrowed from: https://github.com/openscm/openscm-runner 
+    Borrowed from: https://github.com/openscm/openscm-runner
     And there adapted from http://danshiebler.com/2016-09-14-parallel-progress-bar/
 
     Parameters
