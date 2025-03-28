@@ -80,6 +80,8 @@ def linear_fnpp_from_temp(fnpp_temp_coeff=0, dtemp=0):
     """
     return 60 + fnpp_temp_coeff * dtemp
 
+linear_fnpp_from_temp_vec = np.vectorize(linear_fnpp_from_temp)
+
 class CarbonCycleModel:
     """
     Class to handle carbon cycle calculations
@@ -230,7 +232,7 @@ class CarbonCycleModel:
                 idtm=self.pamset["idtm"],
             )
 
-    def co2em2conc(self, yr, em_co2_common, dtemp=0):
+    def co2em2conc(self, yr, em_co2_common, dtemp=0.):
         """
         Calculate co2 concentrations from emissions
 
@@ -329,7 +331,7 @@ class CarbonCycleModel:
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
         return self.co2_hold["xCO2"]
 
-    def _get_ffer_timeseries(self, conc_run=False, co2_conc_series=None):
+    def _get_ffer_timeseries(self, conc_run=False, co2_conc_series=None, dtemp_timeseries=None):
         """
         Get the biospheric fertilisation (ffer) time series
 
@@ -353,16 +355,22 @@ class CarbonCycleModel:
             Biospheric fertilisation factor timeseries
         """
         dt = 1.0 / self.pamset["idtm"]
-
         if conc_run and co2_conc_series is not None:
+            if dtemp_timeseries is None:
+                dtemp_timeseries = np.zeros(len(co2_conc_series))
             timesteps = len(co2_conc_series) * self.pamset["idtm"]
+            fnpp = np.repeat(
+                linear_fnpp_from_temp_vec(fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"], dtemp = dtemp_timeseries)
+                ,
+                self.pamset["idtm"],
+            )
             dfnpp = np.repeat(
                 [
                     60 * self.pamset["beta_f"] * np.log(co2_conc / 278.0)
                     for co2_conc in co2_conc_series
                 ],
                 self.pamset["idtm"],
-            )
+            )* fnpp
         else:
             timesteps = self.pamset["idtm"] * self.pamset["years_tot"]
             dfnpp = self.co2_hold["dfnpp"]
@@ -459,7 +467,7 @@ class CarbonCycleModel:
         )
         return ocean_carbon_flux
 
-    def back_calculate_emissions(self, co2_conc_series):
+    def back_calculate_emissions(self, co2_conc_series, dtemp_timeseries=None):
         """
         Back calculate emissions from conc_run
 
@@ -474,12 +482,14 @@ class CarbonCycleModel:
         """
         prev_co2_conc = 278.0
         em_series = np.zeros(len(co2_conc_series))
-        ffer = self._get_ffer_timeseries(conc_run=True, co2_conc_series=co2_conc_series)
+        if dtemp_timeseries is None:
+            dtemp_timeseries = np.zeros(len(co2_conc_series))
+        ffer = self._get_ffer_timeseries(conc_run=True, co2_conc_series=co2_conc_series, dtemp_timeseries=dtemp_timeseries)
         for i, co2_conc in enumerate(co2_conc_series):
             ffer_here = ffer[i * self.pamset["idtm"]]
             em_series[i] = (
                 self._guess_emissions_iteration(
-                    co2_conc, prev_co2_conc, yrix=i, ffer=ffer_here
+                    co2_conc, prev_co2_conc, yrix=i, ffer=ffer_here, dtemp=dtemp_timeseries[i]
                 )
                 * PPM_CO2_TO_PG_C
                 + ffer_here
@@ -523,7 +533,7 @@ class CarbonCycleModel:
         )
 
     def _guess_emissions_iteration(
-        self, co2_conc_now, co2_conc_zero, yrix=0, rtol=1e-7, maxit=100, ffer=None
+        self, co2_conc_now, co2_conc_zero, dtemp= 0,yrix=0, rtol=1e-7, maxit=100, ffer=None
     ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
         """
         Iterate to get right emissions for a single year
@@ -561,7 +571,7 @@ class CarbonCycleModel:
 
         """
         if ffer is None:
-            ffer = self._get_ffer_timeseries([co2_conc_zero, co2_conc_now])[
+            ffer = self._get_ffer_timeseries([co2_conc_zero, co2_conc_now], dtemp_timeseries=[0, dtemp])[
                 yrix * self.pamset["idtm"]
             ]
         min_guess = self.simplified_em_backward(co2_conc_now / 2, co2_conc_zero)
@@ -569,7 +579,7 @@ class CarbonCycleModel:
         guess = self.simplified_em_backward(co2_conc_now, co2_conc_zero)
         hold_dict = self._get_co2_hold_values()
         estimated_conc = self.co2em2conc(
-            self.pamset["nystart"] + yrix, PPM_CO2_TO_PG_C * (guess) + ffer
+            self.pamset["nystart"] + yrix, PPM_CO2_TO_PG_C * (guess) + ffer, dtemp = dtemp
         )
         iteration = 0
         while (
@@ -585,7 +595,7 @@ class CarbonCycleModel:
                 guess = (guess + max_guess) / 2
             self._set_co2_hold(**hold_dict)
             estimated_conc = self.co2em2conc(
-                self.pamset["nystart"] + yrix, PPM_CO2_TO_PG_C * (guess) + ffer
+                self.pamset["nystart"] + yrix, PPM_CO2_TO_PG_C * (guess) + ffer, dtemp = dtemp
             )
             iteration = iteration + 1
         return guess
