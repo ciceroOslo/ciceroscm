@@ -2,7 +2,8 @@ import os
 
 import numpy as np
 
-from ciceroscm import CICEROSCM, carbon_cycle_mod
+from ciceroscm import CICEROSCM
+from ciceroscm.carbon_cycle import carbon_cycle_mod
 
 
 def test_linear_fnpp_from_temp():
