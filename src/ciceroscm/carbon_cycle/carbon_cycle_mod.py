@@ -574,8 +574,9 @@ class CarbonCycleModel:
             ffer = self._get_ffer_timeseries([co2_conc_zero, co2_conc_now], dtemp_timeseries=[0, dtemp])[
                 yrix * self.pamset["idtm"]
             ]
-        min_guess = self.simplified_em_backward(co2_conc_now / 2, co2_conc_zero)
-        max_guess = self.simplified_em_backward(co2_conc_now * 2, co2_conc_zero)
+        co2_change = co2_conc_now-co2_conc_zero
+        min_guess = self.simplified_em_backward(co2_conc_zero - 4*co2_change , co2_conc_zero)
+        max_guess = self.simplified_em_backward(co2_conc_zero + 4* co2_change, co2_conc_zero)
         guess = self.simplified_em_backward(co2_conc_now, co2_conc_zero)
         hold_dict = self._get_co2_hold_values()
         estimated_conc = self.co2em2conc(
@@ -598,6 +599,9 @@ class CarbonCycleModel:
                 self.pamset["nystart"] + yrix, PPM_CO2_TO_PG_C * (guess) + ffer, dtemp = dtemp
             )
             iteration = iteration + 1
+        if yrix%50 == 0:
+            print(f"yr: {yrix} has minguess: {PPM_CO2_TO_PG_C * min_guess + ffer}, maxguess: {PPM_CO2_TO_PG_C * max_guess + ffer} and ends at {PPM_CO2_TO_PG_C * guess + ffer}")
+            print(f"{co2_conc_now} and {co2_conc_zero}")
         return guess
 
     def get_carbon_cycle_output(self, years, conc_run=False, conc_series=None):

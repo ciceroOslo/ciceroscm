@@ -125,18 +125,20 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
          {"results_as_dict": True, "carbon_cycle_outputs": True},        
     )
     conc_co2_series_no_feedback = cscm.results["concentrations"]["CO2"].values
+    print(cscm.ce_handler.carbon_cycle.pamset)
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True}, 
-        pamset_emiconc={"fnpp_temp_coeff": -1, "mixed_carbon": 75.0}
+        pamset_emiconc={"fnpp_temp_coeff": -10}
     )
     conc_co2_series = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
     temp_timseries = cscm.results["dT_glob"]
+    print(cscm.ce_handler.carbon_cycle.pamset)
 
-    ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2100, "nystart": 1750, "fnpp_temp_coeff": -1, "mixed_carbon": 75.0})
+    ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2100, "nystart": 1750, "fnpp_temp_coeff": -1})
     em_back_calculated = ccmod.back_calculate_emissions(conc_co2_series, dtemp_timeseries=temp_timseries)
-    print(conc_co2_series[:30])
-    print(conc_co2_series_no_feedback[:30])
+    #print(conc_co2_series[:30])
+    #print(conc_co2_series_no_feedback[:30])
     assert not np.allclose(conc_co2_series, conc_co2_series_no_feedback)
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
 

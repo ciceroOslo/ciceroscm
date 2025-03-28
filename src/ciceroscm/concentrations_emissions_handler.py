@@ -557,7 +557,7 @@ class ConcentrationsEmissionsHandler:
         forc_sh = forc_sh + rf_sun
         return tot_forc, forc_nh, forc_sh
 
-    def emi2conc(self, yr, dtemp=0):
+    def emi2conc(self, yr, dtemp=0.):
         """
         Calculate concentrations from emissions
 
@@ -610,6 +610,7 @@ class ConcentrationsEmissionsHandler:
                     self.emis["CO2_FF"][yr]
                     + self.emis["CO2_AFOLU"][yr]
                     + self.df_gas["NAT_EM"]["CO2"],
+                    dtemp=dtemp,
                 )
                 continue
             if yr < self.pamset["emstart"]:
