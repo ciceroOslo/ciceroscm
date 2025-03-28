@@ -4,7 +4,8 @@ import re
 import numpy as np
 import pytest
 
-from ciceroscm import input_handler, pub_utils, rfuns
+from ciceroscm import input_handler, pub_utils
+from ciceroscm.carbon_cycle import rfuns
 
 
 def test_making_biotic_decay_function():

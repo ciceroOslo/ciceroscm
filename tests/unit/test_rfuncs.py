@@ -1,7 +1,7 @@
 # import matplotlib.pyplot as plt
 import numpy as np
 
-from ciceroscm import rfuns
+from ciceroscm.carbon_cycle import rfuns
 
 
 def test_rs_and_rb_functions_old():
