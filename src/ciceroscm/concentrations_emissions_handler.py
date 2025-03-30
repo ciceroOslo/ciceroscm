@@ -557,7 +557,7 @@ class ConcentrationsEmissionsHandler:
         forc_sh = forc_sh + rf_sun
         return tot_forc, forc_nh, forc_sh
 
-    def emi2conc(self, yr, dtemp=0.):
+    def emi2conc(self, yr, dtemp=0.0):
         """
         Calculate concentrations from emissions
 
