@@ -5,24 +5,19 @@ Module to handle carbon cycle from CO2 emissions to concentrations
 from functools import partial
 
 import numpy as np
+import pandas as pd
 from scipy import optimize
 
-from ._utils import cut_and_check_pamset
-from .pub_utils import _check_array_consistency
+from .._utils import cut_and_check_pamset
+from ..pub_utils import _check_array_consistency
+from .common_carbon_cycle_functions import (
+    GE_COEFF,
+    OCEAN_AREA,
+    PPM_CO2_TO_PG_C,
+    PPMKG_TO_UMOL_PER_VOL,
+    calculate_airborne_fraction,
+)
 from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
-
-# Area of the ocean (m^2)
-OCEAN_AREA = 3.62e14
-
-# Gas exchange coefficient (air <--> ocean) (yr^-1*m^-2)
-GE_COEFF = 1.0 / (OCEAN_AREA * 9.06)
-
-
-# Conversion factor ppm/kg --> umol*/m3
-PPMKG_TO_UMOL_PER_VOL = 1.722e17
-
-# Conversion factor ppm CO2 -> kg
-PPM_CO2_TO_PG_C = 2.123
 
 
 def xco2_poly_to_solve(z_co2, constant=0, mixed_carbon=0):
@@ -63,30 +58,6 @@ def take_out_missing(pamset):
         if value == "missing":
             del pamset[key]
     return pamset
-
-
-def calculate_airborne_fraction(em_timeseries, conc_timeseries):
-    """
-    Calculate Airborne Fraction of CO2 from emissions timeseries
-
-    Parameters
-    ----------
-    em_timeseries: np.ndarray
-        Emissions timeseries, either inputs or backcalculated for concentration
-        run
-    conc_timeseries : np.ndarray
-        Concentrations timeseries. Should be the same length as the emissions
-        timeseries
-
-    Returns
-    -------
-    np.ndarray
-        Airborne fraction calculated from the em_timeseries and conc_timeseries
-    """
-    airborne_fraction = (
-        (conc_timeseries - 278.0) / np.cumsum(em_timeseries) * PPM_CO2_TO_PG_C
-    )
-    return airborne_fraction
 
 
 class CarbonCycleModel:
@@ -524,7 +495,7 @@ class CarbonCycleModel:
 
     def _guess_emissions_iteration(
         self, co2_conc_now, co2_conc_zero, yrix=0, rtol=1e-7, maxit=100, ffer=None
-    ):  # pylint: disable=too-many-positional-arguments, too-many-arguments
+    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
         """
         Iterate to get right emissions for a single year
 
@@ -589,3 +560,44 @@ class CarbonCycleModel:
             )
             iteration = iteration + 1
         return guess
+
+    def get_carbon_cycle_output(self, years, conc_run=False, conc_series=None):
+        """
+        Make and return a dataframe with carbon cycle data
+
+        Parameters
+        ----------
+        years : np.array
+            Array of years to use as index
+        conc_run : bool
+            Whether this is from a concentrations driven run or emissions driven
+        conc_series : np.array
+            Numpy array of concentrations, must be included for a concentrations
+            driven run to back calculate emissions
+
+        Returns
+        -------
+        Pandas.DataFrame
+            Including carbon cycle variables
+        """
+        if conc_run and conc_series is None:
+            return None
+        if conc_run:
+            em_series = self.back_calculate_emissions(conc_series)
+        df_carbon = pd.DataFrame(
+            data={
+                "Biosphere carbon flux": self.get_biosphere_carbon_flux(
+                    conc_run=conc_run
+                ),
+                "Ocean carbon flux": self.get_ocean_carbon_flux(),
+            },
+            index=years,
+        )
+
+        if not conc_run:
+            return df_carbon
+        df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
+            em_series, conc_series  # pylint: disable=possibly-used-before-assignment
+        )
+        df_carbon["Emissions"] = em_series
+        return df_carbon
