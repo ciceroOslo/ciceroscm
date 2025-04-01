@@ -7,13 +7,12 @@ from concurrent.futures import ProcessPoolExecutor
 from itertools import product
 
 import pandas as pd
-from ..output_formatting_tools.reformat_inputdata_to_cscm_format import (
-    SCENARIODATAGETTER,
-)
-from ..output_formatting_tools.reformat_cscm_results import CSCMREADER
 
 from .._utils import check_numeric_pamset
 from ..ciceroscm import CICEROSCM
+from ..formattingtools.reformat_cscm_results import CSCMREADER
+from ..formattingtools.reformat_inputdata_to_cscm_format import \
+    SCENARIODATAGETTER
 from ._parallel_process import _parallel_process
 
 LOGGER = logging.getLogger(__name__)

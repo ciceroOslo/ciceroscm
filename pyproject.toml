@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ciceroscm"
+authors = [
+    {name = "Marit Sandstad", email = "marit.sandstad@cicero.oslo.no"},
+    {name = "Ragnhild Bieltvedt Skeie", email = "r.b.skeie@cicero.oslo.no"},
+    {name = "Ane Nordlie Johansen", email = "ane.nordlie.johansen@cicero.oslo.no"},
+    {name = "Benjamin Sanderson", email = "benjamin.sanderson@cicero.oslo.no"},
+]
+description = "Python version of the CICERO-SCM simple climate model"
+readme = "README.rst"
+requires-python = ">=3.9"
+keywords = ["cicero-scm", "cicero", "python", "repo", "simple", "climate", "model"]
+classifiers = [
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: Apache Software License",
+        "Intended Audience :: Developers",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+]
+dynamic = ["version"]
+dependencies = [
+    "click",
+    "openscm_units>=0.5.0",
+    "python-dotenv",
+    "tqdm",
+    "matplotlib>=3.4",
+    "scipy",
+    "numpy>=1.23",
+    "pandas",
+]
+
+[project.optional-dependencies]
+notebookss = [
+    "ipywidgets",
+    "notebook",
+    "seaborn",
+ ]
+tests =  [
+    "codecov",
+    "coverage",
+    "nbval",
+    "pytest-cov",
+    "pytest>=4.0",
+    "xlrd",
+]
+docs = ["sphinx>=5", "sphinx_rtd_theme", "sphinx-click"]
+deploy = ["twine>=1.11.0", "setuptools>=41.2", "wheel>=0.31.0"]
+dev = [
+        "bandit",
+        "black>=22.3.0",
+        "black-nb",
+        "flake8",
+        "isort>5",
+        "mypy",
+        "nbdime",
+        "pydocstyle",
+        "pylint>=2.4.4",
+    'ciceroscm[deploy,notebooks,tests,docs]'
+]
+
+# ... other project metadata fields as listed in:
+#     https://packaging.python.org/en/latest/guides/writing-pyproject-toml/

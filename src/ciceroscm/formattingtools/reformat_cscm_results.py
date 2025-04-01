@@ -2,6 +2,7 @@
 Module that reads in CICERO-SCM results
 and returns data to append to SCMRun
 """
+
 import numpy as np
 import pandas as pd
 
@@ -108,7 +109,6 @@ def get_data_from_forc_common(df_temp, variable, v_dict, volc=0, sun=0):
     return years, timeseries
 
 
-
 def get_data_from_conc(results, variable):
     """
     Get data from concentration files
@@ -161,9 +161,9 @@ class CSCMREADER:
 
     def __init__(self, nystart, nyend):
         self.variable_dict = openscm_to_cscm_dict
-        self.variable_dict[
-            "Effective Radiative Forcing|Aerosols|Direct Effect|SOx"
-        ] = "SO4_DIR"
+        self.variable_dict["Effective Radiative Forcing|Aerosols|Direct Effect|SOx"] = (
+            "SO4_DIR"
+        )
         self.temp_list = (
             "dT_glob",
             "dT_glob_air",

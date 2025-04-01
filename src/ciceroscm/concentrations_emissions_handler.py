@@ -11,13 +11,11 @@ import pandas as pd
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
 from .carbon_cycle.carbon_cycle_mod import CarbonCycleModel
-from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
+from .carbon_cycle.common_carbon_cycle_functions import \
+    calculate_airborne_fraction
 from .make_plots import plot_output2
-from .perturbations import (
-    ForcingPerturbation,
-    calculate_hemispheric_forcing,
-    perturb_emissions,
-)
+from .perturbations import (ForcingPerturbation, calculate_hemispheric_forcing,
+                            perturb_emissions)
 from .pub_utils import make_cl_and_br_dictionaries
 
 LOGGER = logging.getLogger(__name__)
