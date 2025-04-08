@@ -586,6 +586,7 @@ class ConcentrationsEmissionsHandler:
             self.fill_one_row_conc(yr)
             return
         # Before emissions start
+        
         if yr < self.pamset["emstart"]:
             self.conc["CO2"][yr] = self.carbon_cycle.co2em2conc(
                 yr,
@@ -609,6 +610,7 @@ class ConcentrationsEmissionsHandler:
                     self.emis["CO2_FF"][yr]
                     + self.emis["CO2_AFOLU"][yr]
                     + self.df_gas["NAT_EM"]["CO2"],
+                    dtemp=dtemp
                 )
                 continue
             if yr < self.pamset["emstart"]:
