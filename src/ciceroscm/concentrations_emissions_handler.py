@@ -10,7 +10,8 @@ import pandas as pd
 
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
-from .carbon_cycle_mod import CarbonCycleModel, calculate_airborne_fraction
+from .carbon_cycle.carbon_cycle_mod import CarbonCycleModel
+from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -36,7 +37,9 @@ def check_pamset(pamset):
           of the run. Values that begin with q are concetration
           or emissions to forcing factors, beta_f is the
           carbon cycle fertilisation factor, mixed_carbon is
-          the depth of the mixed layer in the carbon cycle model
+          the depth of the mixed layer in the carbon cycle model,
+          fnpp_temp_coeff is a linear coefficient
+          for the temperature dependence of fnpp
           and ref_yr is the reference year for calculations
 
     Returns
@@ -55,6 +58,7 @@ def check_pamset(pamset):
         "ref_yr": 2010,
         "beta_f": 0.287,
         "mixed_carbon": 75.0,
+        "fnpp_temp_coeff": 0.0,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -225,7 +229,9 @@ class ConcentrationsEmissionsHandler:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
             self.carbon_cycle.reset_co2_hold(
-                self.pamset["beta_f"], self.pamset["mixed_carbon"]
+                beta_f=self.pamset["beta_f"],
+                mixed_carbon=self.pamset["mixed_carbon"],
+                fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"],
             )
         years_tot = len(self.years)
         self.conc = {}
@@ -551,7 +557,7 @@ class ConcentrationsEmissionsHandler:
         forc_sh = forc_sh + rf_sun
         return tot_forc, forc_nh, forc_sh
 
-    def emi2conc(self, yr):
+    def emi2conc(self, yr, dtemp=0.0):
         """
         Calculate concentrations from emissions
 
@@ -565,6 +571,8 @@ class ConcentrationsEmissionsHandler:
         ----------
         yr : int
           Year for which to calculate
+        dtemp : float
+            temperature change from start of run at previous timestep
         """
         # Do per tracer emissions to concentrations, update concentrations df
         # NBNB! Remember to move calculation of  Trop_O3 concentration
@@ -585,6 +593,7 @@ class ConcentrationsEmissionsHandler:
                 self.emis["CO2_FF"][yr]
                 + self.emis["CO2_AFOLU"][yr]
                 + self.df_gas["NAT_EM"]["CO2"],
+                dtemp=dtemp,
             )
             self.fill_one_row_conc(yr, avoid=["CO2"])
             return
@@ -601,6 +610,7 @@ class ConcentrationsEmissionsHandler:
                     self.emis["CO2_FF"][yr]
                     + self.emis["CO2_AFOLU"][yr]
                     + self.df_gas["NAT_EM"]["CO2"],
+                    dtemp=dtemp,
                 )
                 continue
             if yr < self.pamset["emstart"]:
@@ -867,21 +877,26 @@ class ConcentrationsEmissionsHandler:
 
         if self.pamset["conc_run"]:
             em_series = self.carbon_cycle.back_calculate_emissions(conc_series)
+            df_carbon = self.carbon_cycle.get_carbon_cycle_output(
+                conc_series, conc_run=self.pamset["conc_run"]
+            )
         else:
             em_series = (
                 self.emis["CO2_FF"][self.years].values
                 + self.emis["CO2_AFOLU"][self.years].values
             )
-        airborne = calculate_airborne_fraction(em_series, conc_series)
-        df_carbon = pd.DataFrame(
-            data={
-                "Emissions": em_series,
-                "Airborne fraction CO2": airborne,
-                "Biosphere carbon flux": self.carbon_cycle.get_biosphere_carbon_flux(
-                    conc_run=self.pamset["conc_run"]
-                ),
-                "Ocean carbon flux": self.carbon_cycle.get_ocean_carbon_flux(),
-            },
-            index=self.years,
-        )
+            df_carbon = self.carbon_cycle.get_carbon_cycle_output(self.years)
+            if df_carbon is None:
+                df_carbon = pd.DataFrame(
+                    data={
+                        "Airborne fraction CO2": calculate_airborne_fraction(
+                            em_series, conc_series
+                        )
+                    },
+                    index=self.years,
+                )
+            else:
+                df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
+                    em_series, conc_series
+                )
         return df_carbon
