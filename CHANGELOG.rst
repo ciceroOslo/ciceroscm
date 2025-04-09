@@ -21,7 +21,8 @@ The changes listed in this file are categorised as follows:
 - Moved carbon cycle functionality out of concentrations_emissions_handler.py to separate module carbon_cycle_mod.py
 - Changed methodology for parametrised decay functions for biotic decay (rb_function) and mixed layer pulse response rs_function, imposing a few more consistency criteria on them and makeing them changable by a dictionary for each with keys "coeffs" and "timescales" with values that should be lists or np.arrays of coefficient and timescale values 
 
-### Added 
+### Added
+- Functionality to feedback current temperature change to the carbon cycle and have simple temperature feedback 
 - Functionality to back calculate CO2 emissions from concentrations
 - Functionality to calculate carbon fluxes to ocean and land
 - Functionality to calculate airborne fraction
