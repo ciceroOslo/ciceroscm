@@ -23,17 +23,17 @@ def test_cscmparwrapper(test_data_dir):
         os.path.join(test_data_dir, "natemis_n2o.txt"), "N2O"
     )
     scendata = {
-            "gaspam_data": gaspam_data,
-            "nyend": 2050,
-            "nystart": 1900,
-            "emstart": 2015,
-            "concentrations_data": conc_data,
-            "nat_ch4_data": nat_ch4_data,
-            "nat_n2o_data": nat_n2o_data,
-            "emissions_data": em_data,
-            "udir": test_data_dir,
-            "scenname": "ssp245"
-        }
+        "gaspam_data": gaspam_data,
+        "nyend": 2050,
+        "nystart": 1900,
+        "emstart": 2015,
+        "concentrations_data": conc_data,
+        "nat_ch4_data": nat_ch4_data,
+        "nat_n2o_data": nat_n2o_data,
+        "emissions_data": em_data,
+        "udir": test_data_dir,
+        "scenname": "ssp245",
+    }
     parwrapper = CSCMParWrapper(scendata)
 
     assert parwrapper.scen == "ssp245"
@@ -61,15 +61,27 @@ def test_cscmparwrapper(test_data_dir):
             "Index": "13555_old_NR_rounded",
         }
     ]
-    output_variables = ["Heat Content|Ocean", "Surface Air Temperature Change", "Effective Radiative Forcing|Anthropogenic", "Effective Radiative Forcing|Greenhouse Gases", "Emissions|CH4", "Atmospheric Concentrations|N2O"]
+    output_variables = [
+        "Heat Content|Ocean",
+        "Surface Air Temperature Change",
+        "Effective Radiative Forcing|Anthropogenic",
+        "Effective Radiative Forcing|Greenhouse Gases",
+        "Emissions|CH4",
+        "Atmospheric Concentrations|N2O",
+    ]
     results = parwrapper.run_over_cfgs(cfgs, output_variables)
     print(results)
     assert set(results["variable"].unique()) == set(
-        ["Heat Content|Ocean", "Surface Air Temperature Change", "Effective Radiative Forcing|Anthropogenic", "Effective Radiative Forcing|Greenhouse Gases", "Emissions|CH4", "Atmospheric Concentrations|N2O"]
+        [
+            "Heat Content|Ocean",
+            "Surface Air Temperature Change",
+            "Effective Radiative Forcing|Anthropogenic",
+            "Effective Radiative Forcing|Greenhouse Gases",
+            "Emissions|CH4",
+            "Atmospheric Concentrations|N2O",
+        ]
     )
-    assert set(results["scenario"].unique()) == set(
-        ["ssp245"]
-    )
+    assert set(results["scenario"].unique()) == set(["ssp245"])
     test_length = results.query(
         'variable=="Surface Air Temperature Change" & scenario=="ssp245" & run_id=="13555_old_NR_rounded"'
     )
