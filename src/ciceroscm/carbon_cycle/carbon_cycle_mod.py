@@ -10,10 +10,13 @@ from scipy import optimize
 
 from .._utils import cut_and_check_pamset
 from ..pub_utils import _check_array_consistency
-from .common_carbon_cycle_functions import (GE_COEFF, OCEAN_AREA,
-                                            PPM_CO2_TO_PG_C,
-                                            PPMKG_TO_UMOL_PER_VOL,
-                                            calculate_airborne_fraction)
+from .common_carbon_cycle_functions import (
+    GE_COEFF,
+    OCEAN_AREA,
+    PPM_CO2_TO_PG_C,
+    PPMKG_TO_UMOL_PER_VOL,
+    calculate_airborne_fraction,
+)
 from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
 
 

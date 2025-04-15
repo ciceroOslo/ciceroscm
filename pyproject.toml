@@ -59,10 +59,19 @@ dev = [
         "isort>5",
         "mypy",
         "nbdime",
-        "pydocstyle",
+        "pydocstyle[toml]",
         "pylint>=2.4.4",
     'ciceroscm[deploy,notebooks,tests,docs]'
 ]
+
+[tool.pydocstyle]
+ignore = [
+    "D200",
+    "D400",
+]
+
+[tool.flake8]
+max-line-length = 90
 
 # ... other project metadata fields as listed in:
 #     https://packaging.python.org/en/latest/guides/writing-pyproject-toml/

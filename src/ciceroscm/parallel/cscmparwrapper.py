@@ -11,8 +11,7 @@ import pandas as pd
 from .._utils import check_numeric_pamset
 from ..ciceroscm import CICEROSCM
 from ..formattingtools.reformat_cscm_results import CSCMREADER
-from ..formattingtools.reformat_inputdata_to_cscm_format import \
-    SCENARIODATAGETTER
+from ..formattingtools.reformat_inputdata_to_cscm_format import COMMONSFILEWRITER
 from ._parallel_process import _parallel_process
 
 LOGGER = logging.getLogger(__name__)
@@ -138,7 +137,7 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
         self.udir = scenariodata["udir"]
         nystart = scenariodata["nystart"]
         nyend = scenariodata["nyend"]
-        self.sdatagetter = SCENARIODATAGETTER(self.udir, nystart, nyend)
+        self.sdatagetter = COMMONSFILEWRITER(self.udir, nystart, nyend)
         self.resultsreader = CSCMREADER(nystart, nyend)
         self.cscm = CICEROSCM(scenariodata)
         self.scen = scenariodata["scenname"]

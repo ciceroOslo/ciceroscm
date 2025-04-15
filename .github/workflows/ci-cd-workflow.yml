@@ -31,15 +31,15 @@ jobs:
     - name: Formatting and linters
       run: |
         black --version
-        black --check src tests setup.py --exclude ciceroscm/_version.py
+        black --check src tests --exclude ciceroscm/_version.py
         isort --version
-        isort --check-only --quiet --recursive src tests setup.py
+        isort --check-only --quiet --recursive src tests
         pydocstyle --version
         pydocstyle src
         bandit --version
         bandit -c .bandit.yml -r src
         flake8 --version
-        flake8 src tests setup.py
+        flake8 src tests
         pylint --version
         pylint src
     - name: Build docs
@@ -154,7 +154,7 @@ jobs:
         pip install -e .[dev]
     - name: Create package
       run: |
-        python setup.py sdist bdist_wheel --universal
+        python sdist bdist_wheel --universal
         twine check dist/*
     - uses: actions/upload-artifact@v4
       with:
