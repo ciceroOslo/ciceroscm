@@ -61,17 +61,43 @@ dev = [
         "nbdime",
         "pydocstyle[toml]",
         "pylint>=2.4.4",
+        "ruff==0.8.6",
     'ciceroscm[deploy,notebooks,tests,docs]'
 ]
 
 [tool.pydocstyle]
-ignore = [
+add-ignore = [
     "D200",
+    "D205",
     "D400",
 ]
+convention = "numpy"
 
-[tool.flake8]
-max-line-length = 90
+[tool.ruff.lint.isort]
+known-first-party = [
+    "src",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+
+[tool.isort]
+default_section = "THIRDPARTY"
+# comma after multiline breaks like black:
+include_trailing_comma = true
+known_first_party = "ciceroscm"
+# black default line length:
+line_length = 88
+# multiline breaks like black:
+multi_line_output = 3
+skip = [
+    "versioneer.py", 
+    "src/ciceroscm/_version.py",
+]
 
 # ... other project metadata fields as listed in:
 #     https://packaging.python.org/en/latest/guides/writing-pyproject-toml/

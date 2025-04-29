@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 from ciceroscm import input_handler
-from ciceroscm.parallel.cscmparwrapper import run_ciceroscm_parallel, CSCMParWrapper
+from ciceroscm.parallel.cscmparwrapper import CSCMParWrapper, run_ciceroscm_parallel
 
 
 def test_cscmparwrapper(test_data_dir):

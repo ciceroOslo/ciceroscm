@@ -38,8 +38,8 @@ jobs:
         pydocstyle src
         bandit --version
         bandit -c .bandit.yml -r src
-        flake8 --version
-        flake8 src tests
+        ruff version
+        ruff check src tests
         pylint --version
         pylint src
     - name: Build docs

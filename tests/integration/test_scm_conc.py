@@ -260,7 +260,6 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
             "qindso2": -0.514,
             "qbc": 0.200,
             "qoc": -0.103,
-            "qh2o_ch4": 0.171,
         },
         pamset_udm={
             "rlamdo": 16.0,

@@ -181,12 +181,11 @@ class CSCMREADER:
         Get variable timeseries
         Connecting up to correct data dictionary to get data
         """
-        if variable not in self.variable_dict:
-            return (
-                pd.Series([], dtype="float64"),
-                pd.Series([], dtype="float64"),
-                "NoUnit",
-            )
+        years, timeseries, unit = (
+            pd.Series([], dtype="float64"),
+            pd.Series([], dtype="float64"),
+            "NoUnit",
+        )
         if "Concentration" in variable:
             years, timeseries = get_data_from_conc(
                 results, self.variable_dict[variable]
@@ -194,16 +193,19 @@ class CSCMREADER:
             unit = sfilewriter.concunits[
                 sfilewriter.components.index(self.variable_dict[variable])
             ]
+
         elif "Emissions" in variable:
             years, timeseries = get_data_from_em(results, self.variable_dict[variable])
             unit = sfilewriter.units[
                 sfilewriter.components.index(self.variable_dict[variable])
             ]
+
         elif "Forcing" in variable:
             years, timeseries = self.get_data_from_forc(
                 results, self.variable_dict[variable]
             )
             unit = "W/m^2"
+
         elif self.variable_dict[variable] in self.temp_list:
             timeseries = get_data_from_temp_or_rib(
                 results, self.variable_dict[variable]
@@ -218,7 +220,6 @@ class CSCMREADER:
             timeseries = get_data_from_ohc(results, self.variable_dict[variable])
             years = self.indices
             unit = "ZJ"
-
         return years, timeseries, unit
 
     def get_volc_forcing(self, results):

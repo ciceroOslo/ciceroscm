@@ -8,7 +8,6 @@ import csv
 import os
 
 import numpy as np
-import pandas as pd
 
 cicero_comp_dict = {
     "CO2_lu": ["CO2|MAGICC AFOLU", 1],
@@ -55,7 +54,7 @@ cicero_comp_dict = {
 # Halon1212, CH3Cl
 
 
-class COMMONSFILEWRITER:
+class COMMONSFILEWRITER:  # pylint: disable=too-few-public-methods
     """
     Class to write scenariofiles:
     """
