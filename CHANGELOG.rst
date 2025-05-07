@@ -20,12 +20,14 @@ The changes listed in this file are categorised as follows:
 - Removed use of scmdata, and changed parallel output to be pandas to offload extra dependencies
 - Moved carbon cycle functionality out of concentrations_emissions_handler.py to separate module carbon_cycle_mod.py
 - Changed methodology for parametrised decay functions for biotic decay (rb_function) and mixed layer pulse response rs_function, imposing a few more consistency criteria on them and makeing them changable by a dictionary for each with keys "coeffs" and "timescales" with values that should be lists or np.arrays of coefficient and timescale values 
+- Upgrade infrasturucture for development
 
 ### Added 
 - Functionality to back calculate CO2 emissions from concentrations
 - Functionality to calculate carbon fluxes to ocean and land
 - Functionality to calculate airborne fraction
 - Functionality to output new carbon cycle information
+- Functionality to output new carbon cycle information in parallel runs
 - Changeable parameter for the depth of the mixed_layer ocean seen by the carbon cycle
 
 
@@ -36,6 +38,7 @@ The changes listed in this file are categorised as follows:
 - Fix error in flat N2O assumption in natural precalculate_natural_emissions.py script
 - Change logging messages for misisng parameters from warning to info
 - Fix bug in file cutting for read_inputfile in input_handler
+- Temporarily mute docs generation with sphinx on github as it is not working, plan to work in different method
 
 ## [Versions 1.1.1 and v1.1.0]
   

@@ -426,7 +426,7 @@ class CarbonCycleModel:
         -------
         np.ndarray
             Timeseries of the added carbon content to the yearly
-            ocean carbon flux
+            ocean carbon flux (Pg / C /yr)
         """
         if conc_run and co2_conc_series is not None:
             self.back_calculate_emissions(co2_conc_series)

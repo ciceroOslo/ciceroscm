@@ -5,9 +5,9 @@ handling
 """
 
 import csv
-import os
 
 import numpy as np
+import pandas as pd
 
 cicero_comp_dict = {
     "CO2_lu": ["CO2|MAGICC AFOLU", 1],
@@ -59,22 +59,24 @@ class COMMONSFILEWRITER:  # pylint: disable=too-few-public-methods
     Class to write scenariofiles:
     """
 
-    def __init__(self, udir, nystart=2015, nyend=2101):
+    def __init__(self, gaspam_file, nystart=2015, nyend=2101):
         self.components = []
         self.units = []
         self.concunits = []
 
-        self.initialize_units_comps(os.path.join(udir, "gases_v1RCMIP.txt"))
+        self.initialize_units_comps(gaspam_file)
         self.years = np.arange(
             nystart, nyend
         )  # Temporary default values, is updated later
-        self.udir = udir
 
     def initialize_units_comps(self, gasfile):
         """
         Get the list of gas components and units
         from the gases file:
         """
+        if isinstance(gasfile, pd.DataFrame):
+            self.initialize_units_comps_from_pd(gasfile)
+            return
         with open(gasfile, "r", encoding="ascii") as txt_rcpfile:
             gasreader = csv.reader(txt_rcpfile, delimiter="\t")
             next(gasreader)
@@ -104,6 +106,30 @@ class COMMONSFILEWRITER:  # pylint: disable=too-few-public-methods
                 self.units.append(unit)
                 self.concunits.append(row[2])
 
+        self.components.insert(1, "CO2_lu")
+        self.units.insert(1, "PgC / yr")
+        self.concunits.insert(1, "ppm")
+
+    def initialize_units_comps_from_pd(self, gasfile):
+        """
+        Intialize units and compontets if pandas of gasfile is sent deal with units
+        """
+        gasdata_mod = gasfile.copy()
+        # Might cause problems later, hopefully not
+        gasdata_mod.replace("Tg_N", "TgN2ON", inplace=True)
+        gasdata_mod["CONC_UNIT"] = gasdata_mod["CONC_UNIT"].replace("_", "")
+        # Not very robuste...:
+        gasdata_mod.loc["BMB_AEROS_OC", "EM_UNIT"] = gasdata_mod["EM_UNIT"][
+            "BMB_AEROS_OC"
+        ].replace("Tg", "TgOC")
+        gasdata_mod.loc["BMB_AEROS_BC", "EM_UNIT"] = gasdata_mod["EM_UNIT"][
+            "BMB_AEROS_BC"
+        ].replace("Tg", "TgBC")
+        self.components = gasdata_mod.index.values.tolist()
+        units = gasdata_mod["EM_UNIT"].values.tolist()
+        self.concunits = gasdata_mod["CONC_UNIT"].values.tolist()
+
+        self.units = [f"{unit} / yr" for unit in units]
         self.components.insert(1, "CO2_lu")
         self.units.insert(1, "PgC / yr")
         self.concunits.insert(1, "ppm")

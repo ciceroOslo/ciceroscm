@@ -42,11 +42,12 @@ jobs:
         ruff check src tests
         pylint --version
         pylint src
-    - name: Build docs
+    # Muting docs for now, will try to make transition to other package manager for this eventually
+    #- name: Build docs
       # treat warnings as errors (-W)...
       # ...but not when being nitpicky (-n)
-      run: |
-          sphinx-build -M html docs/source docs/build -qW
+      #run: |
+          #sphinx-build -M html docs/source docs/build -qW
           # Muted coverage-test for now
           #sphinx-build -M html docs/source docs/build -Eqn -b coverage
           #if [[ -s docs/build/html/python.txt ]]

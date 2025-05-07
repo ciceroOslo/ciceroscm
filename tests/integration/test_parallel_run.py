@@ -68,6 +68,9 @@ def test_cscmparwrapper(test_data_dir):
         "Effective Radiative Forcing|Greenhouse Gases",
         "Emissions|CH4",
         "Atmospheric Concentrations|N2O",
+        "Ocean carbon flux", 
+        "Airborne fraction CO2", 
+        "Biosphere carbon pool", 
     ]
     results = parwrapper.run_over_cfgs(cfgs, output_variables)
     print(results)
@@ -79,6 +82,9 @@ def test_cscmparwrapper(test_data_dir):
             "Effective Radiative Forcing|Greenhouse Gases",
             "Emissions|CH4",
             "Atmospheric Concentrations|N2O",
+            "Ocean carbon flux", 
+            "Airborne fraction CO2", 
+            "Biosphere carbon pool", 
         ]
     )
     assert set(results["scenario"].unique()) == set(["ssp245"])
@@ -355,21 +361,21 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
     )
     scenarios = [
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_data": np.loadtxt(os.path.join(test_data_dir, "test_forcing.txt")),
             "udir": test_data_dir,
             "scenname": "forc_data_test_forcing",
         },
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_data": np.loadtxt(os.path.join(test_data_dir, "zero_forcing.txt")),
             "udir": test_data_dir,
             "scenname": "forc_data_zero_forcing",
         },
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_data": np.loadtxt(os.path.join(test_data_dir, "test_forcing.txt")),
             "sunvolc": 1,
@@ -377,14 +383,14 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
             "scenname": "forc_data_test_forcing_sunvolc",
         },
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_data": np.loadtxt(os.path.join(test_data_dir, "CO2_1pros.txt")),
             "udir": test_data_dir,
             "scenname": "forc_data_CO2_1pros",
         },
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "test_forcing_hemisplit.txt"),
             "udir": test_data_dir,

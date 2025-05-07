@@ -78,6 +78,13 @@ fgas_list = [
     "SF6",
 ]
 ghg_not_fgas = ["CO2", "CH4", "N2O", "TROP_O3", "STRAT_O3", "STRAT_H2O"]
+carbon_cycle_outputs = [
+    "Biosphere carbon flux",
+    "Ocean carbon flux",
+    "Airborne fraction CO2",
+    "Biosphere carbon pool",
+    "Ocean carbon pool",
+]
 
 
 def get_data_from_forc_common(df_temp, variable, v_dict, volc=0, sun=0):
@@ -138,7 +145,7 @@ def get_data_from_temp_or_rib(results, variable):
 
 def get_data_from_ohc(results, variable):
     """
-    Get data from ocean heat content files
+    Get data from ocean heat content
     """
     df_temp = results[variable]
     # Units are 10^22J and output should be 10^21J = ZJ
@@ -147,11 +154,20 @@ def get_data_from_ohc(results, variable):
     return timeseries
 
 
-def convert_cicero_unit(cicero_unit):
+def get_carbon_cycle_outputs(results, variable):
     """
-    Convert cicero unit convention for pint
+    Get data from carbon cycle output
     """
-    return f"{cicero_unit.replace('_', '')} / yr"
+    if variable.endswith("flux"):
+        timeseries = results[variable]
+        unit = "Pg C / yr"
+    elif variable.endswith("pool"):
+        timeseries = np.cumsum(results[variable.replace("pool", "flux")].values)
+        unit = "Pg C"
+    else:
+        timeseries = results[variable]
+        unit = "Unitless"
+    return timeseries, unit
 
 
 class CSCMREADER:
@@ -206,6 +222,13 @@ class CSCMREADER:
             )
             unit = "W/m^2"
 
+        elif variable in carbon_cycle_outputs:
+            if "carbon cycle" in results.keys():
+                years = self.indices
+                timeseries, unit = get_carbon_cycle_outputs(
+                    results["carbon cycle"], variable
+                )
+
         elif self.variable_dict[variable] in self.temp_list:
             timeseries = get_data_from_temp_or_rib(
                 results, self.variable_dict[variable]
@@ -220,6 +243,7 @@ class CSCMREADER:
             timeseries = get_data_from_ohc(results, self.variable_dict[variable])
             years = self.indices
             unit = "ZJ"
+
         return years, timeseries, unit
 
     def get_volc_forcing(self, results):
