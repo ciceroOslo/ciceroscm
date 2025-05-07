@@ -132,35 +132,36 @@ jobs:
         pip list
         python scripts/test_install.py
 
+  # Commenting this out for now till we figure out how to do distributions with
+  # newer type of package manager
+  #create-dist:
 
-  create-dist:
+    #needs: [build,linting-and-docs]
 
-    needs: [build,linting-and-docs]
+  #  runs-on: ubuntu-latest
+  #  strategy:
+  #    matrix:
+  #      python-version: [3.9]
 
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.9]
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Setup python
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        pip install --upgrade pip wheel
-        pip install -e .[dev]
-    - name: Create package
-      run: |
-        python sdist bdist_wheel --universal
-        twine check dist/*
-    - uses: actions/upload-artifact@v4
-      with:
-        name: dist
-        path: dist
+  #  steps:
+  #  - name: Checkout repository
+  #    uses: actions/checkout@v4
+  #  - name: Setup python
+  #    uses: actions/setup-python@v1
+  #    with:
+  #      python-version: ${{ matrix.python-version }}
+  #  - name: Install dependencies
+  #    run: |
+  #      pip install --upgrade pip wheel
+  #      pip install -e .[dev]
+  #  - name: Create package
+  #    run: |
+  #      python sdist bdist_wheel --universal
+  #      twine check dist/*
+  #  - uses: actions/upload-artifact@v4
+  #    with:
+  #      name: dist
+  #      path: dist
 
 
   deploy-pypi:

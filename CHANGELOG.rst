@@ -39,6 +39,7 @@ The changes listed in this file are categorised as follows:
 - Change logging messages for misisng parameters from warning to info
 - Fix bug in file cutting for read_inputfile in input_handler
 - Temporarily mute docs generation with sphinx on github as it is not working, plan to work in different method
+- Temporarily mute distribution generation, plan to work this back in with more updated package manager
 
 ## [Versions 1.1.1 and v1.1.0]
   
