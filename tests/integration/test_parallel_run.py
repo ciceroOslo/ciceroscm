@@ -68,9 +68,9 @@ def test_cscmparwrapper(test_data_dir):
         "Effective Radiative Forcing|Greenhouse Gases",
         "Emissions|CH4",
         "Atmospheric Concentrations|N2O",
-        "Ocean carbon flux", 
-        "Airborne fraction CO2", 
-        "Biosphere carbon pool", 
+        "Ocean carbon flux",
+        "Airborne fraction CO2",
+        "Biosphere carbon pool",
     ]
     results = parwrapper.run_over_cfgs(cfgs, output_variables)
     print(results)
@@ -82,9 +82,9 @@ def test_cscmparwrapper(test_data_dir):
             "Effective Radiative Forcing|Greenhouse Gases",
             "Emissions|CH4",
             "Atmospheric Concentrations|N2O",
-            "Ocean carbon flux", 
-            "Airborne fraction CO2", 
-            "Biosphere carbon pool", 
+            "Ocean carbon flux",
+            "Airborne fraction CO2",
+            "Biosphere carbon pool",
         ]
     )
     assert set(results["scenario"].unique()) == set(["ssp245"])
