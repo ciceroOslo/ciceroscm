@@ -807,7 +807,7 @@ class ConcentrationsEmissionsHandler:
 
     def add_results_to_dict(self, cfg):
         """
-        Adding results to results dictionary
+        Add results to results dictionary
 
         Parameters
         ----------

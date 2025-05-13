@@ -182,4 +182,5 @@ jobs:
   #    uses: pypa/gh-action-pypi-publish@release/v1
   #    with:
   #      user: __token__
-  #      password: ${{ secrets.pypi_api_token }}
+  # NBNB next line is missing two curly brackets at the end
+  #      password: ${{ secrets.pypi_api_token
