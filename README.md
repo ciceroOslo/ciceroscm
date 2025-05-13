@@ -46,6 +46,7 @@ With a CICEROSCM instance in place, you are ready to start runs with various par
 * output_prefix - prefix to output filenames
 * make_plot - if set to True plots of the output are made and saved to a subfolder in the output_folder.
 * results_as_dict - if set to True, outputs will not be printed to files, instead they will be available as a results attribute dictionary to the ciceroscm instance.
+* carbon_cycle_outputs - If set to True, carbon cycle outputs will be included
 
 ### Parameter sets
 Physical parameters to the model is divided in two parametersets each of which are sent as two seperate dictionaries to the run call.
@@ -83,6 +84,7 @@ The concentration and emission parameterset (which is needed for emission runs) 
 * qh2o_ch4 (0.091915) - Stratospheric water vapour ERF ratio to methane ERF
 * beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
 * mixed_carbon (75.0) - Depth of mixed layer in Joos scheme carbon cycle
+* fnpp_temp_coeff - A coefficient which sets up a simple temperature feedback in the biosphere carbon cycle. If sent and non-zero it will be the coefficient in a linear relation ship between the fnpp and temperature change.
 * ref_yr (2010) - Reference year for the above forcing values. To construct radiative forcing time series, these forcing values are scaled using emssions. The forcing in the reference year is equal to the forcing value set by the above parameters
 * idtm (24) - Number of subyearly timesteps for calculation of CO2 concentrations from emissions.
 * lifetime_mode - Lifetime mode for methane, valid options are TAR (for following the third IPCC assessment report), CONSTANT (for a constant value of 12 years) or a wigley exponent behaviour. TAR is the default, but wigley is a hidden default if you send a value for this option which is not TAR nor CONSTANT

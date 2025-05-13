@@ -7,14 +7,12 @@ from concurrent.futures import ProcessPoolExecutor
 from itertools import product
 
 import pandas as pd
-from openscm_runner.adapters.ciceroscm_py_adapter.make_scenario_data import (
-    SCENARIODATAGETTER,
-)
-from openscm_runner.adapters.ciceroscm_py_adapter.read_results import CSCMREADER
-from openscm_runner.adapters.utils._parallel_process import _parallel_process
 
 from .._utils import check_numeric_pamset
 from ..ciceroscm import CICEROSCM
+from ..formattingtools.reformat_cscm_results import CSCMREADER
+from ..formattingtools.reformat_inputdata_to_cscm_format import COMMONSFILEWRITER
+from ._parallel_process import _parallel_process
 
 LOGGER = logging.getLogger(__name__)
 
@@ -139,13 +137,20 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
         self.udir = scenariodata["udir"]
         nystart = scenariodata["nystart"]
         nyend = scenariodata["nyend"]
-        self.sdatagetter = SCENARIODATAGETTER(self.udir, nystart, nyend)
+        if "gaspam_file" in scenariodata:
+            self.sdatagetter = COMMONSFILEWRITER(
+                scenariodata["gaspam_file"], nystart, nyend
+            )
+        else:
+            self.sdatagetter = COMMONSFILEWRITER(
+                scenariodata["gaspam_data"], nystart, nyend
+            )
         self.resultsreader = CSCMREADER(nystart, nyend)
         self.cscm = CICEROSCM(scenariodata)
         self.scen = scenariodata["scenname"]
         self.model = scenariodata["scenname"]
 
-    def run_over_cfgs(self, cfgs, output_variables):
+    def run_over_cfgs(self, cfgs, output_variables, carbon_cycle_outputs=True):
         """
         Run over each configuration parameter set
         write parameterfiles, run, read results
@@ -163,6 +168,10 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
         output_variables : list[str]
             Variables to output, these follow ScmRun conventions
 
+        carbon_cycle_outputs : bool
+            If carbon cycle outputs should be included in results.
+            Default is True, but can be muted if user wants
+
         Returns
         -------
              :obj:`ScmRun`
@@ -171,7 +180,7 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
         runs = []
         for pamset in cfgs:
             self.cscm._run(  # pylint: disable=protected-access
-                {"results_as_dict": True},
+                {"results_as_dict": True, "carbon_cycle_outputs": carbon_cycle_outputs},
                 pamset_udm=pamset["pamset_udm"],
                 pamset_emiconc=pamset["pamset_emiconc"],
             )

@@ -6,6 +6,10 @@ import pandas as pd
 import pandas.testing as pdt
 
 from ciceroscm import CICEROSCM, input_handler
+from ciceroscm.formattingtools import (
+    reformat_cscm_results,
+    reformat_inputdata_to_cscm_format,
+)
 
 
 def check_output(
@@ -124,9 +128,10 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     nystart = 1900
     nyend = 2050
     emstart = 1950
+    gaspamfile = os.path.join(test_data_dir, "gases_v1RCMIP.txt")
     cscm = CICEROSCM(
         {
-            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": gaspamfile,
             "nystart": nystart,
             "emstart": emstart,
             "nyend": nyend,
@@ -216,6 +221,60 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     assert np.allclose(
         carbon_sum, np.cumsum(cscm.results["emissions"]["CO2"]), rtol=5e-1
     )
+
+    # Block for testing reformatting of outputs
+    sfilewriter = reformat_inputdata_to_cscm_format.COMMONSFILEWRITER(gaspamfile)
+    cscm_reader = reformat_cscm_results.CSCMREADER(nystart, nyend)
+    print(cscm.results.keys())
+    test_variables = [
+        "Ocean carbon flux",
+        "Airborne fraction CO2",
+        "Biosphere carbon pool",
+        "Emissions|CH4",
+        "Atmospheric Concentrations|CO2",
+        "Heat Content|Ocean",
+        "Effective Radiative Forcing|Aerosols|Direct Effect",
+        "Effective Radiative Forcing|Anthropogenic",
+        "Effective Radiative Forcing",
+        "Effective Radiative Forcing|F-Gases",
+        "Effective Radiative Forcing|Greenhouse Gases",
+        "Effective Radiative Forcing|C6F14",
+        "Surface Air Ocean Blended Temperature Change",
+        "Heat Uptake",
+    ]
+    unit_list = [
+        "Pg C / yr",
+        "Unitless",
+        "Pg C",
+        "TgCH4 / yr",
+        "ppm",
+        "ZJ",
+        "W/m^2",
+        "W/m^2",
+        "W/m^2",
+        "W/m^2",
+        "W/m^2",
+        "W/m^2",
+        "K",
+        "W/m^2",
+    ]
+    for i, variable in enumerate(test_variables):
+        format_output = cscm_reader.get_variable_timeseries(
+            cscm.results, variable, sfilewriter
+        )
+        print(variable)
+        print(format_output[0])
+        assert np.all(format_output[0] == np.arange(nystart, nyend + 1))
+        assert len(format_output[0]) == nyend - nystart + 1
+        assert format_output[2] == unit_list[i]
+    empty_result = cscm_reader.get_variable_timeseries(
+        {}, "Ocean carbon flux", sfilewriter
+    )
+    assert len(empty_result[0]) == 0
+    assert len(empty_result[1]) == 0
+    assert empty_result[2] == "NoUnit"
+    # Now test getting some variables
+
     # Put this in again, find out what is happening with CF4
     # check_output(
     #    outdir_save,
@@ -260,7 +319,6 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
             "qindso2": -0.514,
             "qbc": 0.200,
             "qoc": -0.103,
-            "qh2o_ch4": 0.171,
         },
         pamset_udm={
             "rlamdo": 16.0,
