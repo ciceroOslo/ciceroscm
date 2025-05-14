@@ -10,8 +10,8 @@ import pandas as pd
 
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
-from .carbon_cycle_factory import create_carbon_cycle_model
-from .carbon_cycle_mod_box import calculate_airborne_fraction
+from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
+from .component_factory_functions import create_carbon_cycle_model
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -565,7 +565,7 @@ class ConcentrationsEmissionsHandler:
         forc_sh = forc_sh + rf_sun
         return tot_forc, forc_nh, forc_sh
 
-    def emi2conc(self, yr, dtemp=0):
+    def emi2conc(self, yr, dtemp=0.0):
         """
         Calculate concentrations from emissions
 
@@ -824,7 +824,7 @@ class ConcentrationsEmissionsHandler:
 
     def add_results_to_dict(self, cfg):
         """
-        Adding results to results dictionary
+        Add results to results dictionary
 
         Parameters
         ----------
@@ -885,21 +885,26 @@ class ConcentrationsEmissionsHandler:
 
         if self.pamset["conc_run"]:
             em_series = self.carbon_cycle.back_calculate_emissions(conc_series)
+            df_carbon = self.carbon_cycle.get_carbon_cycle_output(
+                conc_series, conc_run=self.pamset["conc_run"]
+            )
         else:
             em_series = (
                 self.emis["CO2_FF"][self.years].values
                 + self.emis["CO2_AFOLU"][self.years].values
             )
-        airborne = calculate_airborne_fraction(em_series, conc_series)
-        df_carbon = pd.DataFrame(
-            data={
-                "Emissions": em_series,
-                "Airborne fraction CO2": airborne,
-                "Biosphere carbon flux": self.carbon_cycle.get_biosphere_carbon_flux(
-                    conc_run=self.pamset["conc_run"]
-                ),
-                "Ocean carbon flux": self.carbon_cycle.get_ocean_carbon_flux(),
-            },
-            index=self.years,
-        )
+            df_carbon = self.carbon_cycle.get_carbon_cycle_output(self.years)
+            if df_carbon is None:
+                df_carbon = pd.DataFrame(
+                    data={
+                        "Airborne fraction CO2": calculate_airborne_fraction(
+                            em_series, conc_series
+                        )
+                    },
+                    index=self.years,
+                )
+            else:
+                df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
+                    em_series, conc_series
+                )
         return df_carbon

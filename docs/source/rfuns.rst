@@ -3,4 +3,4 @@
 Rfuns (decay functions or carbon cycle) API
 -------------------------------------------
 
-.. automodule:: ciceroscm.rfuns
+.. automodule:: ciceroscm.carbon_cycle.rfuns

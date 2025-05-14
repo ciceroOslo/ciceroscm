@@ -9,10 +9,10 @@ import numpy as np
 import pandas as pd
 
 from ._utils import cut_and_check_pamset
+from .component_factory_functions import create_thermal_model
 from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
 from .input_handler import InputHandler
 from .make_plots import plot_output1
-from .thermal_factory import create_thermal_model
 
 LOGGER = logging.getLogger(__name__)
 

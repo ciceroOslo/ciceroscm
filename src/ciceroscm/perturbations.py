@@ -83,7 +83,9 @@ def perturb_emissions(input_handler, emissions_df):
         tracer = row.component
         if row.component == "CO2" and "CO2" not in emissions_df:
             tracer = "CO2_FF"
-        emissions_df[tracer][row.year] = emissions_df[tracer][row.year] + row.emission
+        emissions_df.loc[row.year, tracer] = (
+            emissions_df[tracer][row.year] + row.emission
+        )
     # might not need to return, as the pandas should change itself
     return emissions_df
 

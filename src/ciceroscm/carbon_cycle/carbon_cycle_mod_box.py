@@ -4,33 +4,7 @@ Simple CarbonCycleModel with temperature feedback and no pre-computed pulse resp
 
 import numpy as np
 
-PPM_CO2_TO_PG_C = 2.123  # Conversion factor ppm CO2 -> PgC
-OCEAN_AREA = 3.62e14  # Area of the ocean in m^2
-GE_COEFF = 1.0 / (OCEAN_AREA * 9.06)  # Gas exchange coefficient (yr^-1*m^-2)
-
-
-def calculate_airborne_fraction(em_timeseries, conc_timeseries):
-    """
-    Calculate Airborne Fraction of CO2 from emissions timeseries
-
-    Parameters
-    ----------
-    em_timeseries: np.ndarray
-        Emissions timeseries, either inputs or backcalculated for concentration
-        run
-    conc_timeseries : np.ndarray
-        Concentrations timeseries. Should be the same length as the emissions
-        timeseries
-
-    Returns
-    -------
-    np.ndarray
-        Airborne fraction calculated from the em_timeseries and conc_timeseries
-    """
-    airborne_fraction = (
-        (conc_timeseries - 278.0) / np.cumsum(em_timeseries) * PPM_CO2_TO_PG_C
-    )
-    return airborne_fraction
+from .common_carbon_cycle_functions import PPM_CO2_TO_PG_C  # OCEAN_AREA, GE_COEFF
 
 
 class CarbonCycleModel:
@@ -84,7 +58,7 @@ class CarbonCycleModel:
         self.ocean_mixed_layer_carbon = 0.0  # Ocean mixed layer carbon anomaly (PgC)
         self.ocean_deep_carbon = 0.0  # Deep ocean carbon anomaly (PgC)
 
-    def co2em2conc(self, yr, em_co2_common, dtemp=0):
+    def co2em2conc(self, yr, em_co2_common, dtemp=0):  # pylint: disable=unused-argument
         """
         Calculate CO2 concentrations from emissions.
 
