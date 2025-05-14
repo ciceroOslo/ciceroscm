@@ -5,7 +5,7 @@
 import numpy as np
 
 
-class TwoLayerOceanModel:
+class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
     """
     Two layer Model with 2 thermal timescales.
     """
@@ -70,6 +70,7 @@ class TwoLayerOceanModel:
         self.temp_fast += dtemp_fast
         self.temp_slow += dtemp_slow
 
+        # TODO: Add calculations of Ocean heat content and RIB? Should be knowable/calculable even from this, right?
         return {
             "dtemp": self.temp_fast,  # Global mean temperature change
             "dtemp_fast": self.temp_fast,
