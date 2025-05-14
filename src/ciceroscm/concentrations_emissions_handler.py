@@ -10,8 +10,8 @@ import pandas as pd
 
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
-from .carbon_cycle.carbon_cycle_mod import CarbonCycleModel
 from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
+from .component_factory_functions import create_carbon_cycle_model
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -187,10 +187,15 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
+        print("Carbon Model=" + pamset["carbon_cycle_model"])
         self.pamset = cut_and_check_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
-            used={"rs_function": "missing", "rb_function": "missing"},
+            used={
+                "rs_function": "missing",
+                "rb_function": "missing",
+                "carbon_cycle_model": "default",
+            },
             cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
@@ -204,7 +209,10 @@ class ConcentrationsEmissionsHandler:
         self.pamset["cl_dict"], self.pamset["br_dict"] = make_cl_and_br_dictionaries(
             self.df_gas.index
         )
-        self.carbon_cycle = CarbonCycleModel(self.pamset)
+        model_type = self.pamset["carbon_cycle_model"]  # Default to "default"
+
+        self.carbon_cycle = create_carbon_cycle_model(model_type, self.pamset)
+        # self.carbon_cycle = CarbonCycleModel(self.pamset)
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
 
@@ -816,7 +824,7 @@ class ConcentrationsEmissionsHandler:
 
     def add_results_to_dict(self, cfg):
         """
-        Adding results to results dictionary
+        Add results to results dictionary
 
         Parameters
         ----------

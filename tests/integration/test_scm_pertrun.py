@@ -86,7 +86,6 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
             "qindso2": -0.514,
             "qbc": 0.200,
             "qoc": -0.103,
-            "qh2o_ch4": 0.171,
         },
     )
 
@@ -120,7 +119,6 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
             "qindso2": -0.514,
             "qbc": 0.200,
             "qoc": -0.103,
-            "qh2o_ch4": 0.171,
         },
     )
 
