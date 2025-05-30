@@ -87,3 +87,6 @@ def test_ciceroscm_with_twolayer_thermal_model(tmpdir, test_data_dir):
         },
     )
     assert isinstance(cscm.thermal({}), TwoLayerOceanModel)
+    cscm._run({"results_as_dict": True})
+    print(cscm.results.keys())
+    assert False

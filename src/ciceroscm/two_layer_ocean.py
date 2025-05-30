@@ -29,6 +29,7 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
             params.get("deep", 1200) * 1000 * 4181 / (365 * 24 * 3600)
         )  # Default value: 100.0
         self.k = params.get("k", 0.5)  # eta, Default value: 0.5
+        self.efficacy = params.get("efficacy", 1)
 
         # Initialize temperatures for fast and slow layers
         self.temp_fast = 0.0
@@ -60,7 +61,7 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
         dtemp_fast = (
             forc
             - self.temp_fast * self.lambda_
-            - self.k * (self.temp_fast - self.temp_slow)
+            - self.k * self.efficacy * (self.temp_fast - self.temp_slow)
         ) / self.c_fast
 
         # Slow layer temperature change
@@ -69,6 +70,7 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
         # Update temperatures
         self.temp_fast += dtemp_fast
         self.temp_slow += dtemp_slow
+        rib_toa = forc - self.lambda_* self.temp_fast - (self.efficacy - 1 ) * self.k*(self.temp_fast -self.temp_slow)
 
         # TODO: Add calculations of Ocean heat content and RIB? Should be knowable/calculable even from this, right?
         return {
@@ -85,7 +87,7 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
             "dtempsh_sea": 0.0,
             "RIBN": 0.0,
             "RIBS": 0.0,
-            "RIB": 0.0,
+            "RIB": rib_toa,
             "OHC700": 0.0,
             "OHCTOT": 0.0,
         }
