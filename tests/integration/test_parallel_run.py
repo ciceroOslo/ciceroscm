@@ -3,7 +3,97 @@ import os
 import numpy as np
 
 from ciceroscm import input_handler
-from ciceroscm.parallel.cscmparwrapper import run_ciceroscm_parallel
+from ciceroscm.parallel.cscmparwrapper import CSCMParWrapper, run_ciceroscm_parallel
+
+
+def test_cscmparwrapper(test_data_dir):
+
+    gaspam_data = input_handler.read_components(
+        os.path.join(test_data_dir, "gases_v1RCMIP.txt")
+    )
+    conc_data = input_handler.read_inputfile(
+        os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"), True, 1750, 2100
+    )
+    ih = input_handler.InputHandler({"nyend": 2050, "nystart": 1900, "emstart": 2015})
+    em_data = ih.read_emissions(os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"))
+    nat_ch4_data = input_handler.read_natural_emissions(
+        os.path.join(test_data_dir, "natemis_ch4.txt"), "CH4"
+    )
+    nat_n2o_data = input_handler.read_natural_emissions(
+        os.path.join(test_data_dir, "natemis_n2o.txt"), "N2O"
+    )
+    scendata = {
+        "gaspam_data": gaspam_data,
+        "nyend": 2050,
+        "nystart": 1900,
+        "emstart": 2015,
+        "concentrations_data": conc_data,
+        "nat_ch4_data": nat_ch4_data,
+        "nat_n2o_data": nat_n2o_data,
+        "emissions_data": em_data,
+        "udir": test_data_dir,
+        "scenname": "ssp245",
+    }
+    parwrapper = CSCMParWrapper(scendata)
+
+    assert parwrapper.scen == "ssp245"
+    assert parwrapper.model == "ssp245"
+    cfgs = [
+        {
+            "pamset_udm": {
+                "rlamdo": 15.1,
+                "akapa": 0.657,
+                "cpi": 0.208,
+                "W": 2.2,
+                "beto": 6.9,
+                "lambda": 0.606,
+                "mixed": 107.0,
+            },
+            "pamset_emiconc": {
+                "qbmb": 0.0,
+                "qo3": 0.5,
+                "qdirso2": -0.3701,
+                "qindso2": -0.4163,
+                "qbc": 0.163,
+                "qoc": -0.084,
+                "qh2o_ch4": 0.171,
+            },
+            "Index": "13555_old_NR_rounded",
+        }
+    ]
+    output_variables = [
+        "Heat Content|Ocean",
+        "Surface Air Temperature Change",
+        "Effective Radiative Forcing|Anthropogenic",
+        "Effective Radiative Forcing|Greenhouse Gases",
+        "Emissions|CH4",
+        "Atmospheric Concentrations|N2O",
+        "Ocean carbon flux",
+        "Airborne fraction CO2",
+        "Biosphere carbon pool",
+    ]
+    results = parwrapper.run_over_cfgs(cfgs, output_variables)
+    print(results)
+    assert set(results["variable"].unique()) == set(
+        [
+            "Heat Content|Ocean",
+            "Surface Air Temperature Change",
+            "Effective Radiative Forcing|Anthropogenic",
+            "Effective Radiative Forcing|Greenhouse Gases",
+            "Emissions|CH4",
+            "Atmospheric Concentrations|N2O",
+            "Ocean carbon flux",
+            "Airborne fraction CO2",
+            "Biosphere carbon pool",
+        ]
+    )
+    assert set(results["scenario"].unique()) == set(["ssp245"])
+    test_length = results.query(
+        'variable=="Surface Air Temperature Change" & scenario=="ssp245" & run_id=="13555_old_NR_rounded"'
+    )
+    test_not_empty = results[2000]
+    assert len(test_length.values[0]) == 158
+    assert test_not_empty.values.any()
 
 
 def test_ciceroscm_run_parallel_many_scenarios(test_data_dir):
@@ -62,20 +152,17 @@ def test_ciceroscm_run_parallel_many_scenarios(test_data_dir):
         scenarios.append(new_scen)
     output_variables = ["Heat Content|Ocean", "Surface Air Temperature Change"]
     results = run_ciceroscm_parallel(scenarios, cfgs, output_variables)
-    print(results)
-    assert set(results.get_unique_meta("variable")) == set(
+    assert set(results["variable"].unique()) == set(
         ["Heat Content|Ocean", "Surface Air Temperature Change"]
     )
-    assert set(results.get_unique_meta("scenario")) == set(
+    assert set(results["scenario"].unique()) == set(
         [f"ssp245-plus-{d}-percent" for d in range(20)]
     )
-    test_length = results.filter(
-        variable="Surface Air Temperature Change",
-        scenario="ssp245-plus-1-percent",
-        run_id="13555_old_NR_rounded",
+    test_length = results.query(
+        'variable=="Surface Air Temperature Change" & scenario=="ssp245-plus-1-percent" & run_id=="13555_old_NR_rounded"'
     )
-    test_not_empty = results.filter(year=2000)
-    assert len(test_length.values[0]) == 151
+    test_not_empty = results[2000]
+    assert len(test_length.values[0]) == 158
     assert test_not_empty.values.any()
 
 
@@ -255,7 +342,7 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
     output_variables = ["Heat Content|Ocean", "Surface Air Temperature Change"]
     results = run_ciceroscm_parallel(scenarios, cfgs, output_variables)
     print(results)
-    assert set(results.get_unique_meta("run_id")) == set(
+    assert set(results["run_id"].unique()) == set(
         [
             "13555_old_NR_rounded",
             "13555_old_NR_improved",
@@ -274,21 +361,21 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
     )
     scenarios = [
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_data": np.loadtxt(os.path.join(test_data_dir, "test_forcing.txt")),
             "udir": test_data_dir,
             "scenname": "forc_data_test_forcing",
         },
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_data": np.loadtxt(os.path.join(test_data_dir, "zero_forcing.txt")),
             "udir": test_data_dir,
             "scenname": "forc_data_zero_forcing",
         },
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_data": np.loadtxt(os.path.join(test_data_dir, "test_forcing.txt")),
             "sunvolc": 1,
@@ -296,14 +383,14 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
             "scenname": "forc_data_test_forcing_sunvolc",
         },
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_data": np.loadtxt(os.path.join(test_data_dir, "CO2_1pros.txt")),
             "udir": test_data_dir,
             "scenname": "forc_data_CO2_1pros",
         },
         {
-            "gaspamfile": gaspam_data,
+            "gaspam_data": gaspam_data,
             "nyend": 2100,
             "forc_file": os.path.join(test_data_dir, "test_forcing_hemisplit.txt"),
             "udir": test_data_dir,
@@ -336,7 +423,7 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
     output_variables = ["Heat Content|Ocean", "Surface Air Temperature Change"]
     results = run_ciceroscm_parallel(scenarios, cfgs, output_variables)
     print(results)
-    assert set(results.get_unique_meta("scenario")) == set(
+    assert set(results["scenario"].unique()) == set(
         [
             "forc_data_test_forcing_hemisplit",
             "forc_data_CO2_1pros",
@@ -345,9 +432,7 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
             "forc_data_test_forcing",
         ]
     )
-    test_length = results.filter(
-        variable="Surface Air Temperature Change",
-        scenario="forc_data_zero_forcing",
-        run_id="10496_old_NR_rounded",
+    test_length = results.query(
+        'variable=="Surface Air Temperature Change" & scenario=="forc_data_zero_forcing" & run_id=="10496_old_NR_rounded"'
     )
-    assert len(test_length.values[0]) == 351
+    assert len(test_length.values[0]) == 358

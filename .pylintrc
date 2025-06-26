@@ -3,9 +3,7 @@ ignore=_version.py
 load-plugins=
     pylint.extensions.bad_builtin,
     pylint.extensions.check_elif,
-    pylint.extensions.comparetozero,
     pylint.extensions.docparams,
-    pylint.extensions.emptystring,
     pylint.extensions.overlapping_exceptions,
     pylint.extensions.redefined_variable_type
 
@@ -27,3 +25,6 @@ ignore-imports=yes
 
 [FORMAT]
 good-names=i,j,k,nt,yr,it,dt,rf,dT_glob,dT_NH,dT_SH,dT_glob_air,dT_glob_NH_air,dT_glob_SH_air,dT_glob_sea,q,dT_glob_NH_sea,dT_glob_SH_sea,dSL,dSL_ice,dSL_thermal,fs,fn,s,t,p0,p,t0,w,dz,tn,ts,z0,a,b,c,aa,bb,z,dn,ds,im,lm
+
+# Maximum number of characters on a single line. 
+max-line-length=90

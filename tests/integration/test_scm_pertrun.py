@@ -21,8 +21,8 @@ def check_output(
         if update_expected_files:
             shutil.copyfile(file_to_check, file_expected)
         else:
-            res = pd.read_csv(file_to_check, delim_whitespace=True)
-            exp = pd.read_csv(file_expected, delim_whitespace=True)
+            res = pd.read_csv(file_to_check, sep=r"\s+")
+            exp = pd.read_csv(file_expected, sep=r"\s+")
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
@@ -48,12 +48,8 @@ def check_output_just_some_lines(
         if update_expected_files:
             shutil.copyfile(file_to_check, file_expected)
         else:
-            res = pd.read_csv(
-                file_to_check, delim_whitespace=True, skiprows=range(lines, 352)
-            )
-            exp = pd.read_csv(
-                file_expected, delim_whitespace=True, skiprows=range(lines, 352)
-            )
+            res = pd.read_csv(file_to_check, sep=r"\s+", skiprows=range(lines, 352))
+            exp = pd.read_csv(file_expected, sep=r"\s+", skiprows=range(lines, 352))
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
@@ -90,7 +86,6 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
             "qindso2": -0.514,
             "qbc": 0.200,
             "qoc": -0.103,
-            "qh2o_ch4": 0.171,
         },
     )
 
@@ -124,7 +119,6 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
             "qindso2": -0.514,
             "qbc": 0.200,
             "qoc": -0.103,
-            "qh2o_ch4": 0.171,
         },
     )
 

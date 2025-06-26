@@ -3,11 +3,10 @@ import os
 import shutil
 import warnings
 
-import numpy as np
 import pandas as pd
 import pandas.testing as pdt
 
-from ciceroscm import CICEROSCM, pub_utils
+from ciceroscm import CICEROSCM
 
 
 def check_output_not_equal(
@@ -24,8 +23,8 @@ def check_output_not_equal(
         if update_expected_files:
             shutil.copyfile(file_to_check, file_expected)
         else:
-            res = pd.read_csv(file_to_check, delim_whitespace=True)
-            exp = pd.read_csv(file_expected, delim_whitespace=True)
+            res = pd.read_csv(file_to_check, sep=r"\s+")
+            exp = pd.read_csv(file_expected, sep=r"\s+")
             pdt.assert_index_equal(res.index, exp.index)
 
             try:
@@ -56,7 +55,10 @@ def test_swap_out_rs_function(tmpdir, test_data_dir):
                 "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
                 "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
                 "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
-                "rs_function": lambda it, idtm: 0.5 + 0.5 * np.exp(-it / idtm / 100.0),
+                "rs_function": {
+                    "coeffs": [0.5, 0.5],
+                    "timescales": [100.0],
+                },  # lambda it, idtm: 0.5 + 0.5 * np.exp(-it / idtm / 100.0),
             },
         )
         warnings.simplefilter("error")
@@ -93,9 +95,6 @@ def test_swap_out_rs_function(tmpdir, test_data_dir):
 
 
 def test_swap_out_rb_function(tmpdir, test_data_dir):
-    rb_decay = pub_utils.make_rb_function_from_arrays(
-        [0.70211, 13.4141e-3, -0.71846, 2.9323e-3], [1 / 0.35, 20.0, 120 / 55.0, 100.0]
-    )
     cscm = CICEROSCM(
         {
             "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
@@ -107,7 +106,7 @@ def test_swap_out_rb_function(tmpdir, test_data_dir):
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
-            "rb_function": rb_decay,
+            "rb_function": {"coeffs": [0.5, 0.25, 0.25], "timescales": [2.5, 10, 60]},
         },
     )
     # outdir_save = os.path.join(os.getcwd(), "output")
@@ -142,13 +141,6 @@ def test_swap_out_rb_function(tmpdir, test_data_dir):
 
 
 def test_swap_out_both_r_functions(tmpdir, test_data_dir):
-    rb_decay = pub_utils.make_rb_function_from_arrays(
-        [0.70211, 13.4141e-3, -0.71846, 2.9323e-3], [1 / 0.35, 20.0, 120 / 55.0, 100.0]
-    )
-    rs_decay_fair = pub_utils.make_rs_function_from_arrays(
-        [0.24278, 0.13963, 0.089318, 0.03782, 0.035549],
-        [1.2679, 5.2528, 18.601, 68.736, 232.3],
-    )
     cscm = CICEROSCM(
         {
             "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
@@ -160,8 +152,11 @@ def test_swap_out_both_r_functions(tmpdir, test_data_dir):
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
-            "rb_function": rb_decay,
-            "rs_function": rs_decay_fair,
+            "rb_function": {"coeffs": [0.5, 0.25, 0.25], "timescales": [2.5, 10, 60]},
+            "rs_function": {
+                "coeffs": [0.24278, 0.13963, 0.089318, 0.03782, 0.035549],
+                "timescales": [5.2528, 18.601, 68.736, 232.3],
+            },
         },
     )
     # outdir_save = os.path.join(os.getcwd(), "output")
