@@ -3,6 +3,7 @@ Class for common utility functions
 """
 
 import logging
+import numpy as np
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,14 +30,22 @@ def check_numeric_pamset(required, pamset):
          pamset augmented with necessary default values
          from required
     """
+    vector_keys = ["dz_vector"]
     for pam, value in required.items():
         if pam not in pamset:
-            LOGGER.info(  # pylint: disable=logging-fstring-interpolation
+            LOGGER.info(
                 f"Parameter {pam} not in pamset. Using default value {value}",
             )
             pamset[pam] = value
-        elif not isinstance(pamset[pam], int) and not isinstance(pamset[pam], float):
-            LOGGER.info(  # pylint: disable=logging-fstring-interpolation
+        elif pam in vector_keys:
+            # Accept numpy arrays or lists for vector parameters
+            if not isinstance(pamset[pam], (np.ndarray, list)):
+                LOGGER.info(
+                    f"Parameter {pam} must be a numpy array or list. Using default value {value}",
+                )
+                pamset[pam] = value
+        elif not isinstance(pamset[pam], (int, float)):
+            LOGGER.info(
                 f"Parameter {pam} must be a number. Using default value {value}",
             )
             pamset[pam] = value
