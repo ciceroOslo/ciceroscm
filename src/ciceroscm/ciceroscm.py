@@ -165,6 +165,7 @@ class CICEROSCM:
             "Solar_forcing",
             "Volcanic_forcing_NH",
             "Volcanic_forcing_SH",
+            "anomalous_radiation",
         ]
         for output in output_variables:
             self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
@@ -238,6 +239,7 @@ class CICEROSCM:
             "dT_glob_sea": "dtemp_sea",
             "dT_NH_sea": "dtempnh_sea",
             "dT_SHsea": "dtempsh_sea",
+            "anomalous_radiation": "anomalous_radiation",
         }
         for output, name in outputs_dict.items():
             self.results[output][index] = values[name]

@@ -96,11 +96,20 @@ def read_inputfile(input_file, cut_years=False, year_start=1750, year_end=2100):
         to relevant years
     """
     df_input = pd.read_csv(input_file, sep=r"\s+", index_col=0, skiprows=[1, 2, 3])
+    max_year = df_input.index[-1]
+
     if cut_years:
         min_year = df_input.index[0]
         max_year = df_input.index[-1]
         cut_rows = [*range(min_year, year_start), *range(year_end + 1, max_year + 1)]
         df_input.drop(index=cut_rows, inplace=True)
+        # If requested years go beyond available data, repeat last value
+    if year_end > max_year:
+        last_row = df_input.loc[[max_year]]
+        for extra_year in range(max_year + 1, year_end + 1):
+            last_row.index = [extra_year]
+            df_input = pd.concat([df_input, last_row])
+
     return df_input
 
 
@@ -549,6 +558,11 @@ class InputHandler:
             )
         else:
             df_data = pd.read_csv(volc_datafile, header=None, nrows=nrows, sep=r"\s+")
+        # If not enough rows, repeat the last row
+        if len(df_data) < nrows:
+            last_row = df_data.iloc[[-1]]
+            repeat_rows = pd.concat([last_row] * (nrows - len(df_data)), ignore_index=True)
+            df_data = pd.concat([df_data, repeat_rows], ignore_index=True)
 
         df_data.set_axis(labels=indices)
         return df_data

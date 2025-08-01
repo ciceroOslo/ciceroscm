@@ -17,24 +17,28 @@ DAY_YEAR = 365.0
 LOGGER = logging.getLogger(__name__)
 
 
-def _solve_tridiagonal(a_array, b_array, c_array, d_array):
+def _band(a_array, b_array, c_array, d_array):
     """
-    Solves a tridiagonal system of linear equations: M*x = d.
+    Calculate band
 
-    This version constructs a sparse matrix from the diagonals and uses a
-    general-purpose sparse solver, which correctly handles asymmetric matrices.
+    Parameters
+    ----------
+    a_array : np.ndarray
+              a_array through ocean layers
+    b_array : np.ndarray
+              b_array through ocean layers
+    c_array : np.ndarray
+              c_array through ocean layers
+    d_array : np.ndarray
+               d_array through ocean layers
+
+    Returns
+    -------
+    np.ndarray
+             band value through ocean layers
     """
-    # Define the diagonals of the matrix. The first argument is a list of the
-    # diagonal arrays; the second is which diagonal they correspond to
-    # (-1 = lower, 0 = main, 1 = upper).
-    diagonals = [a_array, b_array, c_array]
-    positions = [-1, 0, 1]
-    
-    # Construct the sparse matrix in a diagonal format.
-    matrix = spdiags(diagonals, positions, len(b_array), len(b_array), format='csc')
-    
-    # Solve the system using the efficient sparse solver.
-    return spsolve(matrix, d_array)
+    return solve_banded((1, 1), np.array([c_array, b_array, a_array]), d_array)
+
 
 
 def check_pamset(pamset):
@@ -262,11 +266,10 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
                 * self.pamset["dt"]
             )
         
-
+        ##NEW efficacy logic
         # 1. Get the standard, physical coefficients.
         a_phys, b_phys, c_phys = self.coeff(wcfac, self.get_gam_and_fro_factor_ns(True))
         
-
         # 2. Create the EFFECTIVE coefficients for the solver as a copy.
         a_eff, b_eff, c_eff = a_phys.copy(), b_phys.copy(), c_phys.copy()
         
@@ -475,14 +478,14 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             )
 
             # Where are these being initialised? Ok, I think
-            self.tn = _solve_tridiagonal(
+            self.tn = _band(
                 self.varrying["acoeffn"],
                 self.varrying["bcoeffn"],
                 self.varrying["ccoeffn"],
                 dn,
             )
             # Replace _band with _solve_tridiagonal
-            self.ts = _solve_tridiagonal(
+            self.ts = _band(
                 self.varrying["acoeffs"],
                 self.varrying["bcoeffs"],
                 self.varrying["ccoeffs"],
@@ -584,6 +587,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             "RIB": (ribn + ribs) / 2.0,
             "OHC700": ocean_res["OHC700"],
             "OHCTOT": ocean_res["OHCTOT"],
+            "anomalous_radiation": anomalous_radiation,
         }
 
     def ocean_temperature(self):
