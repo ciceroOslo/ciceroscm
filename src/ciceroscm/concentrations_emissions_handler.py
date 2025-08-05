@@ -204,9 +204,118 @@ class ConcentrationsEmissionsHandler:
         self.pamset["cl_dict"], self.pamset["br_dict"] = make_cl_and_br_dictionaries(
             self.df_gas.index
         )
+        self.precalc_dict = {}
+        self._precalculate_vanilla_gases()
         self.carbon_cycle = CarbonCycleModel(self.pamset)
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, preexisting=False)
+
+    def _precalculate_vanilla_gases(self):
+        df_gases_vanilla = self.df_gas.copy()
+        print(df_gases_vanilla.index)
+        to_drop = ["CO2", "CH4", "N2O"]
+        for index, row in df_gases_vanilla.iterrows():
+            if row["CONC_UNIT"] == "-":
+                to_drop.append(index)
+        df_gases_vanilla.drop(labels=to_drop, inplace=True)
+        self.precalc_dict["df_gas_vanilla"] = df_gases_vanilla
+        self.precalc_dict["precalc_conc"] = self._precalculate_concentrations_vanilla_gases(df_gases_vanilla)
+        self.precalc_dict["precalc_erf"] = self._precalculate_erf_vanilla_gases()
+        
+        self._add_precalculated_strat_o3()
+        self.precalc_dict["precalc_erf"]["TOT_vanilla"] = self.precalc_dict["precalc_erf"].sum(axis=1)
+        self.precalc_dict["gases_list_spicy"] = []
+        for index in self.df_gas.index:
+            if index not in self.precalc_dict["precalc_erf"].columns:
+                self.precalc_dict["gases_list_spicy"].append(index)
+
+        print (self.precalc_dict)
+
+    
+    def _precalculate_erf_vanilla_gases(self):
+        """
+        Precalculate erf for vanilla gases
+        """
+        conc0 = self.precalc_dict["precalc_conc"].iloc[0,:].to_numpy()
+        alpha = self.precalc_dict["df_gas_vanilla"]["ALPHA"].to_numpy()
+        sarf_to_erf = self.precalc_dict["df_gas_vanilla"]["SARF_TO_ERF"].to_numpy()
+
+        erf_data = sarf_to_erf * alpha * (self.precalc_dict["precalc_conc"].to_numpy() - conc0)
+
+        erf_df = pd.DataFrame(
+            data = erf_data,
+            columns= self.precalc_dict["precalc_conc"].columns,
+            index= self.precalc_dict["precalc_conc"].index
+        )
+        return erf_df
+
+    def _precalculate_concentrations_vanilla_gases(self, df_gases_vanilla):
+        conc_in_vanilla = self.conc_in.copy()[df_gases_vanilla.index]
+        if self.pamset["conc_run"]:
+            return conc_in_vanilla
+        
+        conc_in_vanilla = conc_in_vanilla.iloc[self.pamset["nystart"]- conc_in_vanilla.index[0]: self.pamset["emstart"]- conc_in_vanilla.index[0]]
+        #print(df_gases_vanilla)
+        emis_vanilla = self.emis.copy()[df_gases_vanilla.index]
+        emis_vanilla = emis_vanilla.iloc[self.pamset["emstart"]- emis_vanilla.index[0]: self.pamset["nyend"]- emis_vanilla.index[0]+1]
+        #print(emis_vanilla)
+        
+        conc_in_vanilla = conc_in_vanilla.iloc[self.pamset["nystart"]- conc_in_vanilla.index[0]: self.pamset["emstart"]- conc_in_vanilla.index[0]]
+        #print(conc_in_vanilla)
+        #print(df_gases_vanilla["TAU1"])
+        q = 1.0 / df_gases_vanilla["TAU1"].to_numpy()
+        emis = emis_vanilla.to_numpy() + df_gases_vanilla["NAT_EM"].to_numpy()
+        conc_rows = []
+        for i in range(emis.shape[0]):
+            emis_now = emis[i,:]
+            if i == 0:
+                conc_prev = conc_in_vanilla.iloc[-1, :].to_numpy()
+            else:
+                conc_prev = conc_rows[-1]
+            conc = emis_now / df_gases_vanilla["BETA"].to_numpy() / q * (1 - np.exp(-q)) + conc_prev * np.exp(-q)
+            conc_rows.append(conc)
+        conc_rows_df = pd.DataFrame(
+            data = np.array(conc_rows),
+            columns = conc_in_vanilla.columns,
+            index = self.conc_in.index[len(conc_in_vanilla.index):]
+        )
+        return pd.concat([conc_in_vanilla, conc_rows_df])
+    
+    def _add_precalculated_strat_o3(self):
+        sumcl, sumbr = np.zeros(len(self.years)), np.zeros(len(self.years))
+        print(len(self.years))
+        print(len(self.years[:-3]))
+        print(len(self.years[3:]))
+        sumcl[3:], sumbr[3:] = self.calculate_strat_quantities(self.years[:-3], self.precalc_dict["precalc_conc"])
+        q =  (
+                    -(
+                        # self.pamset["qo3"]
+                        0.05
+                        / 0.17377
+                        * (0.000552 * (sumcl) + 3.048 * sumbr)
+                    )
+                    / 1000.0
+                    * self.df_gas["SARF_TO_ERF"]["STRAT_O3"]
+                )
+        self.precalc_dict["precalc_erf"]["STRAT_O3"] = q
+        return
+        """    
+                elif tracer == "STRAT_O3":
+                sumcl, sumbr = self.calculate_strat_quantities(yr - 3)
+                # Updated according to IPCC AR4.
+                # Multiply by factor 0.287737 (=-0.05/-0.17377, AR4/SCM)
+                q = (
+                    -(
+                        # self.pamset["qo3"]
+                        0.05
+                        / 0.17377
+                        * (0.000552 * (sumcl) + 3.048 * sumbr)
+                    )
+                    / 1000.0
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )
+        """
+
 
     def reset_with_new_pams(self, pamset, preexisting=True):
         """
@@ -236,13 +345,14 @@ class ConcentrationsEmissionsHandler:
         years_tot = len(self.years)
         self.conc = {}
         self.forc = {}
-        for tracer in self.df_gas.index:
+        for tracer in self.precalc_dict["gases_list_spicy"]:
             if tracer != "CO2.1":
-                self.conc[tracer] = {}
+                if tracer == "TROP_O3" or self.df_gas["CONC_UNIT"][tracer] != "-":
+                    self.conc[tracer] = {}
                 self.forc[tracer] = np.zeros(years_tot)
         self.forc["Total_forcing"] = np.zeros(years_tot)
 
-    def calculate_strat_quantities(self, yr):
+    def calculate_strat_quantities(self, yr, conc):
         """
         Calculate sumcl and sumbr in stratosphere
 
@@ -262,17 +372,19 @@ class ConcentrationsEmissionsHandler:
             and the sumbr value for halon gases.
         """
         yr0 = int(self.years[0])
-        if yr <= yr0:
-            return 0.0, 0.0
+        if np.isscalar(yr):
+            if yr <= yr0:
+                return 0.0, 0.0
         sumcl = 0
         sumbr = 0
         for comp, mult in self.pamset["cl_dict"].items():
-            num = self.conc[comp][yr] - self.conc[comp][yr0]
+            num = conc[comp][yr] - conc[comp][yr0]
             # sumcl = sumcl + (mult * (self.conc[comp][yr] - self.conc[comp][yr0])) ** 1.7
             sumcl = sumcl + np.sign(num) * np.power(mult * abs(num), 1.7)
         for comp, mult in self.pamset["br_dict"].items():
-            sumbr = sumbr + mult * (self.conc[comp][yr] - self.conc[comp][yr0])
+            sumbr = sumbr + mult * (conc[comp][yr] - conc[comp][yr0])
         return sumcl, sumbr
+
 
     def calculate_forc_three_main(self, yr):  # pylint: disable=too-many-locals
         """
@@ -468,7 +580,7 @@ class ConcentrationsEmissionsHandler:
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
         yr_0 = self.years[0]
         # Finish per tracer calculations, add per tracer to printable df and sum the total
-        for tracer in self.df_gas.index:
+        for tracer, value_dict in self.forc.items():
             if tracer in ["CO2", "N2O", "CH4"]:
                 continue
             q = 0
@@ -492,33 +604,9 @@ class ConcentrationsEmissionsHandler:
                         - self.emis[ref_emission_species[tracer][0]][yr_0]
                     ) / erefyr
                     q = ref_emission_species[tracer][1] * frac_em
-
-            elif (
-                tracer in self.df_gas.index
-                and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
-            ):
-                q = (
-                    (self.conc[tracer][yr] - self.conc[tracer][yr_0])
-                    * self.df_gas["ALPHA"][tracer]
-                    * self.df_gas["SARF_TO_ERF"][tracer]
-                )  # +forc_pert
             elif tracer == "TROP_O3":
                 q = (
                     self.tropospheric_ozone_forcing(yr)
-                    * self.df_gas["SARF_TO_ERF"][tracer]
-                )
-            elif tracer == "STRAT_O3":
-                sumcl, sumbr = self.calculate_strat_quantities(yr - 3)
-                # Updated according to IPCC AR4.
-                # Multiply by factor 0.287737 (=-0.05/-0.17377, AR4/SCM)
-                q = (
-                    -(
-                        # self.pamset["qo3"]
-                        0.05
-                        / 0.17377
-                        * (0.000552 * (sumcl) + 3.048 * sumbr)
-                    )
-                    / 1000.0
                     * self.df_gas["SARF_TO_ERF"][tracer]
                 )
             elif tracer == "STRAT_H2O":
@@ -538,7 +626,11 @@ class ConcentrationsEmissionsHandler:
             )
             tot_forc = tot_forc + q
             # print("Forcer: %s, tot_forc: %f, FN: %f, FS: %f, q: %f"%(tracer, tot_forc, forc_nh, forc_sh, q)
+        # Add total forcing from precalculated:
+        precalc_rf = self.precalc_dict["precalc_erf"]["TOT_vanilla"][yr]
+        tot_forc, forc_nh, forc_sh = tot_forc + precalc_rf, forc_nh + precalc_rf, forc_sh  + precalc_rf
         # Adding forcing perturbations if they exist:
+        # TODO: Deal with forcing perturbation if precalculated species is perturbed
         if "forc_pert" in self.pamset:
             if self.pamset["forc_pert"].check_if_year_in_pert(yr):
                 tot_forc, forc_nh, forc_sh, self.forc = self.pamset[
@@ -599,13 +691,13 @@ class ConcentrationsEmissionsHandler:
             return
         self.add_row_of_zeros_conc(yr)
 
-        for tracer in self.df_gas.index:
+        for tracer, value_dict in self.conc.items():
             # something something postscenario...?
             if self.df_gas["CONC_UNIT"][tracer] == "-":
-                # Forcing calculated from emissions
+                # Forcing calculated from emissions, should now only be TROP_O3
                 continue
             if tracer == "CO2":
-                self.conc["CO2"][yr] = self.carbon_cycle.co2em2conc(
+                value_dict[yr] = self.carbon_cycle.co2em2conc(
                     yr,
                     self.emis["CO2_FF"][yr]
                     + self.emis["CO2_AFOLU"][yr]
@@ -635,7 +727,7 @@ class ConcentrationsEmissionsHandler:
             point_conc = emis / self.df_gas["BETA"][tracer]
             # Rewrote this quite a bit from an original loop,
             # but I think it is mathematically equivalent
-            self.conc[tracer][yr] = point_conc / q + (
+            value_dict[yr] = point_conc / q + (
                 conc_local - point_conc / q
             ) * np.exp(-q)
 
@@ -747,6 +839,9 @@ class ConcentrationsEmissionsHandler:
 
         df_forc = pd.DataFrame(data=self.forc, index=self.years)
         df_forc["Year"] = self.years
+        # Adding in precalculated values:
+        df_forc = pd.concat([df_forc, self.precalc_dict["precalc_erf"]], axis=1)
+        df_forc.drop(columns=["TOT_vanilla"], inplace=True)
 
         cols = df_forc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
@@ -763,12 +858,23 @@ class ConcentrationsEmissionsHandler:
         self.conc["Year"] = self.years
 
         df_conc = pd.DataFrame(data=self.conc, index=self.years)
+        df_conc = pd.concat([df_conc, self.precalc_dict["precalc_conc"]], axis=1)
+        for tracer in self.precalc_dict["gases_list_spicy"]:
+            if tracer not in df_conc.columns:
+                df_conc[tracer] = np.zeros(len(self.years))
+        if "STRAT_O3" not in df_conc.columns:
+            df_conc["STRAT_O3"] = np.zeros(len(self.years))  
         cols = df_conc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_conc = df_conc[cols]
         for tracer in self.df_gas.index:
             if tracer not in df_emis.columns.tolist():
                 df_emis[tracer] = np.zeros(len(self.years))
+        frame_order = self.df_gas.index.copy()
+        frame_order = frame_order.insert(0, "Year")
+        print("Frame order")
+        print(frame_order)
+        df_conc = df_conc[frame_order]
         if "output_prefix" in cfg:
             filename_start = cfg["output_prefix"]
         else:
@@ -834,7 +940,9 @@ class ConcentrationsEmissionsHandler:
         """
         df_forc = pd.DataFrame(data=self.forc, index=self.years)
         df_forc["Year"] = self.years
-
+        # Adding in precalculated values:
+        df_forc = pd.concat([df_forc, self.precalc_dict["precalc_erf"]], axis=1)
+        df_forc.drop(columns=["TOT_vanilla"], inplace=True)
         cols = df_forc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_forc = df_forc[cols]
@@ -850,9 +958,24 @@ class ConcentrationsEmissionsHandler:
         self.conc["Year"] = self.years
 
         df_conc = pd.DataFrame(data=self.conc, index=self.years)
+        df_conc = pd.concat([df_conc, self.precalc_dict["precalc_conc"]], axis=1)   
         cols = df_conc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_conc = df_conc[cols]
+        for tracer in self.precalc_dict["gases_list_spicy"]:
+            if tracer not in df_conc.columns:
+                df_conc[tracer] = np.zeros(len(self.years))
+        if "STRAT_O3" not in df_conc.columns:
+            df_conc["STRAT_O3"] = np.zeros(len(self.years))
+        for tracer in self.df_gas.index:
+            if tracer not in df_emis.columns.tolist():
+                df_emis[tracer] = np.zeros(len(self.years))
+
+        frame_order = self.df_gas.index.copy()
+        frame_order = frame_order.insert(0, "Year")
+        df_conc = df_conc[frame_order]
+        print("Frame order")
+        print(frame_order)
         results = {}
         results["emissions"] = df_emis
         results["concentrations"] = df_conc
