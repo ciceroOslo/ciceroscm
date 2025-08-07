@@ -576,6 +576,8 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             "dtemp": dtemp,
             "dtempnh": tempn,
             "dtempsh": temps,
+            "tn": self.tn,
+            "ts": self.ts,
             "dtemp_air": (tempn_air + temps_air) / 2.0,
             "dtempnh_air": tempn_air,
             "dtempsh_air": temps_air,

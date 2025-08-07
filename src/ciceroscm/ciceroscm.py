@@ -166,9 +166,18 @@ class CICEROSCM:
             "Volcanic_forcing_NH",
             "Volcanic_forcing_SH",
             "anomalous_radiation",
+            "tn",
+            "ts",
         ]
+        n_years = self.cfg["nyend"] - self.cfg["nystart"] + 1
+        n_layers = self.cfg.get("lm", 40)  # Default to 40 if not specified
+
         for output in output_variables:
-            self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
+            if output in ["tn", "ts"]:
+                self.results[output] = np.zeros((n_years, n_layers))
+            else:
+                self.results[output] = np.zeros(n_years)
+
 
     def forc_set(self, yr, rf_sun):
         """
@@ -230,6 +239,8 @@ class CICEROSCM:
             "RIB_glob": "RIB",
             "RIB_N": "RIBN",
             "RIB_S": "RIBS",
+            "tn": "tn",
+            "ts": "ts",
             "dT_glob": "dtemp",
             "dT_NH": "dtempnh",
             "dT_SH": "dtempsh",
