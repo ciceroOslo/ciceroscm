@@ -225,6 +225,12 @@ class ConcentrationsEmissionsHandler:
         self.precalc_dict["precalc_erf"] = self._precalculate_erf_vanilla_gases()
 
         self._add_precalculated_strat_o3()
+
+        if "forc_pert" in self.pamset and self.pamset["forc_pert"] is not None:
+            self.pamset["forc_pert"].add_forcing_pert_for_vanilla(
+                self.precalc_dict["precalc_erf"]
+            )
+
         self.precalc_dict["precalc_erf"]["TOT_vanilla"] = self.precalc_dict[
             "precalc_erf"
         ].sum(axis=1)
@@ -631,6 +637,7 @@ class ConcentrationsEmissionsHandler:
             )
             tot_forc = tot_forc + q
             # print("Forcer: %s, tot_forc: %f, FN: %f, FS: %f, q: %f"%(tracer, tot_forc, forc_nh, forc_sh, q)
+
         # Add total forcing from precalculated:
         precalc_rf = self.precalc_dict["precalc_erf"]["TOT_vanilla"][yr]
         tot_forc, forc_nh, forc_sh = (
@@ -638,6 +645,7 @@ class ConcentrationsEmissionsHandler:
             forc_nh + precalc_rf,
             forc_sh + precalc_rf,
         )
+
         # Adding forcing perturbations if they exist:
         # TODO: Deal with forcing perturbation if precalculated species is perturbed
         if "forc_pert" in self.pamset:
