@@ -11,7 +11,7 @@ from ciceroscm.two_layer_ocean import TwoLayerOceanModel
 from ciceroscm.upwelling_diffusion_model import UpwellingDiffusionModel
 
 
-def test_ciceroscm_with_default_carbon_cycle_model(tmpdir, test_data_dir):
+def test_ciceroscm_with_default_carbon_cycle_model(test_data_dir):
     """
     Test that CICEROSCM uses the default CarbonCycleModel when configured.
     """
@@ -32,7 +32,7 @@ def test_ciceroscm_with_default_carbon_cycle_model(tmpdir, test_data_dir):
     assert isinstance(cscm.ce_handler.carbon_cycle, DefaultCarbonCycleModel)
 
 
-def test_ciceroscm_with_box_carbon_cycle_model(tmpdir, test_data_dir):
+def test_ciceroscm_with_box_carbon_cycle_model(test_data_dir):
     cscm = CICEROSCM(
         {
             "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
@@ -48,9 +48,12 @@ def test_ciceroscm_with_box_carbon_cycle_model(tmpdir, test_data_dir):
         },
     )
     assert isinstance(cscm.ce_handler.carbon_cycle, BoxCarbonCycleModel)
+    cscm._run({"results_as_dict": True, "carbon_cycle_outputs": True})
+    print(cscm.results.keys())
+    assert False
 
 
-def test_ciceroscm_with_default_thermal_model(tmpdir, test_data_dir):
+def test_ciceroscm_with_default_thermal_model(test_data_dir):
     """
     Test that CICEROSCM uses the default CarbonCycleModel when configured.
     """
@@ -71,7 +74,7 @@ def test_ciceroscm_with_default_thermal_model(tmpdir, test_data_dir):
     assert isinstance(cscm.thermal({}), UpwellingDiffusionModel)
 
 
-def test_ciceroscm_with_twolayer_thermal_model(tmpdir, test_data_dir):
+def test_ciceroscm_with_twolayer_thermal_model(test_data_dir):
     cscm = CICEROSCM(
         {
             "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
@@ -88,5 +91,4 @@ def test_ciceroscm_with_twolayer_thermal_model(tmpdir, test_data_dir):
     )
     assert isinstance(cscm.thermal({}), TwoLayerOceanModel)
     cscm._run({"results_as_dict": True})
-    print(cscm.results.keys())
-    assert False
+    assert len(cscm.results["RIB_glob"]) == 351

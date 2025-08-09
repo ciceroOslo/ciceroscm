@@ -70,7 +70,11 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
         # Update temperatures
         self.temp_fast += dtemp_fast
         self.temp_slow += dtemp_slow
-        rib_toa = forc - self.lambda_* self.temp_fast - (self.efficacy - 1 ) * self.k*(self.temp_fast -self.temp_slow)
+        rib_toa = (
+            forc
+            - self.lambda_ * self.temp_fast
+            - (self.efficacy - 1) * self.k * (self.temp_fast - self.temp_slow)
+        )
 
         # TODO: Add calculations of Ocean heat content and RIB? Should be knowable/calculable even from this, right?
         return {

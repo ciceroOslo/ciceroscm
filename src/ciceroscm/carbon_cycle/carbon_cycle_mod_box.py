@@ -163,3 +163,9 @@ class CarbonCycleModel:
         """
         Stub
         """
+    # TODO:
+    def get_carbon_cycle_output(self, years):
+        """
+        Get carbon cycle output to print out
+        """
+        pass
