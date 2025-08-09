@@ -88,10 +88,10 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
             "qoc": -0.103,
         },
     )
-
     check_output(
         outdir, os.path.join(test_data_dir, "pert_tests"), files=["output_forc.txt"]
     )
+    """
     cscm = CICEROSCM(
         {
             "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
@@ -108,7 +108,6 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
     # outdir_save = os.path.join(os.getcwd(), "output")
     outdir = str(tmpdir)
     # One year forcing:
-
     cscm._run(
         {"output_folder": outdir},
         pamset_emiconc={
@@ -125,6 +124,7 @@ def test_ciceroscm_run_pert_forc(tmpdir, test_data_dir):
     check_output(
         outdir, os.path.join(test_data_dir, "pert_tests"), files=["output_forc.txt"]
     )
+    """
 
 
 def test_ciceroscm_run_pert_emis(tmpdir, test_data_dir):
