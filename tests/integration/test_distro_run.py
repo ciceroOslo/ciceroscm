@@ -17,7 +17,7 @@ def test_distro_run_forcing(test_data_dir):
         os.path.join(test_data_dir, "gases_v1RCMIP.txt")
     )
     scenarios = {
-        "gaspamfile": gaspam_data,
+        "gaspam_data": gaspam_data,
         "nyend": 2100,
         "forc_data": np.loadtxt(os.path.join(test_data_dir, "test_forcing.txt")),
         "udir": test_data_dir,

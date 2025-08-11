@@ -18,7 +18,18 @@ input_dir = "/div/amoc/CSCM/SCM_Linux_v2019/RCMIP/input/"
 
 outdir = os.path.join(os.getcwd(), "./output_test")
 
-ssps = ["119", "126", "245", "245methane", "370-lowNTCF", "370", "434", "460", "534-over", "585"]
+ssps = [
+    "119",
+    "126",
+    "245",
+    "245methane",
+    "370-lowNTCF",
+    "370",
+    "434",
+    "460",
+    "534-over",
+    "585",
+]
 
 for s in ssps:
     concf = f"{input_dir}ssp{s}_conc_RCMIP.txt"

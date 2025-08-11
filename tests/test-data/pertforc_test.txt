@@ -2,3 +2,6 @@ component,unit,source,year,forcing
 OTHER,Wm-2,src,2000,-4.0
 OTHER,Wm-2,src,2001,-4.0
 OTHER,Wm-2,src,2002,-4.0
+CFC-11,Wm-2,src,1999,-0.4
+CFC-11,Wm-2,src,2003,-0.4
+CFC-11,Wm-2,src,2005,-0.4
