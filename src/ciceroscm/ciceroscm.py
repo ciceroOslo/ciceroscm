@@ -93,14 +93,8 @@ class CICEROSCM:
 
         input_handler = InputHandler(cfg)
         self.cfg["rf_run"] = input_handler.optional_pam("forc")
-        if input_handler.thermal_model(self.cfg):
-            self.cfg["thermal_model"] = input_handler.thermal_model(self.cfg)
-        else:
-            self.cfg["thermal_model"] = "default"
-        if input_handler.carbon_model(self.cfg):
-            self.cfg["carbon_cycle_model"] = input_handler.carbon_model(self.cfg)
-        else:
-            self.cfg["carbon_cycle_model"] = "default"
+        self.cfg["thermal_model"] = input_handler.thermal_model(self.cfg)
+        self.cfg["carbon_cycle_model"] = input_handler.carbon_model(self.cfg)
 
         #        print("Thermal Model=" + self.cfg["thermal_model"])
 

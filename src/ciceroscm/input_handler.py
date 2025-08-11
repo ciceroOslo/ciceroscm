@@ -462,37 +462,37 @@ class InputHandler:
 
     def thermal_model(self, cfg):
         """
-        Check if configurations includes conc_run option
+        Check if thermal model is set
 
-        Checking if configurations includes conc_run option
-        If included, its value is returned, otherwise False
-        is returned
+        Check if configurations include a setting for the thermal model
+        If they do, return the value, otherwise return False
 
         Returns
         -------
-        bool
-            Whether this is rf_run or not
+        str
+            'default' if thermal model is not in configurations
+            the name of the thermal model if it is
         """
         if "thermal_model" in cfg:
             return cfg["thermal_model"]
-        return False
+        return "default"
 
     def carbon_model(self, cfg):
         """
-        Check if configurations includes conc_run option
+        Check if carbon cycle model is set
 
-        Checking if configurations includes conc_run option
-        If included, its value is returned, otherwise False
-        is returned
+        Check if configurations include a setting for the carbon cycle model
+        If they do, return the value, otherwise return default
 
         Returns
         -------
-        bool
-            Whether this is rf_run or not
+        str
+            'default' if carbon cycle model model is not in configurations
+            The name of the carbon cycle model if it is
         """
         if "carbon_cycle_model" in cfg:
             return cfg["carbon_cycle_model"]
-        return False
+        return "default"
 
     def optional_pam(self, which):
         """
