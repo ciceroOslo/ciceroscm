@@ -622,7 +622,9 @@ class CarbonCycleModel:
             )
         return guess
 
-    def get_carbon_cycle_output(self, years, conc_run=False, conc_series=None):
+    def get_carbon_cycle_output(
+        self, years, conc_run=False, conc_series=None, dtemp_series=None
+    ):
         """
         Make and return a dataframe with carbon cycle data
 
@@ -635,6 +637,9 @@ class CarbonCycleModel:
         conc_series : np.array
             Numpy array of concentrations, must be included for a concentrations
             driven run to back calculate emissions
+        dtemp_series : np.array
+            Numpy array of temperatures, must be included for a concentrations
+            driven run to back calculate emissions that depend on temperature
 
         Returns
         -------

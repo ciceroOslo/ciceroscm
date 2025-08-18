@@ -837,7 +837,7 @@ class ConcentrationsEmissionsHandler:
         for value_dict in self.conc.values():
             value_dict[yr] = 0
 
-    def write_output_to_files(self, cfg, make_plot=False):
+    def write_output_to_files(self, cfg, results_dict, make_plot=False):
         """
         Write results to files after run
 
@@ -852,6 +852,8 @@ class ConcentrationsEmissionsHandler:
         cfg : dict
            Configurations to define where to put output
            files and what prefix to have for file name
+        results_dict : dict
+            Dictionary of results to write to files
         make_plot : bool
            Whether the output should be plottet or not
         """
@@ -861,111 +863,71 @@ class ConcentrationsEmissionsHandler:
         else:
             outdir = os.path.join(os.getcwd(), "output")
 
-        df_forc = pd.DataFrame(data=self.forc, index=self.years)
-        df_forc["Year"] = self.years
-        # Adding in precalculated values:
-        df_forc = pd.concat([df_forc, self.precalc_dict["precalc_erf"]], axis=1)
-        df_forc.drop(columns=["TOT_vanilla"], inplace=True)
-
-        cols = df_forc.columns.tolist()
-        cols = cols[-1:] + cols[:-1]
-        df_forc = df_forc[cols]
-        df_forc.rename(columns={"SO2": "SO4_DIR"}, inplace=True)
-        df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis=1).drop(
-            labels=np.arange(self.years[-1] + 1, self.emis.index[-1] + 1), axis=0
-        )
-        df_emis["Year"] = self.years
-        df_emis["CO2"] = self.emis["CO2_FF"] + self.emis["CO2_AFOLU"]
-        cols = df_emis.columns.tolist()
-        cols = cols[-2:] + cols[:-2]
-        df_emis = df_emis[cols]
-        self.conc["Year"] = self.years
-
-        df_conc = pd.DataFrame(data=self.conc, index=self.years)
-        df_conc = pd.concat([df_conc, self.precalc_dict["precalc_conc"]], axis=1)
-        for tracer in self.precalc_dict["gases_list_spicy"]:
-            if tracer not in df_conc.columns:
-                df_conc[tracer] = np.zeros(len(self.years))
-        if "STRAT_O3" not in df_conc.columns:
-            df_conc["STRAT_O3"] = np.zeros(len(self.years))
-        cols = df_conc.columns.tolist()
-        cols = cols[-1:] + cols[:-1]
-        df_conc = df_conc[cols]
-        for tracer in self.df_gas.index:
-            if tracer not in df_emis.columns.tolist():
-                df_emis[tracer] = np.zeros(len(self.years))
-        frame_order = self.df_gas.index.copy()
-        frame_order = frame_order.insert(0, "Year")
-
-        df_conc = df_conc[frame_order]
         if "output_prefix" in cfg:
             filename_start = cfg["output_prefix"]
         else:
             filename_start = "output"
-        df_forc.to_csv(
-            os.path.join(outdir, f"{filename_start}_forc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
-        df_conc.to_csv(
-            os.path.join(outdir, f"{filename_start}_conc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
 
-        df_emis.to_csv(
-            os.path.join(outdir, f"{filename_start}_em.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
+        longname_shortname_dict = {
+            "emissions": "em",
+            "concentrations": "conc",
+            "forcing": "forc",
+            "carbon cycle": "carbon",
+        }
+        for outtype, df in results_dict.items():
 
-        if make_plot:
-            plot_output2("forc", df_forc, outdir)
-            plot_output2("emis", df_emis, outdir, self.df_gas["EM_UNIT"])
-            plot_output2("conc", df_conc, outdir, self.df_gas["CONC_UNIT"])
-
-        if "carbon_cycle_outputs" in cfg:
-            # Adding carbon cycle outputs here
-            # Typically back_calculated emissions for conc_run
-            # Airborne fraction
-            # biosphere carbon flux
-            # Ocean carbon flux
-            # Yearly fluxes?
-            df_carbon_cycle = self.get_carbon_cycle_data()
-
-            df_carbon_cycle.to_csc(
-                os.path.join(outdir, f"{filename_start}_carbon.txt"),
+            df.to_csv(
+                os.path.join(
+                    outdir, f"{filename_start}_{longname_shortname_dict[outtype]}.txt"
+                ),
                 sep="\t",
                 index=False,
                 float_format="%.5e",
             )
 
-    def add_results_to_dict(self, cfg):
+        if make_plot:
+            plot_output2("forc", results_dict["forcing"], outdir)
+            plot_output2(
+                "emis", results_dict["emissions"], outdir, self.df_gas["EM_UNIT"]
+            )
+            plot_output2(
+                "conc", results_dict["concentrations"], outdir, self.df_gas["CONC_UNIT"]
+            )
+
+    def get_emissions_to_forcing_output(
+        self, cfg, dtemp_series=None, write_to_files=True, make_plot=False
+    ):
         """
-        Add results to results dictionary
+        Get results after a run
+
+        Get results for emissions, concentrations
+        and forcings and possibly carbon cycle output.
+        Either return dictionary with
+        dataframes or write output to files. File format is as in the
+        fortran implementation, with separate files for
+        emissions (emis), concentrations (conc) and
+        forcing (forc)
 
         Parameters
         ----------
         cfg : dict
-            Configurations to define where to put output
-            files and what prefix to have for file name
-            At the moment this method only needs to know
-            if it's supposed to include carbon cycle outputs
-
-        Returns
-        -------
-        dict
-            Containing run emissions, concentrations and forcings
-            in the form of pandas.Dataframe with years and tracers
+           Configurations to define where to put output
+           files and what prefix to have for file name
+        dtemp_series : np.array
+            Array of temperature time series. May be needed
+            to calculate carbon cycle output
+        write_to_files : bool
+            If results are to be written to file
+        make_plot : bool
+           Whether the output should be plottet or not
+           make_plot only works if write_to_files is True
         """
         df_forc = pd.DataFrame(data=self.forc, index=self.years)
         df_forc["Year"] = self.years
         # Adding in precalculated values:
         df_forc = pd.concat([df_forc, self.precalc_dict["precalc_erf"]], axis=1)
         df_forc.drop(columns=["TOT_vanilla"], inplace=True)
+
         cols = df_forc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_forc = df_forc[cols]
@@ -982,20 +944,20 @@ class ConcentrationsEmissionsHandler:
 
         df_conc = pd.DataFrame(data=self.conc, index=self.years)
         df_conc = pd.concat([df_conc, self.precalc_dict["precalc_conc"]], axis=1)
-        cols = df_conc.columns.tolist()
-        cols = cols[-1:] + cols[:-1]
-        df_conc = df_conc[cols]
         for tracer in self.precalc_dict["gases_list_spicy"]:
             if tracer not in df_conc.columns:
                 df_conc[tracer] = np.zeros(len(self.years))
         if "STRAT_O3" not in df_conc.columns:
             df_conc["STRAT_O3"] = np.zeros(len(self.years))
+        cols = df_conc.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        df_conc = df_conc[cols]
         for tracer in self.df_gas.index:
             if tracer not in df_emis.columns.tolist():
                 df_emis[tracer] = np.zeros(len(self.years))
-
         frame_order = self.df_gas.index.copy()
         frame_order = frame_order.insert(0, "Year")
+
         df_conc = df_conc[frame_order]
 
         results = {}
@@ -1004,10 +966,16 @@ class ConcentrationsEmissionsHandler:
         results["forcing"] = df_forc
 
         if "carbon_cycle_outputs" in cfg:
-            results["carbon cycle"] = self.get_carbon_cycle_data()
-        return results
+            results["carbon cycle"] = self.get_carbon_cycle_data(
+                dtemp_series=dtemp_series
+            )
 
-    def get_carbon_cycle_data(self):
+        if not write_to_files:
+            return results
+
+        self.write_output_to_files(cfg, results, make_plot=make_plot)
+
+    def get_carbon_cycle_data(self, dtemp_series=None):
         """
         Get carbon cycle data and put in dataframe for output
 
@@ -1019,18 +987,24 @@ class ConcentrationsEmissionsHandler:
             Biosphere carbon flux and ocean carbon flux
         """
         conc_series = np.array([v for k, v in self.conc["CO2"].items()])
-
         if self.pamset["conc_run"]:
             em_series = self.carbon_cycle.back_calculate_emissions(conc_series)
             df_carbon = self.carbon_cycle.get_carbon_cycle_output(
-                conc_series, conc_run=self.pamset["conc_run"]
+                self.years,
+                conc_series=conc_series,
+                conc_run=self.pamset["conc_run"],
+                dtemp_series=dtemp_series,
             )
         else:
             em_series = (
                 self.emis["CO2_FF"][self.years].values
                 + self.emis["CO2_AFOLU"][self.years].values
             )
-            df_carbon = self.carbon_cycle.get_carbon_cycle_output(self.years)
+            df_carbon = self.carbon_cycle.get_carbon_cycle_output(
+                self.years, conc_series=conc_series, dtemp_series=dtemp_series
+            )
+
+        if em_series is not None:
             if df_carbon is None:
                 df_carbon = pd.DataFrame(
                     data={

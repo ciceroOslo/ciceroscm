@@ -1,5 +1,7 @@
 import os
 
+import pandas as pd
+
 from ciceroscm import CICEROSCM
 from ciceroscm.carbon_cycle.carbon_cycle_mod import (
     CarbonCycleModel as DefaultCarbonCycleModel,
@@ -45,12 +47,14 @@ def test_ciceroscm_with_box_carbon_cycle_model(test_data_dir):
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
             "carbon_cycle_model": "box",  # Specify the box model
+            "conc_run": True,
         },
     )
     assert isinstance(cscm.ce_handler.carbon_cycle, BoxCarbonCycleModel)
     cscm._run({"results_as_dict": True, "carbon_cycle_outputs": True})
-    print(cscm.results.keys())
-    assert False
+    # print(cscm.results["carbon cycle"])
+    assert isinstance(cscm.results["carbon cycle"], pd.DataFrame)
+    assert "Ocean carbon flux" in cscm.results["carbon cycle"].columns
 
 
 def test_ciceroscm_with_default_thermal_model(test_data_dir):

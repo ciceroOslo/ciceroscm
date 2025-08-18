@@ -303,10 +303,19 @@ class CICEROSCM:
             plot_output1(cfg, self.results, self.cfg["nystart"], self.cfg["nyend"])
         if ("results_as_dict" in cfg) and cfg["results_as_dict"]:
             if not self.cfg["rf_run"]:
-                self.results.update(self.ce_handler.add_results_to_dict(cfg))
+                self.results.update(
+                    self.ce_handler.get_emissions_to_forcing_output(
+                        cfg, dtemp_series=self.results["dT_glob"], write_to_files=False
+                    )
+                )
         else:
             if not self.cfg["rf_run"]:
-                self.ce_handler.write_output_to_files(cfg, make_plot)
+                self.ce_handler.get_emissions_to_forcing_output(
+                    cfg,
+                    dtemp_series=self.results["dT_glob"],
+                    write_to_files=True,
+                    make_plot=make_plot,
+                )
 
             self.write_data_to_file(cfg)
 

@@ -3,6 +3,7 @@ Simple CarbonCycleModel with temperature feedback and no pre-computed pulse resp
 """
 
 import numpy as np
+import pandas as pd
 
 from .common_carbon_cycle_functions import PPM_CO2_TO_PG_C  # OCEAN_AREA, GE_COEFF
 
@@ -118,34 +119,49 @@ class CarbonCycleModel:
         self.atmospheric_co2 += net_flux / PPM_CO2_TO_PG_C * dt
         return self.atmospheric_co2
 
-    def calculate_npp(self, dtemp):
+    def calculate_npp(self, dtemp, co2_conc_series=None):
         """
         Calculate Net Primary Production (NPP) as a function of temperature and CO2.
 
         Parameters
         ----------
-        dtemp : float
+        dtemp : float or np.ndarray
             Global mean temperature difference from pre-industrial (K).
+        co2_conc_series : np.ndarray
+            Timeseries of atmospheric CO2 concentrations over which to estimate
+            npp values
 
         Returns
         -------
         float
             NPP (PgC/yr).
         """
-        co2_fertilization = self.pamset["beta_f"] * np.log(self.atmospheric_co2 / 278.0)
         temp_effect = self.pamset["land_temp_sensitivity"] * dtemp
-        return max(
-            0.0, 60.0 + co2_fertilization - temp_effect
-        )  # Ensure NPP is non-negative
 
-    def calculate_ocean_uptake(self, dtemp):
+        if co2_conc_series is None:
+            co2_fertilization = self.pamset["beta_f"] * np.log(
+                self.atmospheric_co2 / 278.0
+            )
+            # TODO: Do we need some error handling here?
+            return max(
+                0.0, 60.0 + co2_fertilization - temp_effect
+            )  # Ensure NPP is non-negative
+
+        co2_fertilization = self.pamset["beta_f"] * np.log(co2_conc_series / 278.0)
+        return np.clip(60.0 + co2_fertilization - temp_effect, a_min=0, a_max=None)
+
+    def calculate_ocean_uptake(self, dtemp, co2_conc_series=None):
         """
         Calculate ocean carbon uptake as a function of temperature and CO2.
 
         Parameters
         ----------
-        dtemp : float
+        dtemp : float or np.ndarray
             Global mean temperature difference from pre-industrial (K).
+        co2_conc_series : np.ndarray
+            Time series of concentrations to calculate the ocean uptake
+            over full concnentration time series. When this is sent,
+            dtemp is assumed to be a corresponding temperature time series
 
         Returns
         -------
@@ -155,17 +171,46 @@ class CarbonCycleModel:
         solubility = self.pamset["ocean_solubility_base"] * (
             1 + self.pamset["ocean_solubility_temp_coeff"] * dtemp
         )  # Solubility decreases with warming
-        return solubility * (
-            self.atmospheric_co2 - 278.0
-        )  # Uptake proportional to CO2 difference
+        if co2_conc_series is None:
+            return solubility * (
+                self.atmospheric_co2 - 278.0
+            )  # Uptake proportional to CO2 difference
+        # TODO: Do we need some error handling here?
+        return solubility * (co2_conc_series - 278.0)
 
     def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0, fnpp_temp_coeff=0):
         """
         Stub
         """
 
-    # TODO:
-    def get_carbon_cycle_output(self, years):
+    # TODO: Improve
+    def get_carbon_cycle_output(
+        self, years, conc_series=None, dtemp_series=None, conc_run=False
+    ):
         """
         Get carbon cycle output to print out
         """
+        # print(conc_series)
+        # print(years)
+        if conc_series is None:
+            return None
+        if dtemp_series is None:
+            dtemp_series = np.zeros_like(conc_series)
+        df_carbon = pd.DataFrame(
+            data={
+                "Net primary production": self.calculate_npp(dtemp_series, conc_series),
+                "Ocean carbon flux": self.calculate_ocean_uptake(
+                    dtemp_series, conc_series
+                ),
+            },
+            index=years,
+        )
+        # print(df_carbon)
+        return df_carbon
+
+    def back_calculate_emissions(conc_series, dtemp_series=None):
+        """
+        Do backwards calculation to get emissions time series given
+        concentrations and temperature series
+        """
+        pass
