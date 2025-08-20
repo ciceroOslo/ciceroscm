@@ -9,10 +9,10 @@ import numpy as np
 import pandas as pd
 
 from ._utils import cut_and_check_pamset
+from .component_factory_functions import create_thermal_model
 from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
 from .input_handler import InputHandler
 from .make_plots import plot_output1
-from .upwelling_diffusion_model import UpwellingDiffusionModel
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,20 +85,32 @@ class CICEROSCM:
 
         """
         self.cfg = cut_and_check_pamset(
-            {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24}, cfg
+            {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24},
+            cfg,
+            {"carbon_cycle_model": "default", "thermal_model": "default"},
         )
         cfg.update(self.cfg)
+
         input_handler = InputHandler(cfg)
         self.cfg["rf_run"] = input_handler.optional_pam("forc")
+        self.cfg["thermal_model"] = input_handler.thermal_model(self.cfg)
+        self.cfg["carbon_cycle_model"] = input_handler.carbon_model(self.cfg)
+
+        #        print("Thermal Model=" + self.cfg["thermal_model"])
+
         if self.cfg["rf_run"]:
             self.rf = input_handler.get_data("forc")
         else:
             # cfg = check_inputfiles(cfg)
             pamset_emiconc = {}
+
+            pamset_emiconc["thermal_model"] = self.cfg["thermal_model"]
+            pamset_emiconc["carbon_cycle_model"] = self.cfg["carbon_cycle_model"]
             pamset_emiconc["emstart"] = self.cfg["emstart"]
             pamset_emiconc["nystart"] = self.cfg["nystart"]
             pamset_emiconc["nyend"] = self.cfg["nyend"]
             pamset_emiconc["idtm"] = self.cfg["idtm"]
+
             for key, value in cfg.items():
                 if key in ["rs_function", "rb_function"]:
                     pamset_emiconc[key] = value
@@ -115,6 +127,7 @@ class CICEROSCM:
 
         # Add support for sending filename in cfg
         self.rf_luc = input_handler.get_data("rf_luc")
+        self.thermal = create_thermal_model(self.cfg["thermal_model"])
         self.initialise_output_arrays()
 
     def initialise_output_arrays(self):
@@ -254,7 +267,10 @@ class CICEROSCM:
         """
         self.initialise_output_arrays()
         # Setting up UDM
-        udm = UpwellingDiffusionModel(pamset_udm)
+        # udm = UpwellingDiffusionModel(pamset_udm)
+
+        # udm = create_thermal_model(self.cfg["thermal_model"], pamset_udm)
+        udm = self.thermal(pamset_udm)
         values = None
         if not self.cfg["rf_run"]:
             pamset_emiconc["emstart"] = self.cfg["emstart"]
@@ -287,10 +303,19 @@ class CICEROSCM:
             plot_output1(cfg, self.results, self.cfg["nystart"], self.cfg["nyend"])
         if ("results_as_dict" in cfg) and cfg["results_as_dict"]:
             if not self.cfg["rf_run"]:
-                self.results.update(self.ce_handler.add_results_to_dict(cfg))
+                self.results.update(
+                    self.ce_handler.get_emissions_to_forcing_output(
+                        cfg, dtemp_series=self.results["dT_glob"], write_to_files=False
+                    )
+                )
         else:
             if not self.cfg["rf_run"]:
-                self.ce_handler.write_output_to_files(cfg, make_plot)
+                self.ce_handler.get_emissions_to_forcing_output(
+                    cfg,
+                    dtemp_series=self.results["dT_glob"],
+                    write_to_files=True,
+                    make_plot=make_plot,
+                )
 
             self.write_data_to_file(cfg)
 

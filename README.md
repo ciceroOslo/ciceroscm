@@ -46,6 +46,7 @@ With a CICEROSCM instance in place, you are ready to start runs with various par
 * output_prefix - prefix to output filenames
 * make_plot - if set to True plots of the output are made and saved to a subfolder in the output_folder.
 * results_as_dict - if set to True, outputs will not be printed to files, instead they will be available as a results attribute dictionary to the ciceroscm instance.
+* carbon_cycle_outputs - If set to True, carbon cycle outputs will be included
 
 ### Parameter sets
 Physical parameters to the model is divided in two parametersets each of which are sent as two seperate dictionaries to the run call.
