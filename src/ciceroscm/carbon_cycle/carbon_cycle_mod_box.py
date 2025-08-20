@@ -186,7 +186,7 @@ class CarbonCycleModel:
     # TODO: Improve
     def get_carbon_cycle_output(
         self, years, conc_series=None, dtemp_series=None, conc_run=False
-    ):
+    ):  # pylint: disable=unused-argument
         """
         Get carbon cycle output to print out
         """
@@ -208,9 +208,11 @@ class CarbonCycleModel:
         # print(df_carbon)
         return df_carbon
 
-    def back_calculate_emissions(conc_series, dtemp_series=None):
+    def back_calculate_emissions(
+        self, conc_series, dtemp_series=None
+    ):  # pylint: disable=unused-argument
         """
         Do backwards calculation to get emissions time series given
         concentrations and temperature series
         """
-        pass
+        return None

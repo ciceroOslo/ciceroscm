@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 from ciceroscm import CICEROSCM
@@ -47,7 +48,7 @@ def test_ciceroscm_with_box_carbon_cycle_model(test_data_dir):
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
             "carbon_cycle_model": "box",  # Specify the box model
-            "conc_run": True,
+            "conc_run": False,
         },
     )
     assert isinstance(cscm.ce_handler.carbon_cycle, BoxCarbonCycleModel)
@@ -55,6 +56,20 @@ def test_ciceroscm_with_box_carbon_cycle_model(test_data_dir):
     # print(cscm.results["carbon cycle"])
     assert isinstance(cscm.results["carbon cycle"], pd.DataFrame)
     assert "Ocean carbon flux" in cscm.results["carbon cycle"].columns
+    back_calc_npp = cscm.ce_handler.carbon_cycle.calculate_npp(
+        cscm.results["dT_glob"],
+        co2_conc_series=cscm.results["concentrations"]["CO2"].values,
+    )
+    back_calc_ocean = cscm.ce_handler.carbon_cycle.calculate_ocean_uptake(
+        cscm.results["dT_glob"],
+        co2_conc_series=cscm.results["concentrations"]["CO2"].values,
+    )
+    assert np.allclose(
+        back_calc_npp, cscm.results["carbon cycle"]["Net primary production"].values
+    )
+    assert np.allclose(
+        back_calc_ocean, cscm.results["carbon cycle"]["Ocean carbon flux"].values
+    )
 
 
 def test_ciceroscm_with_default_thermal_model(test_data_dir):

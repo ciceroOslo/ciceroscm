@@ -974,6 +974,7 @@ class ConcentrationsEmissionsHandler:
             return results
 
         self.write_output_to_files(cfg, results, make_plot=make_plot)
+        return None
 
     def get_carbon_cycle_data(self, dtemp_series=None):
         """
