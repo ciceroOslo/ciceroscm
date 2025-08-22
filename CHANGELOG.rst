@@ -17,6 +17,7 @@ The changes listed in this file are categorised as follows:
 ## [Unreleased]
 
 ### Changed
+- Change so that non-changing gases are precalculated before a run in concentrations_emissions_handler.py to speed up and avoid looping over every component and looking up in pandas every timestep
 - Removed use of scmdata, and changed parallel output to be pandas to offload extra dependencies
 - Moved carbon cycle functionality out of concentrations_emissions_handler.py to separate module carbon_cycle_mod.py
 - Changed methodology for parametrised decay functions for biotic decay (rb_function) and mixed layer pulse response rs_function, imposing a few more consistency criteria on them and makeing them changable by a dictionary for each with keys "coeffs" and "timescales" with values that should be lists or np.arrays of coefficient and timescale values 
