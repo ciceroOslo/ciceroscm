@@ -921,7 +921,7 @@ class ConcentrationsEmissionsHandler:
             # Yearly fluxes?
             df_carbon_cycle = self.get_carbon_cycle_data()
 
-            df_carbon_cycle.to_csc(
+            df_carbon_cycle.to_csv(
                 os.path.join(outdir, f"{filename_start}_carbon.txt"),
                 sep="\t",
                 index=False,
