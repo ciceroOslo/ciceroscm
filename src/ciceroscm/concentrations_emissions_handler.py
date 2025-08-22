@@ -282,12 +282,6 @@ class ConcentrationsEmissionsHandler:
             + 1
         ]
 
-        conc_in_vanilla = conc_in_vanilla.iloc[
-            self.pamset["nystart"]
-            - conc_in_vanilla.index[0] : self.pamset["emstart"]
-            - conc_in_vanilla.index[0]
-        ]
-
         q = 1.0 / df_gases_vanilla["TAU1"].to_numpy()
         emis = emis_vanilla.to_numpy() + df_gases_vanilla["NAT_EM"].to_numpy()
         conc_rows = []
@@ -927,7 +921,7 @@ class ConcentrationsEmissionsHandler:
             # Yearly fluxes?
             df_carbon_cycle = self.get_carbon_cycle_data()
 
-            df_carbon_cycle.to_csc(
+            df_carbon_cycle.to_csv(
                 os.path.join(outdir, f"{filename_start}_carbon.txt"),
                 sep="\t",
                 index=False,
