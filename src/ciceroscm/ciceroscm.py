@@ -105,7 +105,7 @@ class CICEROSCM:
         else:
             self.cfg["carbon_cycle_model"] = "default"
 
-#        print("Thermal Model=" + self.cfg["thermal_model"])
+        #        print("Thermal Model=" + self.cfg["thermal_model"])
 
         if self.cfg["rf_run"]:
             self.rf = input_handler.get_data("forc")
@@ -168,6 +168,8 @@ class CICEROSCM:
             "anomalous_radiation",
             "tn",
             "ts",
+            "wcfac_n",
+            "wcfac_s",
         ]
         n_years = self.cfg["nyend"] - self.cfg["nystart"] + 1
         n_layers = self.cfg.get("lm", 40)  # Default to 40 if not specified
@@ -177,7 +179,6 @@ class CICEROSCM:
                 self.results[output] = np.zeros((n_years, n_layers))
             else:
                 self.results[output] = np.zeros(n_years)
-
 
     def forc_set(self, yr, rf_sun):
         """
@@ -251,6 +252,8 @@ class CICEROSCM:
             "dT_NH_sea": "dtempnh_sea",
             "dT_SHsea": "dtempsh_sea",
             "anomalous_radiation": "anomalous_radiation",
+            "wcfac_n": "wcfac_n",
+            "wcfac_s": "wcfac_s",
         }
         for output, name in outputs_dict.items():
             self.results[output][index] = values[name]
