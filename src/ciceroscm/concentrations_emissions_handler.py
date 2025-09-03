@@ -846,61 +846,26 @@ class ConcentrationsEmissionsHandler:
         else:
             outdir = os.path.join(os.getcwd(), "output")
 
-        df_forc = pd.DataFrame(data=self.forc, index=self.years)
-        df_forc["Year"] = self.years
-        # Adding in precalculated values:
-        df_forc = pd.concat([df_forc, self.precalc_dict["precalc_erf"]], axis=1)
-        df_forc.drop(columns=["TOT_vanilla"], inplace=True)
+        results_dict = self.add_results_to_dict(cfg)
 
-        cols = df_forc.columns.tolist()
-        cols = cols[-1:] + cols[:-1]
-        df_forc = df_forc[cols]
-        df_forc.rename(columns={"SO2": "SO4_DIR"}, inplace=True)
-        df_emis = self.emis.drop(labels=["CO2_FF", "CO2_AFOLU"], axis=1).drop(
-            labels=np.arange(self.years[-1] + 1, self.emis.index[-1] + 1), axis=0
-        )
-        df_emis["Year"] = self.years
-        df_emis["CO2"] = self.emis["CO2_FF"] + self.emis["CO2_AFOLU"]
-        cols = df_emis.columns.tolist()
-        cols = cols[-2:] + cols[:-2]
-        df_emis = df_emis[cols]
-        self.conc["Year"] = self.years
-
-        df_conc = pd.DataFrame(data=self.conc, index=self.years)
-        df_conc = pd.concat([df_conc, self.precalc_dict["precalc_conc"]], axis=1)
-        for tracer in self.precalc_dict["gases_list_spicy"]:
-            if tracer not in df_conc.columns:
-                df_conc[tracer] = np.zeros(len(self.years))
-        if "STRAT_O3" not in df_conc.columns:
-            df_conc["STRAT_O3"] = np.zeros(len(self.years))
-        cols = df_conc.columns.tolist()
-        cols = cols[-1:] + cols[:-1]
-        df_conc = df_conc[cols]
-        for tracer in self.df_gas.index:
-            if tracer not in df_emis.columns.tolist():
-                df_emis[tracer] = np.zeros(len(self.years))
-        frame_order = self.df_gas.index.copy()
-        frame_order = frame_order.insert(0, "Year")
-
-        df_conc = df_conc[frame_order]
         if "output_prefix" in cfg:
             filename_start = cfg["output_prefix"]
         else:
             filename_start = "output"
-        df_forc.to_csv(
+        results_dict["forcing"].to_csv(
             os.path.join(outdir, f"{filename_start}_forc.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
         )
-        df_conc.to_csv(
+        results_dict["concentrations"].to_csv(
             os.path.join(outdir, f"{filename_start}_conc.txt"),
             sep="\t",
             index=False,
             float_format="%.5e",
         )
 
-        df_emis.to_csv(
+        results_dict["emissions"].to_csv(
             os.path.join(outdir, f"{filename_start}_em.txt"),
             sep="\t",
             index=False,
@@ -908,9 +873,13 @@ class ConcentrationsEmissionsHandler:
         )
 
         if make_plot:
-            plot_output2("forc", df_forc, outdir)
-            plot_output2("emis", df_emis, outdir, self.df_gas["EM_UNIT"])
-            plot_output2("conc", df_conc, outdir, self.df_gas["CONC_UNIT"])
+            plot_output2("forc", results_dict["forcing"], outdir)
+            plot_output2(
+                "emis", results_dict["emissions"], outdir, self.df_gas["EM_UNIT"]
+            )
+            plot_output2(
+                "conc", results_dict["concentrations"], outdir, self.df_gas["CONC_UNIT"]
+            )
 
         if "carbon_cycle_outputs" in cfg:
             # Adding carbon cycle outputs here
@@ -918,10 +887,9 @@ class ConcentrationsEmissionsHandler:
             # Airborne fraction
             # biosphere carbon flux
             # Ocean carbon flux
-            # Yearly fluxes?
-            df_carbon_cycle = self.get_carbon_cycle_data()
+            # Yearly fluxes
 
-            df_carbon_cycle.to_csv(
+            results_dict["carbon cycle"].to_csv(
                 os.path.join(outdir, f"{filename_start}_carbon.txt"),
                 sep="\t",
                 index=False,
