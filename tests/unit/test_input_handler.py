@@ -97,28 +97,31 @@ def test_read_volc_sun(test_data_dir):
     assert len(df_luc.index) == 351
     assert df_luc.columns.tolist() == [0]
 
+
 def test_gaspam_compatibility_check(test_data_dir):
     ih = input_handler.InputHandler(
         {
-            "gaspam_file" : os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt"),
-            "emissions_file" : os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
-            "concentrations_file" : os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt")
+            "gaspam_file": os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt"),
+            "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
         }
     )
     gaspam_testing = ih.get_data("gaspam")
     gaspam_testing.loc["CH4", "EM_UNIT"] = "Pg_C"
     gaspam_testing.loc["N2O", "CONC_UNIT"] = "NOUNIT"
-    with pytest.raises(ValueError, match=r'Emissions file *'):
+    with pytest.raises(ValueError, match=r"Emissions file *"):
         input_handler.InputHandler(
             {
-                "gaspam_data" : gaspam_testing,
-                "emissions_file" : os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),       
+                "gaspam_data": gaspam_testing,
+                "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             }
         )
-    with pytest.raises(ValueError, match=r'Concentrations file *'):
+    with pytest.raises(ValueError, match=r"Concentrations file *"):
         input_handler.InputHandler(
             {
-                "gaspam_data" : gaspam_testing,
-                "concentrations_file" : os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),       
+                "gaspam_data": gaspam_testing,
+                "concentrations_file": os.path.join(
+                    test_data_dir, "ssp245_conc_RCMIP.txt"
+                ),
             }
         )
