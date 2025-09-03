@@ -938,16 +938,8 @@ class ConcentrationsEmissionsHandler:
         cols = df_conc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_conc = df_conc[cols]
-        for tracer in self.precalc_dict["gases_list_spicy"]:
-            if tracer not in df_conc.columns:
-                df_conc[tracer] = np.zeros(len(self.years))
-        if "STRAT_O3" not in df_conc.columns:
-            df_conc["STRAT_O3"] = np.zeros(len(self.years))
-        for tracer in self.df_gas.index:
-            if tracer not in df_emis.columns.tolist():
-                df_emis[tracer] = np.zeros(len(self.years))
-
         frame_order = self.df_gas.index.copy()
+        frame_order = frame_order.drop(list(set(frame_order.to_list()) - set(cols)))
         frame_order = frame_order.insert(0, "Year")
         df_conc = df_conc[frame_order]
 
