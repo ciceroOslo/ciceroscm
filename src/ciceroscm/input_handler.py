@@ -274,6 +274,67 @@ class InputHandler:
                 )
 
         check_inputfiles(self.cfg)
+        self._check_gaspam_compatibility()
+
+    def _check_gaspam_compatibility(self):
+        """
+        Perform light compatibility check between data in
+        gaspam file and in emissions and concentrations data
+
+        Can only be performed if the InputHandler instance
+        has access to gaspam data of some sort and paths to
+        emissions and concentrations data files
+        """
+        if "gaspam_file" in self.cfg or "gaspam_data" in self.cfg:
+            df_gas = self.get_data("gaspam").drop(
+                index=[
+                    "LANDUSE",
+                    "OTHER",
+                    "SO4_IND",
+                    "TROP_O3",
+                    "STRAT_O3",
+                    "STRAT_H2O",
+                    "BMB_AEROS",
+                ]
+            )
+            if "emissions_file" in self.cfg:
+                em_header = pd.read_csv(
+                    self.cfg["emissions_file"], sep=r"\s+", index_col=0, nrows=1
+                ).drop(columns=["CO2.1"])
+                if not set(df_gas.index).issubset(set(em_header.columns)):
+                    LOGGER.warning(
+                        "The emissions dataset does not contain emissions for all gaspam specied"
+                    )
+                    LOGGER.info(  # pylint: disable=logging-fstring-interpolation
+                        f"Missing species {set(df_gas.index) - set(em_header.columns)}"
+                    )
+                    return
+                em_header_check = em_header[df_gas.index]
+                if (
+                    em_header_check.loc["Unit", :].to_list()
+                    != df_gas["EM_UNIT"].to_list()
+                ):
+                    raise ValueError(
+                        f"Emissions file {self.cfg['emissions_file']} has incompatible units to that of the chosen gaspam file \n Please use compatible emissions"
+                    )
+
+            if ("concentrations_file" in self.cfg) and (
+                "gaspam_file" in self.cfg or "gaspam_data" in self.cfg
+            ):
+                conc_header = pd.read_csv(
+                    self.cfg["concentrations_file"], sep=r"\s+", index_col=0, nrows=1
+                )
+                df_gas = df_gas.drop(
+                    index=list(set(df_gas.index) - set(conc_header.columns))
+                )
+                conc_header_check = conc_header[df_gas.index]
+                if (
+                    conc_header_check.loc["Unit", :].to_list()
+                    != df_gas["CONC_UNIT"].to_list()
+                ):
+                    raise ValueError(
+                        f"Concentrations file {self.cfg['concentrations_file']} has incompatible units to that of the chosen gaspam file \n Please use compatible emissions"
+                    )
 
     def get_flat_natural_emissions(self, component):
         """

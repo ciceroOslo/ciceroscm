@@ -50,15 +50,18 @@ def check_pamset(pamset):
     required = {
         "qbmb": 0.0,
         "qo3": 0.5,
-        "qdirso2": -0.36,
-        "qindso2": -0.97,
-        "qbc": 0.16,
-        "qoc": -0.08,
+        "qdirso2": -0.00308,
+        "qindso2": -0.97 / 57.052577209999995,
+        "qbc": 0.0279,
+        "qoc": -0.00433,
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
         "beta_f": 0.287,
         "mixed_carbon": 75.0,
         "fnpp_temp_coeff": 0.0,
+        "qnmvoc": 0.0,
+        "qnh3": 0.0,
+        "qnox": 0.0,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -580,6 +583,9 @@ class ConcentrationsEmissionsHandler:
             "OC": ["OC", self.pamset["qoc"]],
             "BC": ["BC", self.pamset["qbc"]],
             "BMB_AEROS": ["BMB_AEROS_OC", self.pamset["qbmb"]],
+            "NMVOC": ["NMVOC", self.pamset["qnmvoc"]],
+            "NH3": ["NH3", self.pamset["qnh3"]],
+            "NOx": ["NOx", self.pamset["qnox"]],
         }
         # Intialising with the combined values from CO2, N2O and CH4
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
@@ -595,20 +601,15 @@ class ConcentrationsEmissionsHandler:
                 # Natural emissions
                 # (after IPCC TPII on simple climate models, 1997)
                 # enat = 42.0 Not used, why is this here?
-                # Emission in reference year
-                # SO2, SO4_IND, BC and OC are treated exactly the same
+                # Aerosol forcing used to be scaled to reference year
+                # No just total forcing change
                 # Only with emission to concentration factors differing
                 # These are held in dictionary
-                erefyr = (
-                    self.emis[ref_emission_species[tracer][0]][self.pamset["ref_yr"]]
+                em_change = (
+                    self.emis[ref_emission_species[tracer][0]][yr]
                     - self.emis[ref_emission_species[tracer][0]][yr_0]
                 )
-                if erefyr != 0.0:  # pylint: disable=compare-to-zero
-                    frac_em = (
-                        self.emis[ref_emission_species[tracer][0]][yr]
-                        - self.emis[ref_emission_species[tracer][0]][yr_0]
-                    ) / erefyr
-                    q = ref_emission_species[tracer][1] * frac_em
+                q = ref_emission_species[tracer][1] * em_change
             elif tracer == "TROP_O3":
                 q = (
                     self.tropospheric_ozone_forcing(yr)
@@ -938,16 +939,8 @@ class ConcentrationsEmissionsHandler:
         cols = df_conc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_conc = df_conc[cols]
-        for tracer in self.precalc_dict["gases_list_spicy"]:
-            if tracer not in df_conc.columns:
-                df_conc[tracer] = np.zeros(len(self.years))
-        if "STRAT_O3" not in df_conc.columns:
-            df_conc["STRAT_O3"] = np.zeros(len(self.years))
-        for tracer in self.df_gas.index:
-            if tracer not in df_emis.columns.tolist():
-                df_emis[tracer] = np.zeros(len(self.years))
-
         frame_order = self.df_gas.index.copy()
+        frame_order = frame_order.drop(list(set(frame_order.to_list()) - set(cols)))
         frame_order = frame_order.insert(0, "Year")
         df_conc = df_conc[frame_order]
 
