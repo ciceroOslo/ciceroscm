@@ -59,6 +59,9 @@ def check_pamset(pamset):
         "beta_f": 0.287,
         "mixed_carbon": 75.0,
         "fnpp_temp_coeff": 0.0,
+        "qnmvoc": 0.0,
+        "qnh3": 0.0,
+        "qnox": 0.0,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -580,6 +583,9 @@ class ConcentrationsEmissionsHandler:
             "OC": ["OC", self.pamset["qoc"]],
             "BC": ["BC", self.pamset["qbc"]],
             "BMB_AEROS": ["BMB_AEROS_OC", self.pamset["qbmb"]],
+            "NMVOC": ["NMVOC", self.pamset["qnmvoc"]],
+            "NH3": ["NH3", self.pamset["qnh3"]],
+            "NOx": ["NOx", self.pamset["qnox"]],
         }
         # Intialising with the combined values from CO2, N2O and CH4
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
