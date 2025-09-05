@@ -50,10 +50,10 @@ def check_pamset(pamset):
     required = {
         "qbmb": 0.0,
         "qo3": 0.5,
-        "qdirso2": -0.36,
-        "qindso2": -0.97,
-        "qbc": 0.16,
-        "qoc": -0.08,
+        "qdirso2": -0.00308,
+        "qindso2": -0.97 / 57.052577209999995,
+        "qbc": 0.0279,
+        "qoc": -0.00433,
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
         "beta_f": 0.287,
@@ -595,20 +595,15 @@ class ConcentrationsEmissionsHandler:
                 # Natural emissions
                 # (after IPCC TPII on simple climate models, 1997)
                 # enat = 42.0 Not used, why is this here?
-                # Emission in reference year
-                # SO2, SO4_IND, BC and OC are treated exactly the same
+                # Aerosol forcing used to be scaled to reference year
+                # No just total forcing change
                 # Only with emission to concentration factors differing
                 # These are held in dictionary
-                erefyr = (
-                    self.emis[ref_emission_species[tracer][0]][self.pamset["ref_yr"]]
+                em_change = (
+                    self.emis[ref_emission_species[tracer][0]][yr]
                     - self.emis[ref_emission_species[tracer][0]][yr_0]
                 )
-                if erefyr != 0.0:  # pylint: disable=compare-to-zero
-                    frac_em = (
-                        self.emis[ref_emission_species[tracer][0]][yr]
-                        - self.emis[ref_emission_species[tracer][0]][yr_0]
-                    ) / erefyr
-                    q = ref_emission_species[tracer][1] * frac_em
+                q = ref_emission_species[tracer][1] * em_change
             elif tracer == "TROP_O3":
                 q = (
                     self.tropospheric_ozone_forcing(yr)

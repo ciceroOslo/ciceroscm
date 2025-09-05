@@ -17,6 +17,7 @@ def test_config_distro_methods():
             "qh2o_ch4": 0.091915,
         },
     )
+    print(config_full.prior)
     assert np.array_equal(
         config_full.prior,
         np.array(
@@ -28,8 +29,8 @@ def test_config_distro_methods():
                 [0, 7],
                 [2 / 3.71, 5 / 3.71],
                 [25, 125],
-                [0.1, 0.2],
-                [-0.1, -0.06],
+                [0.004, 0.05],
+                [-0.008, -0.001],
                 [0.110, 0.465],
                 [25, 125],
             ]
