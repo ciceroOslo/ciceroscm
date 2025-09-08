@@ -21,12 +21,11 @@ prior_flat = {
     "mixed": [25, 125],
     "qbmb": [0, 2],
     "qo3": [0.4, 0.6],
-    "qdirso2": [-0.55, -0.2],
-    "qindso2": [-1.5, -0.5],
-    "qbc": [0.1, 0.2],
-    "qoc": [-0.1, -0.06],
+    "qdirso2": [-0.006, -0.001],
+    "qindso2": [-0.03, -0.01],
+    "qbc": [0.004, 0.05],
+    "qoc": [-0.008, -0.001],
     "qh2o_ch4": [0.08, 0.1],
-    "aerosol_total": [-3.0, -0.5],
     "beta_f": [0.110, 0.465],
     "mixed_carbon": [25, 125],
 }
@@ -90,7 +89,6 @@ ordering_standard_forc = [
     "ldtime",
 ]
 """list: Containing a default ordering of parameters for forcing run"""
-aerosols = ["qdirso2", "qindso2", "qbc", "qoc"]
 
 
 class _ConfigDistro:
@@ -113,7 +111,6 @@ class _ConfigDistro:
         options={
             "forc": False,
             "method": "latin",
-            "aerosol-total": [-0.461590, -0.519163, 0.202893, -0.104478],
         },
     ):  # pylint:disable=dangerous-default-value
         """
@@ -146,21 +143,12 @@ class _ConfigDistro:
               drawn from gaussian distributions for each of the
               parameters. This method will also be cosen if some other random
               string or object is sent for this keyword argument.
-              And aerosol_total, which should be a four element array
-              defining the proportions between the aerosol forcings for
-              dirso2, indso2, bc and oc in that order
         """
         self.options = options
         if "forc" not in options:
             self.options["forc"] = False
         if "method" not in options:
             self.options["method"] = "latin"
-        if "aerosol_total" in ordering and "aerosol_total" not in options:
-            options["aerosol_total"] = [-0.461590, -0.519163, 0.202893, -0.104478]
-        if "aerosol_total" in ordering:
-            self.options["aerosol_total"] = np.array(options["aerosol_total"]) / np.sum(
-                options["aerosol_total"]
-            )
         if ordering == "standard":
             if self.options["forc"]:
                 ordering = [
@@ -168,9 +156,6 @@ class _ConfigDistro:
                 ]
             else:
                 ordering = [o for o in ordering_standard if o not in set(setvalues)]
-                if "aerosol_total" in ordering:
-                    for aerosol in aerosols:
-                        ordering.remove(aerosol)
         else:
             ordering = [o for o in ordering if o not in set(setvalues)]
         self.ordering = ordering
@@ -307,13 +292,7 @@ class _ConfigDistro:
                 if pam in ordering_standard_forc:
                     pamset_udm[pam] = samples[i, j]
                 elif not self.options["forc"]:
-                    if pam == "aerosol_total":
-                        for anum, aerosol in enumerate(aerosols):
-                            pamset_emiconc[aerosol] = (
-                                samples[i, j] * self.options["aerosol_total"][anum]
-                            )
-                    else:
-                        pamset_emiconc[pam] = samples[i, j]
+                    pamset_emiconc[pam] = samples[i, j]
 
             config_list[i] = {
                 "pamset_udm": pamset_udm.copy(),

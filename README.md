@@ -75,12 +75,12 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 #### pamset_emiconc
 The concentration and emission parameterset (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
 
-* qbmb (0.0) - Biomass burning aerosol RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qbmb (0.0) - Biomass burning aerosol RF per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt BC}">
 * qo3 (0.5) - Tropospheric ozone RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qdirso2 (-0.36) - Direct RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qindso2 (-0.97) - Indirect RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qbc (0.16) - BC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qoc (-0.08) - OC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qdirso2 (-0.00308) - Direct sulphate RF per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt SO2}"> (note unit in gaspam-file is the mass unit used)
+* qindso2 (-0.017) - Indirect sulphate RF in ref_yr  per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt SO2}"> (note unit in gaspam-file is the mass unit used)
+* qbc (0.0279) - BC (fossil fuel + biofuel) RF  per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt BC}">
+* qoc (-0.00433) - OC (fossil fuel + biofuel) RF in  per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt OC}">
 * qh2o_ch4 (0.091915) - Stratospheric water vapour ERF ratio to methane ERF
 * beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
 * mixed_carbon (75.0) - Depth of mixed layer in Joos scheme carbon cycle

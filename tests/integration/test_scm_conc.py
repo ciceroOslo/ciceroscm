@@ -22,13 +22,11 @@ def check_output(
     for filename in files:
         file_to_check = os.path.join(output_dir, filename)
         file_expected = os.path.join(expected_output_dir, filename)
-        print(filename)
         if update_expected_files:
             shutil.copyfile(file_to_check, file_expected)
         else:
             res = pd.read_csv(file_to_check, sep=r"\s+")
             exp = pd.read_csv(file_expected, sep=r"\s+")
-
             pdt.assert_index_equal(res.index, exp.index)
 
             pdt.assert_frame_equal(
@@ -98,10 +96,10 @@ def test_ciceroscm_run_emi(tmpdir, test_data_dir):
         pamset_emiconc={
             "qbmb": 0.0,
             "qo3": 0.5,
-            "qdirso2": -0.3701,
-            "qindso2": -0.4163,
-            "qbc": 0.163,
-            "qoc": -0.084,
+            "qdirso2": -0.3701 / 57,
+            "qindso2": -0.4163 / 57,
+            "qbc": 0.163 / 7,
+            "qoc": -0.084 / 16,
             "qh2o_ch4": 0.171,
         },
     )
@@ -315,10 +313,10 @@ def test_ciceroscm_run_conc(tmpdir, test_data_dir):
             "qh2o_ch4": 0.171,
             "qbmb": 0.03,
             "qo3": 0.4,
-            "qdirso2": -0.457,
-            "qindso2": -0.514,
-            "qbc": 0.200,
-            "qoc": -0.103,
+            "qdirso2": -0.457 / 57,
+            "qindso2": -0.514 / 57,
+            "qbc": 0.200 / 7,
+            "qoc": -0.103 / 16,
         },
         pamset_udm={
             "rlamdo": 16.0,
@@ -380,10 +378,10 @@ def test_run_with_data_not_files(tmpdir, test_data_dir):
         pamset_emiconc={
             "qbmb": 0.0,
             "qo3": 0.5,
-            "qdirso2": -0.3701,
-            "qindso2": -0.4163,
-            "qbc": 0.163,
-            "qoc": -0.084,
+            "qdirso2": -0.3701 / 57,
+            "qindso2": -0.4163 / 57,
+            "qbc": 0.163 / 7,
+            "qoc": -0.084 / 16,
             "qh2o_ch4": 0.171,
         },
     )
