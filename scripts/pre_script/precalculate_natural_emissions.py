@@ -11,7 +11,7 @@ from ciceroscm import concentrations_emissions_handler, input_handler
 data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "tests", "test-data")
 
 # Change these years if you wish to adjust the estimated time range:
-nyend = 2500
+nyend = 2023
 nystart = 1750
 
 # Choose the lifetime mode assumption for methane 
@@ -34,7 +34,10 @@ def get_lifetime(tracer, yr, ce_handler):
     q = 1/ce_handler.df_gas["TAU1"][tracer]
     if tracer != "CH4":
         return q
-    q = ce_handler.methane_lifetime(q, ce_handler.conc_in[tracer][yr-1], yr)
+    if (yr-1) < ce_handler.conc_in.index[0]:
+        q = ce_handler.methane_lifetime(q, ce_handler.conc_in[tracer][yr], yr)
+    else:
+        q = ce_handler.methane_lifetime(q, ce_handler.conc_in[tracer][yr-1], yr)
     return q
 
 def old_get_nat_em_timeseries(tau, beta, em_nat, em_series, conc_series, sp="N2O"):
@@ -120,6 +123,6 @@ for j, tracer in enumerate(tracers):
     # Option for new (recommended) version calculation (comment out next three lines for old version):
     em_nat_hist_ode = ode_get_nat_em_timeseries(tau, beta, em_series, conc_series, ce_handler, sp=tracer)
     em_nat_out_ode = np.concatenate((em_nat_hist_ode,  np.full((len(year_out)-len(em_nat_hist_ode)), np.mean(em_nat_hist_ode[-11:]),np.double)), axis=0)
-    np.savetxt(f"natemis_{tracer}_ode_method_from_rcmip.txt", em_nat_out_ode,fmt='%1.4f')
+    np.savetxt(f"natemis_{tracer}_ode_method_from_Sep2025_updates.txt", em_nat_out_ode,fmt='%1.4f')
 
 
