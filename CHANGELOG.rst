@@ -25,6 +25,7 @@ The changes listed in this file are categorised as follows:
 - Output data / output files no longer include empty columns for species that don't make sense (landuse albedo emissions, concentrations for aerosols like BC etc)
 - Aerosol forcing is no longer scaled to a reference year, but is per change in annual emissions, this also changes aerosol forcing parameter values and units
 - Added NMVOC, NH3 and NOx as forcing aerosols
+- Changed default gaspam unit for SO2 to Tg_SO2 rather than Tg_S
 
 
 ### Added
