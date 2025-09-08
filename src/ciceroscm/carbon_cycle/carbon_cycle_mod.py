@@ -88,6 +88,7 @@ class CarbonCycleModel:
                 "beta_f": 0.287,
                 "mixed_carbon": 75.0,
                 "fnpp_temp_coeff": 0,
+                "mixed_layer_temp_feedback": 0.0,  # mixed layer depth temp feedback (fraction per degree C)
             },
             pamset,
             used={"rs_function": "missing", "rb_function": "missing"},
@@ -245,6 +246,10 @@ class CarbonCycleModel:
         # TIMESTEP (YR)
         dt = 1.0 / self.pamset["idtm"]
 
+        # Temperature-dependent mixed layer depth
+        mixed_carbon = self.pamset["mixed_carbon"] * (
+            1 + self.pamset.get("mixed_layer_temp_feedback", 0.0) * dtemp
+        )
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
         fnpp = linear_fnpp_from_temp(
@@ -309,7 +314,7 @@ class CarbonCycleModel:
                 PPMKG_TO_UMOL_PER_VOL
                 * GE_COEFF
                 * dt
-                / self.pamset["mixed_carbon"]
+                / mixed_carbon
                 * (sumz + 0.5 * self.co2_hold["sCO2"][it])
             )
             # Partial pressure in ocean mixed layer,
