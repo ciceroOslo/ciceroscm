@@ -59,7 +59,9 @@ def check_pamset(pamset):
         "qnmvoc": 0.0,
         "qnh3": 0.0,
         "qnox": 0.0,
-        "mixed_layer_temp_feedback": 0.0,
+        "ml_w_sigmoid": 3.0,
+        "ml_fracmax": 0.5,
+        "ml_t_half": 0.5,
         "npp0": 60.0,
         "npp_t_half": 0.5,
         "npp_w_sigmoid": 7,
@@ -348,12 +350,14 @@ class ConcentrationsEmissionsHandler:
             self.carbon_cycle.reset_co2_hold(
                 beta_f=self.pamset["beta_f"],
                 mixed_carbon=self.pamset["mixed_carbon"],
-                mixed_layer_temp_feedback=self.pamset["mixed_layer_temp_feedback"],
                 npp0=self.pamset["npp0"],
                 npp_t_half=self.pamset["npp_t_half"],
                 npp_w_sigmoid=self.pamset["npp_w_sigmoid"],
                 npp_t_threshold=self.pamset["npp_t_threshold"],
                 npp_w_threshold=self.pamset["npp_w_threshold"],
+                ml_w_sigmoid=self.pamset["ml_w_sigmoid"],
+                ml_fracmax=self.pamset["ml_fracmax"],
+                ml_t_half=self.pamset["ml_t_half"],
             )
         years_tot = len(self.years)
         self.conc = {}
