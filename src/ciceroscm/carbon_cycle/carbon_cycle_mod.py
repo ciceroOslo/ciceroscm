@@ -357,8 +357,6 @@ class CarbonCycleModel:
             ml_fracmax=self.pamset["ml_fracmax"],
             ml_t_half=self.pamset["ml_t_half"],
         )
-        print("temp: ", dtemp)
-        print("ml: ", mixed_carbon)
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
         fnpp = fnpp_from_temp(
@@ -369,9 +367,6 @@ class CarbonCycleModel:
             t_threshold=self.pamset.get("npp_t_threshold", 4),
             w_threshold=self.pamset.get("npp_w_threshold", 7),
         )
-
-        print("fnpp: ", fnpp)
-        print("npp_threshold: ", self.pamset.get("npp_t_threshold", 4))
         # Monthloop:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
@@ -449,7 +444,6 @@ class CarbonCycleModel:
                 solubility_sens=0.02,
                 solubility_limit=0.5,
             )
-            print("solfac: ", solfac)
 
             self.co2_hold["yCO2"] = solfac * (
                 1.3021 * z_co2
