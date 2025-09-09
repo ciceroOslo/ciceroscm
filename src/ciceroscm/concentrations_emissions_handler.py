@@ -38,8 +38,6 @@ def check_pamset(pamset):
           or emissions to forcing factors, beta_f is the
           carbon cycle fertilisation factor, mixed_carbon is
           the depth of the mixed layer in the carbon cycle model,
-          fnpp_temp_coeff is a linear coefficient
-          for the temperature dependence of fnpp
           and ref_yr is the reference year for calculations
 
     Returns
@@ -58,10 +56,19 @@ def check_pamset(pamset):
         "ref_yr": 2010,
         "beta_f": 0.287,
         "mixed_carbon": 75.0,
-        "fnpp_temp_coeff": 0.0,
         "qnmvoc": 0.0,
         "qnh3": 0.0,
         "qnox": 0.0,
+        "ml_w_sigmoid": 3.0,
+        "ml_fracmax": 0.5,
+        "ml_t_half": 0.5,
+        "npp0": 60.0,
+        "npp_t_half": 0.5,
+        "npp_w_sigmoid": 7,
+        "npp_t_threshold": 4,
+        "npp_w_threshold": 7,
+        "solubility_sens": 0.02,
+        "solubility_limit": 0.5,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -345,7 +352,14 @@ class ConcentrationsEmissionsHandler:
             self.carbon_cycle.reset_co2_hold(
                 beta_f=self.pamset["beta_f"],
                 mixed_carbon=self.pamset["mixed_carbon"],
-                fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"],
+                npp0=self.pamset["npp0"],
+                npp_t_half=self.pamset["npp_t_half"],
+                npp_w_sigmoid=self.pamset["npp_w_sigmoid"],
+                npp_t_threshold=self.pamset["npp_t_threshold"],
+                npp_w_threshold=self.pamset["npp_w_threshold"],
+                ml_w_sigmoid=self.pamset["ml_w_sigmoid"],
+                ml_fracmax=self.pamset["ml_fracmax"],
+                ml_t_half=self.pamset["ml_t_half"],
             )
         years_tot = len(self.years)
         self.conc = {}
