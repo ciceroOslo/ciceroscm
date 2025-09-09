@@ -258,7 +258,7 @@ class CarbonCycleModel:
         mixed_carbon = self.pamset["mixed_carbon"] * (
             1 + self.pamset.get("mixed_layer_temp_feedback", 0.0) * dtemp
         )
-        print(self.pamset["mixed_layer_temp_feedback"])
+
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
         fnpp = linear_fnpp_from_temp(
