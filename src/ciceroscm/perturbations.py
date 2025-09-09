@@ -221,8 +221,8 @@ class ForcingPerturbation:
             return
         for gas in precalc_pert_gases:
             perturb_here = self.perturb_raw[self.perturb_raw.component == gas]
-            precalc_erf[gas][perturb_here.year.values] = (
-                precalc_erf[gas][perturb_here.year.values].values
+            precalc_erf.loc[perturb_here.year.values, gas] = (
+                precalc_erf.loc[perturb_here.year.values, gas].values
                 + perturb_here.forcing.values
             )
         return

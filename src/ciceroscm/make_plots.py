@@ -134,7 +134,7 @@ def plot_output1(pamset, results, nystart, nyend):
 
 def plot_output2(
     var, df_in, outdir, unit=None
-):  # pylint: disable=too-many-locals, too-many-branches
+):  # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     """
     Plot concentration, emission and forcing
 
@@ -152,9 +152,19 @@ def plot_output2(
     """
     plotdir = os.path.join(outdir, "plots")
     if var == "emis":
-        df_in = df_in.drop(labels=unit[unit.values == "X"].index.tolist(), axis=1)
+        cut = list(
+            set(unit[unit.values == "X"].index.tolist()).intersection(
+                set(df_in.columns)
+            )
+        )
+        df_in = df_in.drop(labels=cut, axis=1)
     elif var == "conc":
-        df_in = df_in.drop(labels=unit[unit.values == "-"].index.tolist(), axis=1)
+        cut = list(
+            set(unit[unit.values == "X"].index.tolist()).intersection(
+                set(df_in.columns)
+            )
+        )
+        df_in = df_in.drop(labels=cut, axis=1)
     elif var == "forc":
         df_in = df_in.drop(
             labels=["NOx", "CO", "NMVOC", "NH3", "BMB_AEROS_OC", "BMB_AEROS_BC"], axis=1
