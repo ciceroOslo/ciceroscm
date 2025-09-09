@@ -62,6 +62,7 @@ def check_pamset(pamset):
         "qnmvoc": 0.0,
         "qnh3": 0.0,
         "qnox": 0.0,
+        "mixed_layer_temp_feedback": 0.0,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -346,6 +347,7 @@ class ConcentrationsEmissionsHandler:
                 beta_f=self.pamset["beta_f"],
                 mixed_carbon=self.pamset["mixed_carbon"],
                 fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"],
+                mixed_layer_temp_feedback=self.pamset["mixed_layer_temp_feedback"],
             )
         years_tot = len(self.years)
         self.conc = {}
