@@ -6,6 +6,8 @@ import logging
 
 import numpy as np
 from scipy.linalg import solve_banded
+from scipy.sparse import spdiags
+from scipy.sparse.linalg import spsolve
 
 from ._utils import cut_and_check_pamset
 
@@ -36,6 +38,7 @@ def _band(a_array, b_array, c_array, d_array):
              band value through ocean layers
     """
     return solve_banded((1, 1), np.array([c_array, b_array, a_array]), d_array)
+
 
 
 def check_pamset(pamset):
@@ -71,6 +74,7 @@ def check_pamset(pamset):
         "fnso": 0.7531,
         "lm": 40,
         "ldtime": 12,
+        "ocean_efficacy": 1.0 
     }
     pamset = cut_and_check_pamset(required, pamset, cut_warnings=True)
     pamset["rakapa"] = 1.0e-4 * pamset["akapa"]
@@ -190,7 +194,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             / (self.pamset["c1"] * self.dz[0])
         )
         return factor
-
+    
     def coeff(self, wcfac, gam_fro_fac):
         """
         Calculate a, b c coefficient arrays for hemisphere
@@ -249,6 +253,8 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         temp_1s : float
                Southern hemisphere surface temperature
         """
+        ocean_efficacy = self.pamset.get("ocean_efficacy", 1.0)
+
         # Northern hemisphere:
         if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
             wcfac = self.pamset["W"] / (SEC_DAY * DAY_YEAR) * self.pamset["dt"]
@@ -259,6 +265,27 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
                 * (1 - 0.3 * temp_1n / self.pamset["threstemp"])
                 * self.pamset["dt"]
             )
+        
+        ##NEW efficacy logic
+        # 1. Get the standard, physical coefficients.
+        a_phys, b_phys, c_phys = self.coeff(wcfac, self.get_gam_and_fro_factor_ns(True))
+        
+        # 2. Create the EFFECTIVE coefficients for the solver as a copy.
+        a_eff, b_eff, c_eff = a_phys.copy(), b_phys.copy(), c_phys.copy()
+        
+        # 3. Apply the ASYMMETRIC scaling to the mixed-layer/deep-ocean interface.
+        if ocean_efficacy != 1.0:
+            # Scale the influence of the deep ocean ON the mixed layer's budget (Row 0).
+            c_eff[1] = c_phys[1] * ocean_efficacy
+            
+            # Correct the mixed layer's main diagonal for the scaled flux.
+            # The influence of the mixed layer ON the deep ocean (a_eff[0]) remains UNCHANGED.
+            b_eff[0] = b_phys[0] + c_phys[1] - c_eff[1]
+
+        # 4. Store the effective coefficients for the NH solver.
+        self.varrying["acoeffn"], self.varrying["bcoeffn"], self.varrying["ccoeffn"] = a_eff, b_eff, c_eff
+        
+        # Pre-calculate RHS factors as before.
         self.varrying["dtrm1n"] = (
             1.0
             - self.pamset["cpi"] * wcfac / self.dz[0]
@@ -267,11 +294,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         self.varrying["dtmnl2"] = (
             wcfac * self.pamset["cpi"] / self.dz[self.pamset["lm"] - 1]
         )
-        (
-            self.varrying["acoeffn"],
-            self.varrying["bcoeffn"],
-            self.varrying["ccoeffn"],
-        ) = self.coeff(wcfac, self.get_gam_and_fro_factor_ns(True))
 
         # Southern hemisphere:
         if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
@@ -283,22 +305,18 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
                 * (1 - 0.3 * temp_1s / self.pamset["threstemp"])
                 * self.pamset["dt"]
             )
-        self.varrying["dtrm1s"] = (
-            1.0
-            - self.pamset["cpi"] * wcfac / self.dz[0]
-            - self.pamset["fnso"]
-            * self.pamset["beto"]
-            * self.pamset["dt"]
-            / (self.pamset["c1"] * self.dz[0])
-        )
-        self.varrying["dtmsl2"] = (
-            wcfac * self.pamset["cpi"] / self.dz[self.pamset["lm"] - 1]
-        )
-        (
-            self.varrying["acoeffs"],
-            self.varrying["bcoeffs"],
-            self.varrying["ccoeffs"],
-        ) = self.coeff(wcfac, self.get_gam_and_fro_factor_ns(False))
+        
+        a_phys, b_phys, c_phys = self.coeff(wcfac, self.get_gam_and_fro_factor_ns(False))
+        a_eff, b_eff, c_eff = a_phys.copy(), b_phys.copy(), c_phys.copy()
+
+        if ocean_efficacy != 1.0:
+            c_eff[1] = c_phys[1] * ocean_efficacy
+            b_eff[0] = b_phys[0] + c_phys[1] - c_eff[1]
+            
+        self.varrying["acoeffs"], self.varrying["bcoeffs"], self.varrying["ccoeffs"] = a_eff, b_eff, c_eff
+        
+        self.varrying["dtrm1s"] = 1.0 - self.pamset["cpi"] * wcfac / self.dz[0] - self.pamset["fnso"] * self.pamset["beto"] * self.pamset["dt"] / (self.pamset["c1"] * self.dz[0])
+        self.varrying["dtmsl2"] = wcfac * self.pamset["cpi"] / self.dz[self.pamset["lm"] - 1]
 
     def setup_ebud(self):
         """
@@ -356,7 +374,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         self.varrying["dtmsl3"] = self.pamset["fnso"] * self.varrying["dtmnl3"]
         self.varrying["dtmsl1"] = 1.0 - self.varrying["dtmsl3"]
         self.setup_ebud2(0, 0)
-
     def energy_budget(
         self, forc_nh, forc_sh, fn_volc, fs_volc
     ):  # pylint: disable=too-many-locals
@@ -393,6 +410,9 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             Ocean heat content change down to 700 m OHC700,
             Ocean heat content change total OHCTOT
         """
+        # --- At the start of the year, store the initial temperature profiles ---
+        tn_start = self.tn.copy()
+        ts_start = self.ts.copy()
         temp1n = 0.0
         temp1s = 0.0
 
@@ -457,7 +477,6 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
                 + self.varrying["dtmsl3"] * self.tn[lm - 1]
             )
 
-            #
             # Where are these being initialised? Ok, I think
             self.tn = _band(
                 self.varrying["acoeffn"],
@@ -465,6 +484,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
                 self.varrying["ccoeffn"],
                 dn,
             )
+            # Replace _band with _solve_tridiagonal
             self.ts = _band(
                 self.varrying["acoeffs"],
                 self.varrying["bcoeffs"],
@@ -520,16 +540,44 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         self.prev_values["fn"] = forc_nh
         self.prev_values["fs"] = forc_sh
         self.prev_values["dtemp"] = dtemp
+        
 
         # Getting Ocean temperature:
         ocean_res = self.ocean_temperature()
-        ribn = forc_nh + np.mean(fn_volc) - self.pamset["rlamda"] * tempn
-        ribs = forc_sh + np.mean(fs_volc) - self.pamset["rlamda"] * temps
+
+        # 1. Calculate the temperature change in each layer over the year.
+        delta_tn = self.tn - tn_start
+        delta_ts = self.ts - ts_start
+
+        # 2. Calculate the change in heat content per unit of ocean area for each layer (in J/m^2).
+        #    We use a standard value for the volumetric heat capacity of seawater.
+        heat_capacity_volumetric = 4.184e6  # Joules per m^3 per Kelvin
+        
+        # Area-weight the temperature change, then multiply by heat capacity and layer thickness.
+        delta_heat_content_profile = (
+            heat_capacity_volumetric * self.dz * (delta_tn * self.pamset["foan"] + delta_ts * self.pamset["foas"])
+        )
+
+        # 3. Calculate the annual average heat uptake N (in W/m^2) by summing the
+        #    heat content change of the DEEP OCEAN layers and dividing by the seconds in a year.
+        year_in_seconds = DAY_YEAR * SEC_DAY
+        N = np.sum(delta_heat_content_profile[1:]) / year_in_seconds
+
+        # 4. Calculate the TRUE Top-of-Atmosphere Radiative Imbalance (RIB).
+        ocean_efficacy = self.pamset.get("ocean_efficacy", 1.0)
+        
+        # The anomalous radiation to space is (E-1)*N.
+        anomalous_radiation = (ocean_efficacy - 1.0) * N
+
+        ribn = forc_nh + np.mean(fn_volc) - self.pamset["rlamda"] * tempn - anomalous_radiation
+        ribs = forc_sh + np.mean(fs_volc) - self.pamset["rlamda"] * temps - anomalous_radiation
         # Returning results_dict
         return {
             "dtemp": dtemp,
             "dtempnh": tempn,
             "dtempsh": temps,
+            "tn": self.tn,
+            "ts": self.ts,
             "dtemp_air": (tempn_air + temps_air) / 2.0,
             "dtempnh_air": tempn_air,
             "dtempsh_air": temps_air,
@@ -541,6 +589,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             "RIB": (ribn + ribs) / 2.0,
             "OHC700": ocean_res["OHC700"],
             "OHCTOT": ocean_res["OHCTOT"],
+            "anomalous_radiation": anomalous_radiation,
         }
 
     def ocean_temperature(self):
