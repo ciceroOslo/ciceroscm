@@ -67,6 +67,8 @@ def check_pamset(pamset):
         "npp_w_sigmoid": 7,
         "npp_t_threshold": 4,
         "npp_w_threshold": 7,
+        "solubility_sens": 0.02,
+        "solubility_limit": 0.5,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )

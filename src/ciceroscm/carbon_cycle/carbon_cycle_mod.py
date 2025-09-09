@@ -43,6 +43,30 @@ def take_out_missing(pamset):
     return pamset
 
 
+def solubility_temp_feedback(dtemp=0.0, solubility_sens=0.02, solubility_limit=0.5):
+    """
+    Exponential scaling of CO2 solubility with temperature, with upper limit.
+
+    Parameters
+    ----------
+    dtemp : float
+        Degrees of temperature since start of run
+    solubility_sens : float
+        Fractional decrease in solubility per degree C (default 0.02)
+    solubility_limit : float
+        Maximum allowed gain (e.g. 0.5 for 50% increase)
+
+    Returns
+    -------
+    float
+        Solubility scaling factor (max 1 + solubility_limit)
+    """
+    scale = np.exp(-solubility_sens * dtemp) / np.exp(-solubility_sens * 0.0)
+    scale = np.clip(scale, 0, 1 + solubility_limit)
+    # Limit the gain to 1 + solubility_limit (e.g. 1.5)
+    return scale
+
+
 def fnpp_from_temp(
     dtemp=0, npp0=60, t_half=0.5, w_sigmoid=7, t_threshold=4, w_threshold=7
 ):
@@ -134,6 +158,8 @@ class CarbonCycleModel:
                 "ml_w_sigmoid": 3.0,
                 "ml_fracmax": 0.5,
                 "ml_t_half": 0.5,
+                "solubility_sens": 0.02,
+                "solubility_limit": 0.5,
             },
             pamset,
             used={"rs_function": "missing", "rb_function": "missing"},
@@ -151,6 +177,8 @@ class CarbonCycleModel:
             ml_w_sigmoid=pamset.get("ml_w_sigmoid", 3.0),
             ml_fracmax=pamset.get("ml_fracmax", 0.5),
             ml_t_half=pamset.get("ml_t_half", 0.5),
+            solubility_sens=pamset.get("solubility_sens", 0.02),
+            solubility_limit=pamset.get("solubility_limit", 0.5),
         )
         self.precalc_r_functions()
 
@@ -166,6 +194,8 @@ class CarbonCycleModel:
         ml_w_sigmoid=3.0,
         ml_fracmax=0.5,
         ml_t_half=0.5,
+        solubility_sens=0.02,
+        solubility_limit=0.5,
     ):
         """
         Reset values of CO2_hold for new run
@@ -183,6 +213,7 @@ class CarbonCycleModel:
             "ss1": 0.0,
             "sums": 0.0,
         }
+
         self.pamset["beta_f"] = beta_f
         self.pamset["mixed_carbon"] = mixed_carbon
         self.pamset["npp0"] = npp0
@@ -193,6 +224,8 @@ class CarbonCycleModel:
         self.pamset["ml_w_sigmoid"] = ml_w_sigmoid
         self.pamset["ml_fracmax"] = ml_fracmax
         self.pamset["ml_t_half"] = ml_t_half
+        self.pamset["solubility_sens"] = solubility_sens
+        self.pamset["solubility_limit"] = solubility_limit
 
     def _set_co2_hold(
         self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -411,7 +444,14 @@ class CarbonCycleModel:
             # This might be a natural place to look for/substitute with a
             # different / more general / temperature dependent formulation
             # which would be in line with the model philosophy and structure
-            self.co2_hold["yCO2"] = (
+            solfac = solubility_temp_feedback(
+                dtemp,
+                solubility_sens=0.02,
+                solubility_limit=0.5,
+            )
+            print("solfac: ", solfac)
+
+            self.co2_hold["yCO2"] = solfac * (
                 1.3021 * z_co2
                 + 3.7929e-3 * (z_co2**2)
                 + 9.1193e-6 * (z_co2**3)
