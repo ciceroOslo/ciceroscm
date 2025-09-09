@@ -218,6 +218,14 @@ class CarbonCycleModel:
                 idtm=self.pamset["idtm"],
             )
 
+    def mixed_layer_depth_from_temp(self, dtemp=0):
+        """
+        Calculate temperature dependent mixed layer temp
+        """
+        return self.pamset["mixed_carbon"] * (
+            1 + self.pamset.get("mixed_layer_temp_feedback", 0.0) * dtemp
+        )
+
     def co2em2conc(
         self, yr, em_co2_common, dtemp=0.0
     ):  # pylint: disable=too-many-locals
@@ -247,9 +255,7 @@ class CarbonCycleModel:
         dt = 1.0 / self.pamset["idtm"]
 
         # Temperature-dependent mixed layer depth
-        mixed_carbon = self.pamset["mixed_carbon"] * (
-            1 + self.pamset.get("mixed_layer_temp_feedback", 0.0) * dtemp
-        )
+        mixed_carbon = self.mixed_layer_depth_from_temp(dtemp=dtemp)
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
         fnpp = linear_fnpp_from_temp(
