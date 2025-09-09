@@ -99,10 +99,17 @@ class CarbonCycleModel:
             beta_f=pamset["beta_f"],
             mixed_carbon=pamset["mixed_carbon"],
             fnpp_temp_coeff=pamset["fnpp_temp_coeff"],
+            mixed_layer_temp_feedback=pamset["mixed_layer_temp_feedback"],
         )
         self.precalc_r_functions()
 
-    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0, fnpp_temp_coeff=0):
+    def reset_co2_hold(
+        self,
+        beta_f=0.287,
+        mixed_carbon=75.0,
+        fnpp_temp_coeff=0,
+        mixed_layer_temp_feedback=0.0,
+    ):
         """
         Reset values of CO2_hold for new run
 
@@ -122,6 +129,7 @@ class CarbonCycleModel:
         self.pamset["beta_f"] = beta_f
         self.pamset["mixed_carbon"] = mixed_carbon
         self.pamset["fnpp_temp_coeff"] = fnpp_temp_coeff
+        self.pamset["mixed_layer_temp_feedback"] = mixed_layer_temp_feedback
 
     def _set_co2_hold(
         self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -217,6 +225,14 @@ class CarbonCycleModel:
                 rb_tim=timscales,
                 idtm=self.pamset["idtm"],
             )
+
+    def mixed_layer_depth_from_temp(self, dtemp=0):
+        """
+        Calculate temperature dependent mixed layer temp
+        """
+        return self.pamset["mixed_carbon"] * (
+            1 + self.pamset.get("mixed_layer_temp_feedback", 0.0) * dtemp
+        )
 
     def mixed_layer_depth_from_temp(self, dtemp=0):
         """
