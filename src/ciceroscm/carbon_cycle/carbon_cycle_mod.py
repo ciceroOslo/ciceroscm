@@ -43,7 +43,9 @@ def take_out_missing(pamset):
     return pamset
 
 
-def linear_fnpp_from_temp(fnpp_temp_coeff=0, dtemp=0):
+def fnpp_from_temp(
+    dtemp=0, npp0=60, t_half=0.5, w_sigmoid=7, t_threshold=4, w_threshold=7
+):
     """
     Linear temperature dependence function for fnpp
 
@@ -61,10 +63,38 @@ def linear_fnpp_from_temp(fnpp_temp_coeff=0, dtemp=0):
         fnpp at given temperature for assumed linear
         relationship
     """
-    return 60 + fnpp_temp_coeff * dtemp
+
+    sigmoid = lambda x: 1 / (
+        1 + np.exp(-((x - t_half) / w_sigmoid))
+    )  # Sigmoid function
+    threshold = lambda x: 1 - 1 / (
+        1 + np.exp(-((x - t_threshold) / w_threshold))
+    )  # Threshold function
+    baseline = npp0 / (sigmoid(0) * threshold(0))
+
+    return baseline * sigmoid(dtemp) * threshold(dtemp)
 
 
-linear_fnpp_from_temp_vec = np.vectorize(linear_fnpp_from_temp)
+fnpp_from_temp_vec = np.vectorize(fnpp_from_temp)
+
+
+def mixed_layer_temp_feedback(mixed_layer_temp_feedback=0.0, dtemp=0.0):
+    """
+    Calculate mixed layer depth change with temperature
+
+    Parameters
+    ----------
+    mixed_layer_temp_feedback : float
+        Fractional change in mixed layer depth per degree C
+    dtemp : float
+        Degrees of temperature since start of run
+
+    Returns
+    -------
+    float
+        Mixed layer depth change factor
+    """
+    return 1 + mixed_layer_temp_feedback * dtemp
 
 
 class CarbonCycleModel:
@@ -87,7 +117,11 @@ class CarbonCycleModel:
                 "nyend": 2100,
                 "beta_f": 0.287,
                 "mixed_carbon": 75.0,
-                "fnpp_temp_coeff": 0,
+                "npp0": 60,
+                "npp_t_half": 0.5,
+                "npp_w_sigmoid": 7,
+                "npp_t_threshold": 4,
+                "npp_w_threshold": 7,
                 "mixed_layer_temp_feedback": 0.0,  # mixed layer depth temp feedback (fraction per degree C)
             },
             pamset,
@@ -98,8 +132,12 @@ class CarbonCycleModel:
         self.reset_co2_hold(
             beta_f=pamset["beta_f"],
             mixed_carbon=pamset["mixed_carbon"],
-            fnpp_temp_coeff=pamset["fnpp_temp_coeff"],
             mixed_layer_temp_feedback=pamset["mixed_layer_temp_feedback"],
+            npp0=pamset.get("npp0", 60),
+            npp_t_half=pamset.get("npp_t_half", 0.5),
+            npp_w_sigmoid=pamset.get("npp_w_sigmoid", 7),
+            npp_t_threshold=pamset.get("npp_t_threshold", 4),
+            npp_w_threshold=pamset.get("npp_w_threshold", 7),
         )
         self.precalc_r_functions()
 
@@ -107,8 +145,12 @@ class CarbonCycleModel:
         self,
         beta_f=0.287,
         mixed_carbon=75.0,
-        fnpp_temp_coeff=0,
         mixed_layer_temp_feedback=0.0,
+        npp0=60,
+        npp_t_half=0.5,
+        npp_w_sigmoid=7,
+        npp_t_threshold=4,
+        npp_w_threshold=7,
     ):
         """
         Reset values of CO2_hold for new run
@@ -128,7 +170,11 @@ class CarbonCycleModel:
         }
         self.pamset["beta_f"] = beta_f
         self.pamset["mixed_carbon"] = mixed_carbon
-        self.pamset["fnpp_temp_coeff"] = fnpp_temp_coeff
+        self.pamset["npp0"] = npp0
+        self.pamset["npp_t_half"] = npp_t_half
+        self.pamset["npp_w_sigmoid"] = npp_w_sigmoid
+        self.pamset["npp_t_threshold"] = npp_t_threshold
+        self.pamset["npp_w_threshold"] = npp_w_threshold
         self.pamset["mixed_layer_temp_feedback"] = mixed_layer_temp_feedback
 
     def _set_co2_hold(
@@ -255,15 +301,24 @@ class CarbonCycleModel:
         dt = 1.0 / self.pamset["idtm"]
 
         # Temperature-dependent mixed layer depth
-        mixed_carbon = self.pamset["mixed_carbon"] * (
-            1 + self.pamset.get("mixed_layer_temp_feedback", 0.0) * dtemp
+        mixed_carbon = self.pamset["mixed_carbon"] * mixed_layer_temp_feedback(
+            self.pamset["mixed_layer_temp_feedback"], dtemp
         )
-
+        print(mixed_carbon)
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
-        fnpp = linear_fnpp_from_temp(
-            fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"], dtemp=dtemp
+        fnpp = fnpp_from_temp(
+            dtemp=dtemp,
+            npp0=self.pamset["npp0"],
+            t_half=self.pamset.get("npp_t_half", 0.5),
+            w_sigmoid=self.pamset.get("npp_w_sigmoid", 7),
+            t_threshold=self.pamset.get("npp_t_threshold", 4),
+            w_threshold=self.pamset.get("npp_w_threshold", 7),
         )
+        print("temp: ", dtemp)
+
+        print("fnpp: ", fnpp)
+        print("npp_threshold: ", self.pamset.get("npp_t_threshold", 4))
         # Monthloop:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
@@ -383,8 +438,12 @@ class CarbonCycleModel:
                 dtemp_timeseries = np.zeros(len(co2_conc_series))
             timesteps = len(co2_conc_series) * self.pamset["idtm"]
             fnpp = np.repeat(
-                linear_fnpp_from_temp_vec(
-                    fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"],
+                fnpp_from_temp_vec(
+                    npp0=self.pamset["npp0"],
+                    t_half=self.pamset.get("npp_t_half", 0.5),
+                    w_sigmoid=self.pamset.get("npp_w_sigmoid", 7),
+                    t_threshold=self.pamset.get("npp_t_threshold", 4),
+                    w_threshold=self.pamset.get("npp_w_threshold", 7),
                     dtemp=dtemp_timeseries,
                 ),
                 self.pamset["idtm"],
