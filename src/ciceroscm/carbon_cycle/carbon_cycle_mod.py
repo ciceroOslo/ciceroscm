@@ -180,6 +180,10 @@ class CarbonCycleModel:
             solubility_sens=pamset.get("solubility_sens", 0.02),
             solubility_limit=pamset.get("solubility_limit", 0.5),
         )
+        # Initialize diagnostics timeseries
+        self.mixed_carbon_series = []
+        self.solfac_series = []
+        self.npp_series = []
         self.precalc_r_functions()
 
     def reset_co2_hold(
@@ -226,6 +230,11 @@ class CarbonCycleModel:
         self.pamset["ml_t_half"] = ml_t_half
         self.pamset["solubility_sens"] = solubility_sens
         self.pamset["solubility_limit"] = solubility_limit
+
+        # Reset diagnostics timeseries
+        self.mixed_carbon_series = []
+        self.solfac_series = []
+        self.npp_series = []
 
     def _set_co2_hold(
         self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -371,6 +380,17 @@ class CarbonCycleModel:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
             sumf = 0.0
+            # Record diagnostics only for first timestep of each year
+            if i == 0:
+                if yr_ix == len(self.mixed_carbon_series):
+                    self.mixed_carbon_series.append(mixed_carbon)
+                    solfac = solubility_temp_feedback(
+                        dtemp,
+                        solubility_sens=self.pamset["solubility_sens"],
+                        solubility_limit=self.pamset["solubility_limit"],
+                    )
+                    self.solfac_series.append(solfac)
+                    self.npp_series.append(fnpp)
 
             # Net emissions, including biogenic fertilization effects
             if it > 0:
@@ -778,6 +798,9 @@ class CarbonCycleModel:
                     conc_run=conc_run
                 ),
                 "Ocean carbon flux": self.get_ocean_carbon_flux(),
+                "Mixed layer depth": self.mixed_carbon_series,
+                "CO2 solubility": self.solfac_series,
+                "Net Primary Production": self.npp_series,
             },
             index=years,
         )
