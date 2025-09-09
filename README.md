@@ -65,6 +65,7 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 * threstemp (7.0) - Scales vertical velocity as a function of mixed layer temperature, unitless. Set to 0 if you don't want to include this parameter.
 * lambda (0.61) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing <img src="https://render.githubusercontent.com/render/math?math=\large \left( 3.71 \frac{\mathrm{W}}{\mathrm{m}^2} \right)">
 * mixed (107.) - Mixed layer depth, m, valid range 25-125
+* ocean_efficacy (1.0) - Ocean efficacy parameter, unitless, valid range 0-2
 * foan (0.61) - Fraction of Northern hemisphere covered by ocean
 * foas (0.81) - Fraction of Southern hemisphere covered by ocean
 * ebbeta (0.0) - Atmospheric interhemispheric heat exchange (not currently used)

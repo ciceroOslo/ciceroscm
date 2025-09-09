@@ -38,6 +38,7 @@ The changes listed in this file are categorised as follows:
 - Changeable parameter for the depth of the mixed_layer ocean seen by the carbon cycle
 - Newer gaspam files
 - Light check for emissions and gaspam file compatibility
+- Changeable ocean efficacy parameter to the upwelling diffusion model
 
 
 ### Fixed
