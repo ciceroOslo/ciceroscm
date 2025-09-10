@@ -54,7 +54,7 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
 
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True},
-        pamset_emiconc={"beta_f": 0.3},
+        pamset_carbon={"beta_f": 0.3},
     )
     beta_f_results = {
         "Biosphere carbon flux": cscm.results["carbon cycle"][
@@ -79,7 +79,7 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
     )
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True},
-        pamset_emiconc={"mixed_carbon": 107.0, "beta_f": 0.287},
+        pamset_carbon={"mixed_carbon": 107.0, "beta_f": 0.287},
     )
     mixed_carbon_results = {
         "Biosphere carbon flux": cscm.results["carbon cycle"][
@@ -104,7 +104,7 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
     )
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True},
-        pamset_emiconc={"fnpp_temp_coeff": -1, "mixed_carbon": 75.0},
+        pamset_carbon={"fnpp_temp_coeff": -1, "mixed_carbon": 75.0},
     )
     decreased_fnpp_results = {
         "Biosphere carbon flux": cscm.results["carbon cycle"][
@@ -130,7 +130,7 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
     print(decreased_fnpp_results["Biosphere carbon flux"])
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True},
-        pamset_emiconc={"fnpp_temp_coeff": 20},
+        pamset_carbon={"fnpp_temp_coeff": 20},
     )
     increased_fnpp_results = {
         "Biosphere carbon flux": cscm.results["carbon cycle"][

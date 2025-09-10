@@ -5,7 +5,7 @@ Module to handle carbon cycle from CO2 emissions to concentrations
 import numpy as np
 import pandas as pd
 
-from .._utils import cut_and_check_pamset
+from .._utils import cut_and_check_pamset, update_pam_if_numeric
 from ..pub_utils import _check_array_consistency
 from .common_carbon_cycle_functions import (
     GE_COEFF,
@@ -135,7 +135,7 @@ class CarbonCycleModel:
     Class to handle carbon cycle calculations
     """
 
-    def __init__(self, pamset):
+    def __init__(self, pamset_emiconc, pamset_carbon=None):
         """
         Initialise Carbon cycle model
 
@@ -148,6 +148,13 @@ class CarbonCycleModel:
                 "idtm": 24,
                 "nystart": 1750,
                 "nyend": 2100,
+            },
+            pamset_emiconc,
+        )
+        if pamset_carbon is None:
+            pamset_carbon = {}
+        pamset_carbon = cut_and_check_pamset(
+            {
                 "beta_f": 0.287,
                 "mixed_carbon": 75.0,
                 "npp0": 60,
@@ -161,46 +168,16 @@ class CarbonCycleModel:
                 "solubility_sens": 0.02,
                 "solubility_limit": 0.5,
             },
-            pamset,
+            pamset_carbon,
             used={"rs_function": "missing", "rb_function": "missing"},
         )
-        self.pamset = take_out_missing(pamset.copy())
+        pamset_carbon = take_out_missing(pamset_carbon.copy())
+        self.pamset = {**pamset, **pamset_carbon}
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
-        self.reset_co2_hold(
-            beta_f=pamset["beta_f"],
-            mixed_carbon=pamset["mixed_carbon"],
-            npp0=pamset.get("npp0", 60),
-            npp_t_half=pamset.get("npp_t_half", 0.5),
-            npp_w_sigmoid=pamset.get("npp_w_sigmoid", 7),
-            npp_t_threshold=pamset.get("npp_t_threshold", 4),
-            npp_w_threshold=pamset.get("npp_w_threshold", 7),
-            ml_w_sigmoid=pamset.get("ml_w_sigmoid", 3.0),
-            ml_fracmax=pamset.get("ml_fracmax", 0.5),
-            ml_t_half=pamset.get("ml_t_half", 0.5),
-            solubility_sens=pamset.get("solubility_sens", 0.02),
-            solubility_limit=pamset.get("solubility_limit", 0.5),
-        )
-        # Initialize diagnostics timeseries
-        self.mixed_carbon_series = []
-        self.solfac_series = []
-        self.npp_series = []
+        self.reset_co2_hold(pamset_carbon)
         self.precalc_r_functions()
 
-    def reset_co2_hold(
-        self,
-        beta_f=0.287,
-        mixed_carbon=75.0,
-        npp0=60,
-        npp_t_half=0.5,
-        npp_w_sigmoid=7,
-        npp_t_threshold=4,
-        npp_w_threshold=7,
-        ml_w_sigmoid=3.0,
-        ml_fracmax=0.5,
-        ml_t_half=0.5,
-        solubility_sens=0.02,
-        solubility_limit=0.5,
-    ):
+    def reset_co2_hold(self, pamset_carbon=None):
         """
         Reset values of CO2_hold for new run
 
@@ -217,24 +194,12 @@ class CarbonCycleModel:
             "ss1": 0.0,
             "sums": 0.0,
         }
-
-        self.pamset["beta_f"] = beta_f
-        self.pamset["mixed_carbon"] = mixed_carbon
-        self.pamset["npp0"] = npp0
-        self.pamset["npp_t_half"] = npp_t_half
-        self.pamset["npp_w_sigmoid"] = npp_w_sigmoid
-        self.pamset["npp_t_threshold"] = npp_t_threshold
-        self.pamset["npp_w_threshold"] = npp_w_threshold
-        self.pamset["ml_w_sigmoid"] = ml_w_sigmoid
-        self.pamset["ml_fracmax"] = ml_fracmax
-        self.pamset["ml_t_half"] = ml_t_half
-        self.pamset["solubility_sens"] = solubility_sens
-        self.pamset["solubility_limit"] = solubility_limit
-
-        # Reset diagnostics timeseries
-        self.mixed_carbon_series = []
-        self.solfac_series = []
-        self.npp_series = []
+        if pamset_carbon is not None:
+            self.pamset = update_pam_if_numeric(
+                self.pamset,
+                pamset_new=pamset_carbon,
+                can_change=["beta_f", "mixed_carbon", "fnpp_temp_coeff"],
+            )
 
     def _set_co2_hold(
         self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -482,7 +447,7 @@ class CarbonCycleModel:
         return self.co2_hold["xCO2"]
 
     def _get_ffer_timeseries(
-        self, conc_run=False, co2_conc_series=None, dtemp_timeseries=None
+        self, conc_run=False, co2_conc_series=None, dtemp_series=None
     ):
         """
         Get the biospheric fertilisation (ffer) time series
@@ -508,8 +473,8 @@ class CarbonCycleModel:
         """
         dt = 1.0 / self.pamset["idtm"]
         if conc_run and co2_conc_series is not None:
-            if dtemp_timeseries is None:
-                dtemp_timeseries = np.zeros(len(co2_conc_series))
+            if dtemp_series is None:
+                dtemp_series = np.zeros(len(co2_conc_series))
             timesteps = len(co2_conc_series) * self.pamset["idtm"]
             fnpp = np.repeat(
                 fnpp_from_temp_vec(
@@ -522,6 +487,9 @@ class CarbonCycleModel:
                 ),
                 self.pamset["idtm"],
             )
+            print("And fnpp")
+            print(fnpp)
+            print(self.pamset["fnpp_temp_coeff"])
             dfnpp = (
                 np.repeat(
                     [
@@ -548,7 +516,9 @@ class CarbonCycleModel:
         ffer = dfnpp - dt * sumf
         return ffer
 
-    def get_biosphere_carbon_flux(self, conc_run=False, co2_conc_series=None):
+    def get_biosphere_carbon_flux(
+        self, conc_run=False, co2_conc_series=None, dtemp_series=None
+    ):
         """
         Get the carbon flux to the biosphere as timeseries over years
 
@@ -565,13 +535,16 @@ class CarbonCycleModel:
             calculations are needed or co2_conc_series need to be used for calculations)
         co2_conc_series : np.ndarray
             Time series of concentrations to calculate ffer from
+        dtemp_series : np.ndarray
+            Timeseries of temperature change, should be included for calculation of
+            outputs if temperature feedbacks are on
 
         Returns
         -------
         np.ndarray
             Timeseries of the yearly carbon flux to the biosphere
         """
-        ffer = self._get_ffer_timeseries(conc_run, co2_conc_series)
+        ffer = self._get_ffer_timeseries(conc_run, co2_conc_series, dtemp_series)
         biosphere_carbon_flux = (
             np.array(
                 [
@@ -590,7 +563,9 @@ class CarbonCycleModel:
 
         return biosphere_carbon_flux
 
-    def get_ocean_carbon_flux(self, conc_run=False, co2_conc_series=None):
+    def get_ocean_carbon_flux(
+        self, conc_run=False, co2_conc_series=None, dtemp_series=None
+    ):
         """
         Get yearly timeseries of ocean carbon flux
 
@@ -607,7 +582,7 @@ class CarbonCycleModel:
             ocean carbon flux (Pg / C /yr)
         """
         if conc_run and co2_conc_series is not None:
-            self.back_calculate_emissions(co2_conc_series)
+            self.back_calculate_emissions(co2_conc_series, dtemp_series=dtemp_series)
         ocean_carbon_flux = (
             np.array(
                 [
@@ -628,7 +603,7 @@ class CarbonCycleModel:
         )
         return ocean_carbon_flux
 
-    def back_calculate_emissions(self, co2_conc_series, dtemp_timeseries=None):
+    def back_calculate_emissions(self, co2_conc_series, dtemp_series=None):
         """
         Back calculate emissions from conc_run
 
@@ -640,7 +615,7 @@ class CarbonCycleModel:
         co2_conc_series : np.ndarray
             Timeseries of co2 concentrations for which to back
             calculate emissions
-        dtemp_timeseries : np.ndarray
+        dtemp_series : np.ndarray
             Timeseries of temperature change for which to back calculate emissions
             It should be the same length as the concentration timeseries
             If no value is sent, a timeseries of zeros will be used
@@ -653,13 +628,16 @@ class CarbonCycleModel:
         """
         prev_co2_conc = 278.0
         em_series = np.zeros(len(co2_conc_series))
-        if dtemp_timeseries is None:
-            dtemp_timeseries = np.zeros(len(co2_conc_series))
+        if dtemp_series is None:
+            dtemp_series = np.zeros(len(co2_conc_series))
+
         ffer = self._get_ffer_timeseries(
             conc_run=True,
             co2_conc_series=co2_conc_series,
-            dtemp_timeseries=dtemp_timeseries,
+            dtemp_series=dtemp_series,
         )
+        print("ffer in back_calculate")
+        print(ffer)
         for i, co2_conc in enumerate(co2_conc_series):
             ffer_here = ffer[i * self.pamset["idtm"]]
             em_series[i] = self._guess_emissions_iteration(
@@ -667,7 +645,7 @@ class CarbonCycleModel:
                 prev_co2_conc,
                 yrix=i,
                 ffer=ffer_here,
-                dtemp=dtemp_timeseries[i],
+                dtemp=dtemp_series[i],
             )
             prev_co2_conc = co2_conc
         return em_series
@@ -719,7 +697,7 @@ class CarbonCycleModel:
         """
         if ffer is None:
             ffer = self._get_ffer_timeseries(
-                [co2_conc_zero, co2_conc_now], dtemp_timeseries=[0, dtemp]
+                [co2_conc_zero, co2_conc_now], dtemp_series=[0, dtemp]
             )[yrix * self.pamset["idtm"]]
         co2_change = co2_conc_now - co2_conc_zero
         min_guess = np.min(
@@ -769,7 +747,9 @@ class CarbonCycleModel:
             )
         return guess
 
-    def get_carbon_cycle_output(self, years, conc_run=False, conc_series=None):
+    def get_carbon_cycle_output(
+        self, years, conc_run=False, conc_series=None, dtemp_series=None
+    ):
         """
         Make and return a dataframe with carbon cycle data
 
@@ -782,6 +762,9 @@ class CarbonCycleModel:
         conc_series : np.array
             Numpy array of concentrations, must be included for a concentrations
             driven run to back calculate emissions
+        dtemp_series : np.ndarray
+            Timeseries of temperature change, should be included for calculation of
+            outputs if temperature feedbacks are on
 
         Returns
         -------
@@ -791,11 +774,13 @@ class CarbonCycleModel:
         if conc_run and conc_series is None:
             return None
         if conc_run:
-            em_series = self.back_calculate_emissions(conc_series)
+            em_series = self.back_calculate_emissions(conc_series, dtemp_series)
         df_carbon = pd.DataFrame(
             data={
                 "Biosphere carbon flux": self.get_biosphere_carbon_flux(
-                    conc_run=conc_run
+                    conc_run=conc_run,
+                    co2_conc_series=conc_series,
+                    dtemp_series=dtemp_series,
                 ),
                 "Ocean carbon flux": self.get_ocean_carbon_flux(),
                 "Mixed layer depth": self.mixed_carbon_series,

@@ -229,8 +229,13 @@ class CICEROSCM:
         )
 
     def _run(
-        self, cfg, pamset_udm={}, pamset_emiconc={}, make_plot=False
-    ):  # pylint: disable=dangerous-default-value
+        self,
+        cfg,
+        pamset_udm=None,
+        pamset_emiconc=None,
+        pamset_carbon=None,
+        make_plot=False,
+    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
         """
         Run CICEROSCM
 
@@ -251,16 +256,17 @@ class CICEROSCM:
         pamset_emiconc : dict
                       Parameter set for concentrations
                       emissions handler
+        pamset_carbon : dict
+            Parameter set for carbon cycle module
+        make_plot : bool
+            Whether to output plots automatically
         """
         self.initialise_output_arrays()
         # Setting up UDM
         udm = UpwellingDiffusionModel(pamset_udm)
         values = None
         if not self.cfg["rf_run"]:
-            pamset_emiconc["emstart"] = self.cfg["emstart"]
-            pamset_emiconc["nystart"] = self.cfg["nystart"]
-            pamset_emiconc["nyend"] = self.cfg["nyend"]
-            self.ce_handler.reset_with_new_pams(pamset_emiconc)
+            self.ce_handler.reset_with_new_pams(pamset_emiconc, pamset_carbon)
         for yr in range(self.cfg["nystart"], self.cfg["nyend"] + 1):
             if not self.cfg["rf_run"]:
                 if values is not None:
