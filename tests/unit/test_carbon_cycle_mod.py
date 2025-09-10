@@ -136,8 +136,9 @@ def test_carbon_pools(test_data_dir):
     oceanflux = cscm.ce_handler.carbon_cycle.get_ocean_carbon_flux()
     summed_carbon_pools = (
         conc_co2_series
-        + np.cumsum(bioflux) / carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC
-        - np.cumsum(oceanflux) / carbon_cycle_mod.PPM_CO2_TO_PG_C
+        - carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC
+        + np.cumsum(bioflux) / carbon_cycle_mod.PPM_CO2_TO_PG_C
+        + np.cumsum(oceanflux) / carbon_cycle_mod.PPM_CO2_TO_PG_C
     )
     print(summed_carbon_pools[:5])
     print(conc_co2_series[:5] - carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC)
@@ -145,7 +146,7 @@ def test_carbon_pools(test_data_dir):
     print(oceanflux[:5])
     print(cum_emis[:5] / carbon_cycle_mod.PPM_CO2_TO_PG_C)
     # TODO : Put tests here back on
-    np.allclose(summed_carbon_pools, cum_emis / carbon_cycle_mod.PPM_CO2_TO_PG_C)
+    np.allclose(summed_carbon_pools, (cum_emis / carbon_cycle_mod.PPM_CO2_TO_PG_C))
     assert True
 
 
