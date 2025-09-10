@@ -26,6 +26,7 @@ The changes listed in this file are categorised as follows:
 - Aerosol forcing is no longer scaled to a reference year, but is per change in annual emissions, this also changes aerosol forcing parameter values and units
 - Added NMVOC, NH3 and NOx as forcing aerosols
 - Changed default gaspam unit for SO2 to Tg_SO2 rather than Tg_S
+- Carbon cycle parameters now passed in a separate dictionary
 
 
 ### Added
