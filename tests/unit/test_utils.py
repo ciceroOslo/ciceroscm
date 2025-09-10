@@ -42,3 +42,24 @@ def test_cut_and_check_pamset():
     for key in expected_keys:
         assert key in pamset2
     assert "untouched_string" not in pamset2
+
+
+def test_update_pam_if_numeric():
+    pamset_orig = {
+        "beta_f": 0.287,
+        "other_pam": 1,
+        "nystart": 1750,
+        "leave_it": "Seriously, leave it",
+    }
+
+    pamset_new = {"beta_f": 3, "weird": 43, "other_pam": "hello", "nystart": 1850}
+    pamset_expect = {
+        "beta_f": 3,
+        "other_pam": 1,
+        "nystart": 1750,
+        "leave_it": "Seriously, leave it",
+    }
+    assert pamset_orig == _utils.update_pam_if_numeric(pamset_orig.copy(), None, None)
+    assert pamset_expect == _utils.update_pam_if_numeric(
+        pamset_orig.copy(), pamset_new, ["beta_f", "other_pam", "weird"]
+    )

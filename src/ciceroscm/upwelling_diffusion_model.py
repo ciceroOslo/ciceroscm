@@ -56,6 +56,8 @@ def check_pamset(pamset):
     dict
         Updated pamset with default values used where necessary
     """
+    if pamset is None:
+        pamset = {}
     required = {
         "rlamdo": 15.0,
         "akapa": 0.66,

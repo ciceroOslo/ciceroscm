@@ -97,7 +97,7 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
     print(cscm.ce_handler.carbon_cycle.pamset)
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True},
-        pamset_emiconc={"fnpp_temp_coeff": -10},
+        pamset_carbon={"fnpp_temp_coeff": -10},
     )
     conc_co2_series = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
@@ -105,15 +105,14 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
     print(cscm.ce_handler.carbon_cycle.pamset)
 
     ccmod = carbon_cycle_mod.CarbonCycleModel(
-        {"nyend": 2100, "nystart": 1750, "fnpp_temp_coeff": -10}
+        {"nyend": 2100, "nystart": 1750}, pamset_carbon={"fnpp_temp_coeff": -10}
     )
     em_back_calculated = ccmod.back_calculate_emissions(
-        conc_co2_series, dtemp_timeseries=temp_timseries
+        conc_co2_series, dtemp_series=temp_timseries
     )
-    # print(conc_co2_series[:30])
-    # print(conc_co2_series_no_feedback[:30])
     assert not np.allclose(conc_co2_series, conc_co2_series_no_feedback)
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
+    # TODO: Test carbon cycle outputs with feedbacks
 
 
 def test_carbon_pools(test_data_dir):

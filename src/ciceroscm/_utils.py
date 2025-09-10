@@ -110,3 +110,42 @@ def cut_and_check_pamset(
         used = required
     pamset = cut_non_required(used, pamset, cut_warnings)
     return check_numeric_pamset(required, pamset)
+
+
+def update_pam_if_numeric(pamset_old, pamset_new, can_change):
+    """
+    Update values in pamset_old with values from pamset_new
+
+    Update values in pamset_old with values from pamset_new, but
+    only if they are already in the old pamset, and they have numeric
+    values
+
+    Parameters
+    ----------
+    pamset_old : dict
+        Original pamset to be updated
+    pamset_new : dict
+        New pamset to update with
+    can_change : list
+        Parameters that are allowed to be updated
+
+    Returns
+    -------
+        dict
+        Updated dictionary
+    """
+    if pamset_new is None:
+        return pamset_old
+    for key, value in pamset_new.items():
+        if (key not in can_change) or (key not in pamset_old):
+            LOGGER.info(  # pylint: disable=logging-fstring-interpolation
+                f"{key} is not a valid parameter to update this version of the Carbon cycle",
+            )
+            continue
+        if not isinstance(value, int) and not isinstance(value, float):
+            LOGGER.info(  # pylint: disable=logging-fstring-interpolation
+                f"Parameter {key} must be a number. {value} will be ignored",
+            )
+            continue
+        pamset_old[key] = value
+    return pamset_old
