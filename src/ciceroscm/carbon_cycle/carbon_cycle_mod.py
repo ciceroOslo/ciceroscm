@@ -12,6 +12,7 @@ from .common_carbon_cycle_functions import (
     OCEAN_AREA,
     PPM_CO2_TO_PG_C,
     PPMKG_TO_UMOL_PER_VOL,
+    PREINDUSTRIAL_CO2_CONC,
     calculate_airborne_fraction,
 )
 from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
@@ -66,6 +67,12 @@ def linear_fnpp_from_temp(fnpp_temp_coeff=0, dtemp=0):
 
 linear_fnpp_from_temp_vec = np.vectorize(linear_fnpp_from_temp)
 
+CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
+    "beta_f": 0.287,
+    "mixed_carbon": 75.0,
+    "fnpp_temp_coeff": 0,
+}
+
 
 class CarbonCycleModel:
     """
@@ -89,16 +96,13 @@ class CarbonCycleModel:
             pamset_emiconc,
         )
         if pamset_carbon is None:
-            pamset_carbon = {}
-        pamset_carbon = cut_and_check_pamset(
-            {
-                "beta_f": 0.287,
-                "mixed_carbon": 75.0,
-                "fnpp_temp_coeff": 0,
-            },
-            pamset_carbon,
-            used={"rs_function": "missing", "rb_function": "missing"},
-        )
+            pamset_carbon = CARBON_CYCLE_MODEL_REQUIRED_PAMSET
+        else:
+            pamset_carbon = cut_and_check_pamset(
+                CARBON_CYCLE_MODEL_REQUIRED_PAMSET,
+                pamset_carbon,
+                used={"rs_function": "missing", "rb_function": "missing"},
+            )
         pamset_carbon = take_out_missing(pamset_carbon.copy())
         self.pamset = {**pamset, **pamset_carbon}
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
@@ -115,7 +119,7 @@ class CarbonCycleModel:
         """
         self.co2_hold = {
             "yCO2": 0.0,
-            "xCO2": 278.0,
+            "xCO2": PREINDUSTRIAL_CO2_CONC,
             "sCO2": np.zeros(self.pamset["idtm"] * self.pamset["years_tot"]),
             "emCO2_prev": 0.0,
             "dfnpp": np.zeros(self.pamset["idtm"] * self.pamset["years_tot"]),
@@ -126,11 +130,11 @@ class CarbonCycleModel:
             self.pamset = update_pam_if_numeric(
                 self.pamset,
                 pamset_new=pamset_carbon,
-                can_change=["beta_f", "mixed_carbon", "fnpp_temp_coeff"],
+                can_change=CARBON_CYCLE_MODEL_REQUIRED_PAMSET.keys(),
             )
 
     def _set_co2_hold(
-        self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
+        self, xco2=PREINDUSTRIAL_CO2_CONC, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
     ):  # pylint: disable=too-many-positional-arguments, too-many-arguments
         """
         Reset the CO2 hold scalar values,
@@ -141,7 +145,8 @@ class CarbonCycleModel:
         Parameters
         ----------
         xco2 : float
-            CO2 concentration to set, default is 278.0 which is the start value
+            CO2 concentration to set, default is PREINDUSTRIAL_CO2_CONC
+            which is 278.0 andthe start value
         yco2 : float
             yco2 value, default is 0.0 which is the start value
         emco2_prev : float
@@ -266,7 +271,9 @@ class CarbonCycleModel:
             if it > 0:
                 # Net primary production in timestep
                 self.co2_hold["dfnpp"][it] = (
-                    fnpp * self.pamset["beta_f"] * np.log(self.co2_hold["xCO2"] / 278.0)
+                    fnpp
+                    * self.pamset["beta_f"]
+                    * np.log(self.co2_hold["xCO2"] / PREINDUSTRIAL_CO2_CONC)
                 )
                 # Decay from previous primary production
                 sumf = float(
@@ -340,7 +347,9 @@ class CarbonCycleModel:
             # solving the transfer equation between atmosphere and
             # ocean  to get the resulting atmosphere partial pressure
             self.co2_hold["xCO2"] = (
-                self.co2_hold["sCO2"][it] + self.co2_hold["yCO2"] + 278.0
+                self.co2_hold["sCO2"][it]
+                + self.co2_hold["yCO2"]
+                + PREINDUSTRIAL_CO2_CONC
             )
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
         return self.co2_hold["xCO2"]
@@ -382,13 +391,11 @@ class CarbonCycleModel:
                 ),
                 self.pamset["idtm"],
             )
-            print("And fnpp")
-            print(fnpp)
-            print(self.pamset["fnpp_temp_coeff"])
             dfnpp = (
                 np.repeat(
                     [
-                        self.pamset["beta_f"] * np.log(co2_conc / 278.0)
+                        self.pamset["beta_f"]
+                        * np.log(co2_conc / PREINDUSTRIAL_CO2_CONC)
                         for co2_conc in co2_conc_series
                     ],
                     self.pamset["idtm"],
@@ -521,7 +528,7 @@ class CarbonCycleModel:
             Timeseries of estimated emissions to match the concentration and
             temperature timeseries sent
         """
-        prev_co2_conc = 278.0
+        prev_co2_conc = PREINDUSTRIAL_CO2_CONC
         em_series = np.zeros(len(co2_conc_series))
         if dtemp_series is None:
             dtemp_series = np.zeros(len(co2_conc_series))

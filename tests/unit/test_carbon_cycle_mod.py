@@ -36,7 +36,9 @@ def test_default_pamset_values(test_data_dir):
 
 def test_get_biosphere_carbon_flux():
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
-    co2_conc_series = np.ones(ccmod.pamset["years_tot"]) * 278.0
+    co2_conc_series = (
+        np.ones(ccmod.pamset["years_tot"]) * carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC
+    )
     bio_carbon_flux = ccmod.get_biosphere_carbon_flux(
         conc_run=True, co2_conc_series=co2_conc_series
     )
@@ -45,7 +47,7 @@ def test_get_biosphere_carbon_flux():
 
 
 def test_guess_iteration():
-    co2_conc_zero = 278.0
+    co2_conc_zero = carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1750})
     co2_conc_now = 277.147003174
     em_guess = ccmod._guess_emissions_iteration(
@@ -134,17 +136,16 @@ def test_carbon_pools(test_data_dir):
     oceanflux = cscm.ce_handler.carbon_cycle.get_ocean_carbon_flux()
     summed_carbon_pools = (
         conc_co2_series
-        + np.cumsum(bioflux) / 2.123
-        - 278
-        - np.cumsum(oceanflux) / 2.123
+        + np.cumsum(bioflux) / carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC
+        - np.cumsum(oceanflux) / carbon_cycle_mod.PPM_CO2_TO_PG_C
     )
     print(summed_carbon_pools[:5])
-    print(conc_co2_series[:5] - 278)
-    print(bioflux[:5] / 2.123)
+    print(conc_co2_series[:5] - carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC)
+    print(bioflux[:5] / carbon_cycle_mod.PPM_CO2_TO_PG_C)
     print(oceanflux[:5])
-    print(cum_emis[:5] / 2.123)
+    print(cum_emis[:5] / carbon_cycle_mod.PPM_CO2_TO_PG_C)
     # TODO : Put tests here back on
-    np.allclose(summed_carbon_pools, cum_emis / 2.123)
+    np.allclose(summed_carbon_pools, cum_emis / carbon_cycle_mod.PPM_CO2_TO_PG_C)
     assert True
 
 
