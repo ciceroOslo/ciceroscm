@@ -83,13 +83,17 @@ The concentration and emission parameterset (which is needed for emission runs) 
 * qbc (0.0279) - BC (fossil fuel + biofuel) RF  per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt BC}">
 * qoc (-0.00433) - OC (fossil fuel + biofuel) RF in  per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt OC}">
 * qh2o_ch4 (0.091915) - Stratospheric water vapour ERF ratio to methane ERF
-* beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
-* mixed_carbon (75.0) - Depth of mixed layer in Joos scheme carbon cycle
-* fnpp_temp_coeff - A coefficient which sets up a simple temperature feedback in the biosphere carbon cycle. If sent and non-zero it will be the coefficient in a linear relation ship between the fnpp and temperature change.
 * ref_yr (2010) - Reference year for the above forcing values. To construct radiative forcing time series, these forcing values are scaled using emssions. The forcing in the reference year is equal to the forcing value set by the above parameters
 * idtm (24) - Number of subyearly timesteps for calculation of CO2 concentrations from emissions.
 * lifetime_mode - Lifetime mode for methane, valid options are TAR (for following the third IPCC assessment report), CONSTANT (for a constant value of 12 years) or a wigley exponent behaviour. TAR is the default, but wigley is a hidden default if you send a value for this option which is not TAR nor CONSTANT
 * just_one - this is an optional parameter which allows you to run with the forcing of a single component to the upwelling diffusion model. It should be set equal to the component you are interested in seeing the effects of.
+
+#### pamset_carbon
+The parameterset for the carbon cycle (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
+* beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
+* mixed_carbon (75.0) - Depth of mixed layer in Joos scheme carbon cycle
+* fnpp_temp_coeff - A coefficient which sets up a simple temperature feedback in the biosphere carbon cycle. If sent and non-zero it will be the coefficient in a linear relation ship between the fnpp and temperature change.
+
 
 ## Parallelisation tools
 The module also has a submodule of parallelisation tools. This includes:

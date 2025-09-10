@@ -35,11 +35,7 @@ def check_pamset(pamset):
     pamset : dict
           Dictionary of parameters to define the physics
           of the run. Values that begin with q are concetration
-          or emissions to forcing factors, beta_f is the
-          carbon cycle fertilisation factor, mixed_carbon is
-          the depth of the mixed layer in the carbon cycle model,
-          fnpp_temp_coeff is a linear coefficient
-          for the temperature dependence of fnpp
+          or emissions to forcing factors
           and ref_yr is the reference year for calculations
 
     Returns
@@ -47,6 +43,8 @@ def check_pamset(pamset):
     dict
         Updated pamset with default values used where necessary
     """
+    if pamset is None:
+        pamset = {}
     required = {
         "qbmb": 0.0,
         "qo3": 0.5,
@@ -56,9 +54,6 @@ def check_pamset(pamset):
         "qoc": -0.00433,
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
-        "beta_f": 0.287,
-        "mixed_carbon": 75.0,
-        "fnpp_temp_coeff": 0.0,
         "qnmvoc": 0.0,
         "qnh3": 0.0,
         "qnox": 0.0,
@@ -158,11 +153,7 @@ class ConcentrationsEmissionsHandler:
     # up emissions in it's own class or
     # CO2-handling in its own class
 
-    def __init__(
-        self,
-        input_handler,
-        pamset,
-    ):
+    def __init__(self, input_handler, pamset, pamset_carbon=None):
         """
         Intialising concentrations emissions handler
 
@@ -209,9 +200,9 @@ class ConcentrationsEmissionsHandler:
         )
         self.precalc_dict = {}
         self._precalculate_vanilla_gases()
-        self.carbon_cycle = CarbonCycleModel(self.pamset)
+        self.carbon_cycle = CarbonCycleModel(self.pamset, pamset_carbon)
         # not really needed, but I guess the linter will complain...
-        self.reset_with_new_pams(pamset, preexisting=False)
+        self.reset_with_new_pams(pamset, pamset_carbon, preexisting=False)
 
     def _precalculate_vanilla_gases(self):
         df_gases_vanilla = self.df_gas.copy()
@@ -322,7 +313,7 @@ class ConcentrationsEmissionsHandler:
         )
         self.precalc_dict["precalc_erf"]["STRAT_O3"] = q
 
-    def reset_with_new_pams(self, pamset, preexisting=True):
+    def reset_with_new_pams(self, pamset, pamset_carbon, preexisting=True):
         """
         Reset to run again with same emissions etc.
 
@@ -334,6 +325,8 @@ class ConcentrationsEmissionsHandler:
         ----------
         pamset : dict
               Dictionary of physical parameters
+        pamset_carbon : dict
+            Dictionary of parameters to be passed to the carbon cycle model
         preexisting : bool
                    Defining whether this is the first use of the class
                    or a new run with the same instance, that has to
@@ -342,11 +335,7 @@ class ConcentrationsEmissionsHandler:
         if preexisting:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
-            self.carbon_cycle.reset_co2_hold(
-                beta_f=self.pamset["beta_f"],
-                mixed_carbon=self.pamset["mixed_carbon"],
-                fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"],
-            )
+            self.carbon_cycle.reset_co2_hold(pamset_carbon)
         years_tot = len(self.years)
         self.conc = {}
         self.forc = {}
