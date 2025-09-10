@@ -198,7 +198,21 @@ class CarbonCycleModel:
             self.pamset = update_pam_if_numeric(
                 self.pamset,
                 pamset_new=pamset_carbon,
-                can_change=["beta_f", "mixed_carbon", "fnpp_temp_coeff"],
+                can_change=[
+                    "beta_f", 
+                    "mixed_carbon", 
+                    "fnpp_temp_coeff",
+                    "npp0",
+                    "npp_t_half",
+                    "npp_w_sigmoid",
+                    "npp_t_threshold",
+                    "npp_w_threshold",
+                    "ml_w_sigmoid",
+                    "ml_fracmax",
+                    "ml_t_half",
+                    "solubility_sens",
+                    "solubility_limit",
+                    ],
             )
 
     def _set_co2_hold(
