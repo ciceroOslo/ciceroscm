@@ -158,23 +158,23 @@ def test_carbon_pools(test_data_dir):
     # TODO : Put tests here back on
     #yearly_total_flux = reverse_cumsum()
 
-    fig1, axs = plt.subplots(nrows = 3, ncols = 5)
+    fig1, axs = plt.subplots(nrows = 3, ncols = 3)
     years = cscm.results["concentrations"].index
     axs[1,0].plot(years, emis_series, label = "Emissions")
     axs[0,0].plot(years, cum_emis, label = "Cumulative emissions")
     axs[0,1].plot(years, summed_carbon_pools * carbon_cycle_mod.PPM_CO2_TO_PG_C, label = "Cumulative pools")
     axs[0,2].plot(years, cumulative_mismatch1, label = "Cumulative mismatch")
-    axs[0,3].plot(years, cumulative_mismatch1 / cum_emis, label = "Cumulative mismatch rel")
-    axs[0,4].plot(years[50:], (cumulative_mismatch1 / cum_emis)[50:], label = "Cumulative mismatch rel")
+    #axs[0,3].plot(years, cumulative_mismatch1 / cum_emis, label = "Cumulative mismatch rel")
+    #axs[0,4].plot(years[50:], (cumulative_mismatch1 / cum_emis)[50:], label = "Cumulative mismatch rel")
     axs[1,1].plot(years, summed_fluxes, label="Carbon cycle fluxes")
     axs[1,2].plot(years, (summed_fluxes - emis_series), label= "Flux mismatch")
-    axs[1,3].plot(years, (summed_fluxes - emis_series) / emis_series, label= "Flux mismatch rel")
-    axs[1,4].plot(years[50:], (summed_fluxes - emis_series)[50:] / emis_series[50:], label= "Flux mismatch rel")
+    #axs[1,3].plot(years, (summed_fluxes - emis_series) / emis_series, label= "Flux mismatch rel")
+    #axs[1,4].plot(years[50:], (summed_fluxes - emis_series)[50:] / emis_series[50:], label= "Flux mismatch rel")
     axs[2,0].plot(years, bioflux, label="Biosphere carbon flux")
     axs[2,1].plot(years, oceanflux, label="Ocean carbon flux")
     axs[2,2].plot(years, atmospheric_flux, label="Atmospheric carbon flux")
-    axs[2,3].plot(years, cumulative_mismatch1 / emis_series, label = "Cumulative mismatch rel to emissions")
-    axs[2,4].plot(years[50:], (cumulative_mismatch1 / emis_series)[50:], label = "Cumulative mismatch rel to emissions")
+    #axs[2,3].plot(years, cumulative_mismatch1 / emis_series, label = "Cumulative mismatch rel to emissions")
+    #axs[2,4].plot(years[50:], (cumulative_mismatch1 / emis_series)[50:], label = "Cumulative mismatch rel to emissions")
     for ax in axs.flatten():
         ax.legend()
         ax.set_xlabel("Years")
@@ -216,13 +216,14 @@ def test_carbon_pools_flat(test_data_dir):
         {
             "gaspam_file": os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt"),
             "nyend": 2100,
+            "emstart": 2100,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_data": em_data_flat_co2,
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
         },
     )
-    cscm._run({"results_as_dict": True, "carbon_cycle_outputs": True})
+    cscm._run({"results_as_dict": True, "carbon_cycle_outputs": True, "pamset_emiconc": {"ref_yr":1751}})
     conc_co2_series = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
     cum_emis = np.cumsum(emis_series)

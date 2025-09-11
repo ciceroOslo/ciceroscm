@@ -229,6 +229,46 @@ class CarbonCycleModel:
                 idtm=self.pamset["idtm"],
             )
 
+    def calculate_mixed_layer_partial_pressure_at_timestep(self, it):
+        """
+        """
+        dt = 1.0 / self.pamset["idtm"]
+        if it > 0:
+            # Pulse response integrate carbon content in the mixed layer
+            # Carbon decays into deep layer according to pulse response function
+            sumz = np.dot(
+                self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
+            )
+        else:
+            sumz = 0.0
+
+        # Inorganic carbon content in the mixed layer:
+        z_co2 = (
+            PPMKG_TO_UMOL_PER_VOL
+            * GE_COEFF
+            * dt
+            / self.pamset["mixed_carbon"]
+            * (sumz + 0.5 * self.co2_hold["sCO2"][it])
+        )
+        # Partial pressure in ocean mixed layer,
+        # in principle this only holds in 17.7-18.2 temperature range
+        # but up to 1320 ppm
+        # and this particular formulation is the solution at T = 18.2
+        # The original description paper also has a different formulation
+        # with a wider valid temperature range, but only up to 200 ppm
+        # which is not used
+        # This might be a natural place to look for/substitute with a
+        # different / more general / temperature dependent formulation
+        # which would be in line with the model philosophy and structure
+        y_co2= (
+            1.3021 * z_co2
+            + 3.7929e-3 * (z_co2**2)
+            + 9.1193e-6 * (z_co2**3)
+            + 1.488e-8 * (z_co2**4)
+            + 1.2425e-10 * (z_co2**5)
+            )
+        return y_co2
+
     def co2em2conc(
         self, yr, em_co2_common, dtemp=0.0
     ):  # pylint: disable=too-many-locals
@@ -265,6 +305,7 @@ class CarbonCycleModel:
         # Monthloop:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
+            #print(f"Carbon cycle model step {it}")
             sumf = 0.0
 
             # Net emissions, including biogenic fertilization effects
@@ -284,7 +325,7 @@ class CarbonCycleModel:
                 )
             # Total biospheric sink:
             ffer = self.co2_hold["dfnpp"][it] - dt * sumf
-
+            #print(f"This step biosphere sink: {ffer}")
             # Sum anthropogenic and biospheric and PPMKG_TO_UMOL_PER_VOLert gC/yr --> ppm/yr
             em_co2 = (em_co2_common - ffer) / PPM_CO2_TO_PG_C
 
@@ -308,24 +349,9 @@ class CarbonCycleModel:
             self.co2_hold["sCO2"][it] = cc1 * (
                 self.co2_hold["sums"] + self.co2_hold["ss1"] + ss2
             )
+            #print(f"Air sea flux this timestep {self.co2_hold['sCO2'][it]}")
             self.co2_hold["emCO2_prev"] = em_co2
-            if it > 0:
-                # Pulse response integrate carbon content in the mixed layer
-                # Carbon decays into deep layer according to pulse response function
-                sumz = np.dot(
-                    self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
-                )
-            else:
-                sumz = 0.0
-
-            # Inorganic carbon content in the mixed layer:
-            z_co2 = (
-                PPMKG_TO_UMOL_PER_VOL
-                * GE_COEFF
-                * dt
-                / self.pamset["mixed_carbon"]
-                * (sumz + 0.5 * self.co2_hold["sCO2"][it])
-            )
+            
             # Partial pressure in ocean mixed layer,
             # in principle this only holds in 17.7-18.2 temperature range
             # but up to 1320 ppm
@@ -336,13 +362,8 @@ class CarbonCycleModel:
             # This might be a natural place to look for/substitute with a
             # different / more general / temperature dependent formulation
             # which would be in line with the model philosophy and structure
-            self.co2_hold["yCO2"] = (
-                1.3021 * z_co2
-                + 3.7929e-3 * (z_co2**2)
-                + 9.1193e-6 * (z_co2**3)
-                + 1.488e-8 * (z_co2**4)
-                + 1.2425e-10 * (z_co2**5)
-            )
+            self.co2_hold["yCO2"] = self.calculate_mixed_layer_partial_pressure_at_timestep(it)
+
             # Partial pressure in the atmosphere, this comes from
             # solving the transfer equation between atmosphere and
             # ocean  to get the resulting atmosphere partial pressure
@@ -485,6 +506,8 @@ class CarbonCycleModel:
         """
         if conc_run and co2_conc_series is not None:
             self.back_calculate_emissions(co2_conc_series, dtemp_series=dtemp_series)
+        #Previous implementation
+    
         ocean_carbon_flux = (
             np.array(
                 [
@@ -503,6 +526,13 @@ class CarbonCycleModel:
             * GE_COEFF
             * OCEAN_AREA
         )
+        """    
+        ocean_carbon_flux = [
+            self.co2_hold["sCO2"][
+                self.pamset["idtm"]
+            ]
+        ]
+        """
         return ocean_carbon_flux
 
     def back_calculate_emissions(self, co2_conc_series, dtemp_series=None):
@@ -538,8 +568,6 @@ class CarbonCycleModel:
             co2_conc_series=co2_conc_series,
             dtemp_series=dtemp_series,
         )
-        print("ffer in back_calculate")
-        print(ffer)
         for i, co2_conc in enumerate(co2_conc_series):
             ffer_here = ffer[i * self.pamset["idtm"]]
             em_series[i] = self._guess_emissions_iteration(
