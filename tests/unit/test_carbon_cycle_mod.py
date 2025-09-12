@@ -144,7 +144,7 @@ def test_carbon_pools(test_data_dir):
     # print(oceanflux[:5])
     # print(cum_emis[:5] / carbon_cycle_mod.PPM_CO2_TO_PG_C)
     # This is as close we are likely going to get here...
-    assert np.allclose(summed_fluxes, emis_series, rtol=5e-2)
+    assert np.allclose(summed_fluxes, emis_series, rtol=1e-2)
 
 
 def reverse_cumsum(cumulated):
