@@ -43,97 +43,20 @@ def take_out_missing(pamset):
             del pamset[key]
     return pamset
 
-
-def solubility_temp_feedback(dtemp=0.0, solubility_sens=0.02, solubility_limit=0.5):
-    """
-    Exponential scaling of CO2 solubility with temperature, with upper limit.
-
-    Parameters
-    ----------
-    dtemp : float
-        Degrees of temperature since start of run
-    solubility_sens : float
-        Fractional decrease in solubility per degree C (default 0.02)
-    solubility_limit : float
-        Maximum allowed gain (e.g. 0.5 for 50% increase)
-
-    Returns
-    -------
-    float
-        Solubility scaling factor (max 1 + solubility_limit)
-    """
-    scale = np.exp(-solubility_sens * dtemp) / np.exp(-solubility_sens * 0.0)
-    scale = np.clip(scale, 0, 1 + solubility_limit)
-    # Limit the gain to 1 + solubility_limit (e.g. 1.5)
-    return scale
-
-
-def fnpp_from_temp(
-    dtemp=0, npp0=60, t_half=0.5, w_sigmoid=7, t_threshold=4, w_threshold=7
-):
-    """
-    Linear temperature dependence function for fnpp
-
-    Parameters
-    ----------
-    fnpp_temp_coeff : float
-        Coefficient of linear growth / decline of
-        fnpp with temperature change
-    dtemp : float
-        Degrees of temperature since start of run
-
-    Returns
-    -------
-    float
-        fnpp at given temperature for assumed linear
-        relationship
-    """
-
-    sigmoid = lambda x: 1 / (
-        1 + np.exp(-((x - t_half) / w_sigmoid))
-    )  # Sigmoid function
-    threshold = lambda x: 1 - 1 / (
-        1 + np.exp(-((x - t_threshold) / w_threshold))
-    )  # Threshold function
-    baseline = npp0 / (sigmoid(0) * threshold(0))
-
-    return baseline * sigmoid(dtemp) * threshold(dtemp)
-
-
-fnpp_from_temp_vec = np.vectorize(fnpp_from_temp)
-
-
-def mixed_layer_temp_feedback(
-    dtemp=0.0, ml_w_sigmoid=3.0, ml_fracmax=0.5, ml_t_half=0.5
-):
-    """
-    Calculate mixed layer depth change with temperature using new parameters.
-
-    Parameters
-    ----------
-    dtemp : float
-        Degrees of temperature since start of run
-    ml_w_sigmoid : float
-        Width of sigmoid for mixed layer response
-    ml_fracmax : float
-        Maximum fractional change in mixed layer depth
-    ml_t_half : float
-        Temperature at half response
-
-    Returns
-    -------
-    float
-        Mixed layer depth change factor
-    """
-    sigmoid = lambda x: 1 / (1 + np.exp(-((x - ml_t_half) / ml_w_sigmoid)))
-    mixed_layer_temp = 1 - ml_fracmax * sigmoid(dtemp)
-    baseline = 1 - ml_fracmax * sigmoid(0)
-    return mixed_layer_temp / baseline
-
 CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
     "beta_f": 0.287,
     "mixed_carbon": 75.0,
     "fnpp_temp_coeff": 0,
+    "ml_w_sigmoid": 3.0,
+    "ml_fracmax": 0.5,
+    "ml_t_half": 0.5,
+    "npp0": 60, 
+    "t_half": 0.5, 
+    "w_sigmoid": 7, 
+    "t_threshold": 4, 
+    "w_threshold": 7,
+    "solubility_sens":0.02,
+    "solubility_limit":0.5,
 }
 
 
@@ -195,6 +118,7 @@ class CarbonCycleModel:
                 pamset_new=pamset_carbon,
                 can_change=CARBON_CYCLE_MODEL_REQUIRED_PAMSET.keys(),
             )
+            self.fnpp_from_temp_vec = np.vectorize(self.fnpp_from_temp)
 
     def _set_co2_hold(
         self, xco2=PREINDUSTRIAL_CO2_CONC, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -292,7 +216,76 @@ class CarbonCycleModel:
                 idtm=self.pamset["idtm"],
             )
 
-    def _calculate_partial_pressure_mixed_layer(self, it):
+    def fnpp_from_temp(self, dtemp=0):
+        """
+        Temperature dependence function for fnpp
+
+        Parameters
+        ----------
+        dtemp : float
+            Degrees of temperature since start of run
+
+        Returns
+        -------
+        float
+            fnpp at given temperature for assumed linear
+            relationship
+        """
+
+        sigmoid = lambda x: 1 / (
+            1 + np.exp(-((x - self.pamset["t_half"]) / self.pamset["w_sigmoid"]))
+        )  # Sigmoid function
+        threshold = lambda x: 1 - 1 / (
+            1 + np.exp(-((x - self.pamset["t_threshold"]) / self.pamset["w_threshold"]))
+        )  # Threshold function
+        baseline = self.pamset["npp0"] / (sigmoid(0) * threshold(0))
+
+        return baseline * sigmoid(dtemp) * threshold(dtemp)
+    
+    def solubility_temp_feedback(self, dtemp=0.0):
+        """
+        Exponential scaling of CO2 solubility with temperature, with upper limit.
+
+        Parameters
+        ----------
+        dtemp : float
+            Degrees of temperature since start of run
+        solubility_sens : float
+            Fractional decrease in solubility per degree C (default 0.02)
+        solubility_limit : float
+            Maximum allowed gain (e.g. 0.5 for 50% increase)
+
+        Returns
+        -------
+        float
+            Solubility scaling factor (max 1 + solubility_limit)
+        """
+        scale = np.exp(-self.pamset["solubility_sens"] * dtemp) / np.exp(-self.pamset["solubility_sens"] * 0.0)
+        scale = np.clip(scale, 0, 1 + self.pamset["solubility_limit"])
+        # Limit the gain to 1 + solubility_limit (e.g. 1.5)
+        return scale
+
+
+    def mixed_layer_temp_feedback(self, dtemp=0):
+        """
+        Calculate mixed layer depth change with temperature using new parameters.
+
+        Parameters
+        ----------
+        dtemp : float
+            Degrees of temperature since start of run
+
+        Returns
+        -------
+        float
+            Mixed layer depth change factor
+        """
+        sigmoid = lambda x: 1 / (1 + np.exp(-((x - self.pamset["ml_t_half"]) / self.pamset["ml_w_sigmoid"])))
+        mixed_layer_temp = 1 - self.pamset["ml_fracmax"] * sigmoid(dtemp)
+        baseline = 1 - self.pamset["ml_fracmax"] * sigmoid(0)
+        return self.pamset["mixed_carbon"] * mixed_layer_temp / baseline
+
+    def _calculate_partial_pressure_mixed_layer(self, it, dtemp= 0):
         """
         Calculate ocean mixed layer partial pressure
 
@@ -300,6 +293,8 @@ class CarbonCycleModel:
         ----------
         it : int
             Subyearly timestep at which to calculate
+        dtemp : float
+            Temperature change at timestep
 
         Returns
         -------
@@ -321,7 +316,7 @@ class CarbonCycleModel:
             PPMKG_TO_UMOL_PER_VOL
             * GE_COEFF
             * dt
-            / self.pamset["mixed_carbon"]
+            / self.mixed_layer_temp_feedback(dtemp)
             * (sumz + 0.5 * self.co2_hold["sCO2"][it])
         )
         # Partial pressure in ocean mixed layer,
@@ -334,7 +329,7 @@ class CarbonCycleModel:
         # This might be a natural place to look for/substitute with a
         # different / more general / temperature dependent formulation
         # which would be in line with the model philosophy and structure
-        return (
+        return self.solubility_temp_feedback(dtemp) * (
             1.3021 * z_co2
             + 3.7929e-3 * (z_co2**2)
             + 9.1193e-6 * (z_co2**3)
@@ -370,38 +365,13 @@ class CarbonCycleModel:
         # TIMESTEP (YR)
         dt = 1.0 / self.pamset["idtm"]
 
-        # Temperature-dependent mixed layer depth
-        mixed_carbon = self.pamset["mixed_carbon"] * mixed_layer_temp_feedback(
-            dtemp,
-            ml_w_sigmoid=self.pamset["ml_w_sigmoid"],
-            ml_fracmax=self.pamset["ml_fracmax"],
-            ml_t_half=self.pamset["ml_t_half"],
-        )
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
-        fnpp = fnpp_from_temp(
-            dtemp=dtemp,
-            npp0=self.pamset["npp0"],
-            t_half=self.pamset.get("npp_t_half", 0.5),
-            w_sigmoid=self.pamset.get("npp_w_sigmoid", 7),
-            t_threshold=self.pamset.get("npp_t_threshold", 4),
-            w_threshold=self.pamset.get("npp_w_threshold", 7),
-        )
+        fnpp = self.fnpp_from_temp(dtemp=dtemp)
         # Monthloop:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
             sumf = 0.0
-            # Record diagnostics only for first timestep of each year
-            if i == 0:
-                if yr_ix == len(self.mixed_carbon_series):
-                    self.mixed_carbon_series.append(mixed_carbon)
-                    solfac = solubility_temp_feedback(
-                        dtemp,
-                        solubility_sens=self.pamset["solubility_sens"],
-                        solubility_limit=self.pamset["solubility_limit"],
-                    )
-                    self.solfac_series.append(solfac)
-                    self.npp_series.append(fnpp)
 
             # Net emissions, including biogenic fertilization effects
             if it > 0:
@@ -455,14 +425,8 @@ class CarbonCycleModel:
             # This might be a natural place to look for/substitute with a
             # different / more general / temperature dependent formulation
             # which would be in line with the model philosophy and structure
-            solfac = solubility_temp_feedback(
-                dtemp,
-                solubility_sens=0.02,
-                solubility_limit=0.5,
-            )
-
             yco2_prev = self.co2_hold["yCO2"]
-            self.co2_hold["yCO2"] = solfac * self._calculate_partial_pressure_mixed_layer(it)
+            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(it)
             # Partial pressure in the atmosphere, this comes from
             # solving the transfer equation between atmosphere and
             # ocean  to get the resulting atmosphere partial pressure
@@ -508,12 +472,7 @@ class CarbonCycleModel:
                 dtemp_series = np.zeros(len(co2_conc_series))
             timesteps = len(co2_conc_series) * self.pamset["idtm"]
             fnpp = np.repeat(
-                fnpp_from_temp_vec(
-                    npp0=self.pamset["npp0"],
-                    t_half=self.pamset.get("npp_t_half", 0.5),
-                    w_sigmoid=self.pamset.get("npp_w_sigmoid", 7),
-                    t_threshold=self.pamset.get("npp_t_threshold", 4),
-                    w_threshold=self.pamset.get("npp_w_threshold", 7),
+                self.fnpp_from_temp_vec(
                     dtemp=dtemp_timeseries,
                 ),
                 self.pamset["idtm"],
@@ -610,6 +569,7 @@ class CarbonCycleModel:
             Timeseries of the added carbon content to the yearly
             ocean carbon flux (Pg / C /yr)
         """
+        # TODO: Don't redo this if back-calculation is already done...
         if conc_run and co2_conc_series is not None:
             self.back_calculate_emissions(co2_conc_series, dtemp_series=dtemp_series)
         ocean_carbon_flux = (
@@ -812,9 +772,9 @@ class CarbonCycleModel:
                     dtemp_series=dtemp_series,
                 ),
                 "Ocean carbon flux": self.get_ocean_carbon_flux(),
-                "Mixed layer depth": self.mixed_carbon_series,
-                "CO2 solubility": self.solfac_series,
-                "Net Primary Production": self.npp_series,
+                "Mixed layer depth": selfmixed_layer_temp_feedback(dtemp_series),
+                "CO2 solubility": self.solubility_temp_feedback(dtemp_series),
+                "Net Primary Production": self.fnpp_from_temp_vec(dtemp_series),
             },
             index=years,
         )
