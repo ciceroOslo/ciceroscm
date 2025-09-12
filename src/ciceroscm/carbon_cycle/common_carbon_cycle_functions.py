@@ -17,6 +17,8 @@ PPMKG_TO_UMOL_PER_VOL = 1.722e17
 # Conversion factor ppm CO2 -> kg
 PPM_CO2_TO_PG_C = 2.123
 
+PREINDUSTRIAL_CO2_CONC = 278.0
+
 
 def calculate_airborne_fraction(em_timeseries, conc_timeseries):
     """
@@ -37,6 +39,8 @@ def calculate_airborne_fraction(em_timeseries, conc_timeseries):
         Airborne fraction calculated from the em_timeseries and conc_timeseries
     """
     airborne_fraction = (
-        (conc_timeseries - 278.0) / np.cumsum(em_timeseries) * PPM_CO2_TO_PG_C
+        (conc_timeseries - PREINDUSTRIAL_CO2_CONC)
+        / np.cumsum(em_timeseries)
+        * PPM_CO2_TO_PG_C
     )
     return airborne_fraction
