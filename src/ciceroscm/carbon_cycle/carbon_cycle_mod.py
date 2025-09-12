@@ -229,6 +229,56 @@ class CarbonCycleModel:
                 idtm=self.pamset["idtm"],
             )
 
+    def _calculate_partial_pressure_mixed_layer(self, it):
+        """
+        Calculate ocean mixed layer partial pressure
+
+        Parameters
+        ----------
+        it : int
+            Subyearly timestep at which to calculate
+
+        Returns
+        -------
+            float
+            Mixed ocean layer partial pressure
+        """
+        dt = 1 / self.pamset["idtm"]
+        if it > 0:
+            # Pulse response integrate carbon content in the mixed layer
+            # Carbon decays into deep layer according to pulse response function
+            sumz = np.dot(
+                self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
+            )
+        else:
+            sumz = 0.0
+
+        # Inorganic carbon content in the mixed layer:
+        z_co2 = (
+            PPMKG_TO_UMOL_PER_VOL
+            * GE_COEFF
+            * dt
+            / self.pamset["mixed_carbon"]
+            * (sumz + 0.5 * self.co2_hold["sCO2"][it])
+        )
+        # Partial pressure in ocean mixed layer,
+        # in principle this only holds in 17.7-18.2 temperature range
+        # but up to 1320 ppm
+        # and this particular formulation is the solution at T = 18.2
+        # The original description paper also has a different formulation
+        # with a wider valid temperature range, but only up to 200 ppm
+        # which is not used
+        # This might be a natural place to look for/substitute with a
+        # different / more general / temperature dependent formulation
+        # which would be in line with the model philosophy and structure
+        return (
+            1.3021 * z_co2
+            + 3.7929e-3 * (z_co2**2)
+            + 9.1193e-6 * (z_co2**3)
+            + 1.488e-8 * (z_co2**4)
+            + 1.2425e-10 * (z_co2**5)
+        )
+
     def co2em2conc(
         self, yr, em_co2_common, dtemp=0.0
     ):  # pylint: disable=too-many-locals
@@ -309,23 +359,6 @@ class CarbonCycleModel:
                 self.co2_hold["sums"] + self.co2_hold["ss1"] + ss2
             )
             self.co2_hold["emCO2_prev"] = em_co2
-            if it > 0:
-                # Pulse response integrate carbon content in the mixed layer
-                # Carbon decays into deep layer according to pulse response function
-                sumz = np.dot(
-                    self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
-                )
-            else:
-                sumz = 0.0
-
-            # Inorganic carbon content in the mixed layer:
-            z_co2 = (
-                PPMKG_TO_UMOL_PER_VOL
-                * GE_COEFF
-                * dt
-                / self.pamset["mixed_carbon"]
-                * (sumz + 0.5 * self.co2_hold["sCO2"][it])
-            )
             # Partial pressure in ocean mixed layer,
             # in principle this only holds in 17.7-18.2 temperature range
             # but up to 1320 ppm
@@ -336,19 +369,17 @@ class CarbonCycleModel:
             # This might be a natural place to look for/substitute with a
             # different / more general / temperature dependent formulation
             # which would be in line with the model philosophy and structure
-            self.co2_hold["yCO2"] = (
-                1.3021 * z_co2
-                + 3.7929e-3 * (z_co2**2)
-                + 9.1193e-6 * (z_co2**3)
-                + 1.488e-8 * (z_co2**4)
-                + 1.2425e-10 * (z_co2**5)
-            )
+            yco2_prev = self.co2_hold["yCO2"]
+            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(it)
             # Partial pressure in the atmosphere, this comes from
             # solving the transfer equation between atmosphere and
             # ocean  to get the resulting atmosphere partial pressure
+            # We use the midpoint partial pressure here as this ensures
+            # best (but not perfect) closure of the carbon cycle
             self.co2_hold["xCO2"] = (
                 self.co2_hold["sCO2"][it]
-                + self.co2_hold["yCO2"]
+                + 0.5 * self.co2_hold["yCO2"]
+                + 0.5 * yco2_prev
                 + PREINDUSTRIAL_CO2_CONC
             )
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))

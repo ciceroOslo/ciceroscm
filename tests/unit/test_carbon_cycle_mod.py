@@ -131,23 +131,29 @@ def test_carbon_pools(test_data_dir):
     cscm._run({"results_as_dict": True})
     conc_co2_series = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
-    cum_emis = np.cumsum(emis_series)
     bioflux = cscm.ce_handler.carbon_cycle.get_biosphere_carbon_flux()
     oceanflux = cscm.ce_handler.carbon_cycle.get_ocean_carbon_flux()
-    summed_carbon_pools = (
-        conc_co2_series
-        - carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC
-        + np.cumsum(bioflux) / carbon_cycle_mod.PPM_CO2_TO_PG_C
-        + np.cumsum(oceanflux) / carbon_cycle_mod.PPM_CO2_TO_PG_C
+    atmospheric_flux = (
+        reverse_cumsum((conc_co2_series - carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC))
+        * carbon_cycle_mod.PPM_CO2_TO_PG_C
     )
-    print(summed_carbon_pools[:5])
-    print(conc_co2_series[:5] - carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC)
-    print(bioflux[:5] / carbon_cycle_mod.PPM_CO2_TO_PG_C)
-    print(oceanflux[:5])
-    print(cum_emis[:5] / carbon_cycle_mod.PPM_CO2_TO_PG_C)
-    # TODO : Put tests here back on
-    np.allclose(summed_carbon_pools, (cum_emis / carbon_cycle_mod.PPM_CO2_TO_PG_C))
-    assert True
+    summed_fluxes = atmospheric_flux + bioflux + oceanflux
+    # print(summed_carbon_pools[:5])
+    # print(conc_co2_series[:5] - carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC)
+    # print(bioflux[:5] / carbon_cycle_mod.PPM_CO2_TO_PG_C)
+    # print(oceanflux[:5])
+    # print(cum_emis[:5] / carbon_cycle_mod.PPM_CO2_TO_PG_C)
+    # This is as close we are likely going to get here...
+    assert np.allclose(summed_fluxes, emis_series, rtol=1e-2)
+
+
+def reverse_cumsum(cumulated):
+    print(cumulated[:-1].copy())
+    cumsum_shifted = np.insert(cumulated[:-1].copy(), 0, 0)
+    print(cumulated[0])
+    decumulated = cumulated - cumsum_shifted
+    print(decumulated[0])
+    return decumulated
 
 
 # TODO: Check ocean calculation with and without internal back calculation
