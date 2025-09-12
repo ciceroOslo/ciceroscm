@@ -2,6 +2,8 @@
 Module to handle carbon cycle from CO2 emissions to concentrations
 """
 
+from functools import partial
+
 import numpy as np
 import pandas as pd
 
@@ -16,6 +18,52 @@ from .common_carbon_cycle_functions import (
     calculate_airborne_fraction,
 )
 from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
+
+
+def sigmoid_gen(eval_point, sigmoid_center, sigmoid_width):
+    """
+    Generalised sigmoid function
+
+    Parameters
+    ----------
+    eval_point : float
+        The value at which to evaluate the sigmoid function
+    sigmoid_center : float
+        The center of the sigmoid function, where it is 1
+    sigmoid_width : float
+        The width of the sigmoid function
+
+    Returns
+    -------
+        float
+        sigmoid function value at eval_point
+    """
+    sigmoid = 1 / (1 + np.exp(-((eval_point - sigmoid_center) / sigmoid_width)))
+    return sigmoid
+
+
+def threshold_gen(eval_point, threshold_half, threshold_width):
+    """
+    Generalised threshold damping function
+
+    Parameters
+    ----------
+    eval_point : float
+        The value at which to evaluate the sigmoid function
+    threshold_half : float
+        The value for which the dampening of the threshold = 0.5
+    threshold_width : float
+        The width of the threshold
+
+    Returns
+    -------
+        float
+        threshold function value at eval_point
+    """
+    threshold = 1 - 1 / (
+        1 + np.exp(-((eval_point - threshold_half) / threshold_width))
+    )  # Threshold function
+    return threshold
 
 
 def take_out_missing(pamset):
@@ -43,20 +91,20 @@ def take_out_missing(pamset):
             del pamset[key]
     return pamset
 
+
 CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
     "beta_f": 0.287,
     "mixed_carbon": 75.0,
-    "fnpp_temp_coeff": 0,
     "ml_w_sigmoid": 3.0,
     "ml_fracmax": 0.5,
     "ml_t_half": 0.5,
-    "npp0": 60, 
-    "t_half": 0.5, 
-    "w_sigmoid": 7, 
-    "t_threshold": 4, 
+    "npp0": 60,
+    "t_half": 0.5,
+    "w_sigmoid": 7,
+    "t_threshold": 4,
     "w_threshold": 7,
-    "solubility_sens":0.02,
-    "solubility_limit":0.5,
+    "solubility_sens": 0.02,
+    "solubility_limit": 0.5,
 }
 
 
@@ -231,40 +279,46 @@ class CarbonCycleModel:
             fnpp at given temperature for assumed linear
             relationship
         """
-
-        sigmoid = lambda x: 1 / (
-            1 + np.exp(-((x - self.pamset["t_half"]) / self.pamset["w_sigmoid"]))
-        )  # Sigmoid function
-        threshold = lambda x: 1 - 1 / (
-            1 + np.exp(-((x - self.pamset["t_threshold"]) / self.pamset["w_threshold"]))
-        )  # Threshold function
+        sigmoid = partial(
+            sigmoid_gen,
+            sigmoid_center=self.pamset["t_half"],
+            sigmoid_width=self.pamset["w_sigmoid"],
+        )
+        threshold = partial(
+            threshold_gen,
+            threshold_half=self.pamset["t_threshold"],
+            threshold_width=self.pamset["w_threshold"],
+        )
+        # Threshold function
         baseline = self.pamset["npp0"] / (sigmoid(0) * threshold(0))
 
         return baseline * sigmoid(dtemp) * threshold(dtemp)
-    
+
     def solubility_temp_feedback(self, dtemp=0.0):
         """
         Exponential scaling of CO2 solubility with temperature, with upper limit.
+
+        The parameters used are solubility_sens, the fractional decrease in solubility
+        per degree C (default 0.02) and solubility_limit, the maximum allowed gain
+        (e.g. 0.5 for 50% increase)
 
         Parameters
         ----------
         dtemp : float
             Degrees of temperature since start of run
-        solubility_sens : float
-            Fractional decrease in solubility per degree C (default 0.02)
-        solubility_limit : float
-            Maximum allowed gain (e.g. 0.5 for 50% increase)
+
 
         Returns
         -------
         float
             Solubility scaling factor (max 1 + solubility_limit)
         """
-        scale = np.exp(-self.pamset["solubility_sens"] * dtemp) / np.exp(-self.pamset["solubility_sens"] * 0.0)
+        scale = np.exp(-self.pamset["solubility_sens"] * dtemp) / np.exp(
+            -self.pamset["solubility_sens"] * 0.0
+        )
         scale = np.clip(scale, 0, 1 + self.pamset["solubility_limit"])
         # Limit the gain to 1 + solubility_limit (e.g. 1.5)
         return scale
-
 
     def mixed_layer_temp_feedback(self, dtemp=0):
         """
@@ -280,12 +334,16 @@ class CarbonCycleModel:
         float
             Mixed layer depth change factor
         """
-        sigmoid = lambda x: 1 / (1 + np.exp(-((x - self.pamset["ml_t_half"]) / self.pamset["ml_w_sigmoid"])))
+        sigmoid = partial(
+            sigmoid_gen,
+            sigmoid_center=self.pamset["ml_t_half"],
+            sigmoid_width=self.pamset["ml_w_sigmoid"],
+        )
         mixed_layer_temp = 1 - self.pamset["ml_fracmax"] * sigmoid(dtemp)
         baseline = 1 - self.pamset["ml_fracmax"] * sigmoid(0)
         return self.pamset["mixed_carbon"] * mixed_layer_temp / baseline
 
-    def _calculate_partial_pressure_mixed_layer(self, it, dtemp= 0):
+    def _calculate_partial_pressure_mixed_layer(self, it, dtemp=0):
         """
         Calculate ocean mixed layer partial pressure
 
@@ -473,7 +531,7 @@ class CarbonCycleModel:
             timesteps = len(co2_conc_series) * self.pamset["idtm"]
             fnpp = np.repeat(
                 self.fnpp_from_temp_vec(
-                    dtemp=dtemp_timeseries,
+                    dtemp=dtemp_series,
                 ),
                 self.pamset["idtm"],
             )
@@ -762,6 +820,8 @@ class CarbonCycleModel:
         """
         if conc_run and conc_series is None:
             return None
+        if dtemp_series is None:
+            dtemp_series = np.zeros(self.pamset["years_tot"])
         if conc_run:
             em_series = self.back_calculate_emissions(conc_series, dtemp_series)
         df_carbon = pd.DataFrame(
@@ -772,7 +832,7 @@ class CarbonCycleModel:
                     dtemp_series=dtemp_series,
                 ),
                 "Ocean carbon flux": self.get_ocean_carbon_flux(),
-                "Mixed layer depth": selfmixed_layer_temp_feedback(dtemp_series),
+                "Mixed layer depth": self.mixed_layer_temp_feedback(dtemp_series),
                 "CO2 solubility": self.solubility_temp_feedback(dtemp_series),
                 "Net Primary Production": self.fnpp_from_temp_vec(dtemp_series),
             },
