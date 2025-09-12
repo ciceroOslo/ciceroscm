@@ -6,18 +6,21 @@ from ciceroscm import CICEROSCM
 from ciceroscm.carbon_cycle import carbon_cycle_mod
 
 
-def test_linear_fnpp_from_temp():
-    assert carbon_cycle_mod.linear_fnpp_from_temp() == 60.0
-    assert carbon_cycle_mod.linear_fnpp_from_temp(fnpp_temp_coeff=1) == 60.0
-    assert carbon_cycle_mod.linear_fnpp_from_temp(dtemp=1) == 60.0
-    assert carbon_cycle_mod.linear_fnpp_from_temp(fnpp_temp_coeff=2, dtemp=3) == 66.0
-
-
 def test_default_pamset_values(test_data_dir):
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
     assert ccmod.pamset["beta_f"] == 0.287
     assert ccmod.pamset["mixed_carbon"] == 75.0
-    assert ccmod.pamset["fnpp_temp_coeff"] == 0
+    assert ccmod.pamset["npp0"] == 60
+    assert ccmod.pamset["ml_w_sigmoid"] == 3.0
+    assert ccmod.pamset["ml_fracmax"] == 0.5
+    assert ccmod.pamset["ml_t_half"] == 0.5
+    assert ccmod.pamset["t_half"] == 0.5
+    assert ccmod.pamset["w_sigmoid"] == 7
+    assert ccmod.pamset["t_threshold"] == 4
+    assert ccmod.pamset["w_threshold"] == 7
+    assert ccmod.pamset["solubility_sens"] == 0.02
+    assert ccmod.pamset["solubility_limit"] == 0.5
+
     cscm = CICEROSCM(
         {
             "gaspam_file": os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt"),
@@ -31,7 +34,16 @@ def test_default_pamset_values(test_data_dir):
     ccmod_inside = cscm.ce_handler.carbon_cycle
     assert ccmod_inside.pamset["beta_f"] == 0.287
     assert ccmod_inside.pamset["mixed_carbon"] == 75.0
-    assert ccmod_inside.pamset["fnpp_temp_coeff"] == 0
+    assert ccmod_inside.pamset["npp0"] == 60
+    assert ccmod_inside.pamset["ml_w_sigmoid"] == 3.0
+    assert ccmod_inside.pamset["ml_fracmax"] == 0.5
+    assert ccmod_inside.pamset["ml_t_half"] == 0.5
+    assert ccmod_inside.pamset["t_half"] == 0.5
+    assert ccmod_inside.pamset["w_sigmoid"] == 7
+    assert ccmod_inside.pamset["t_threshold"] == 4
+    assert ccmod_inside.pamset["w_threshold"] == 7
+    assert ccmod_inside.pamset["solubility_sens"] == 0.02
+    assert ccmod_inside.pamset["solubility_limit"] == 0.5
 
 
 def test_get_biosphere_carbon_flux():
@@ -75,8 +87,11 @@ def test_back_calculate_emissions(test_data_dir):
     cscm._run({"results_as_dict": True})
     conc_co2_series = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
+    dtemp_series = cscm.results["dT_glob"]
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2100, "nystart": 1750})
-    em_back_calculated = ccmod.back_calculate_emissions(conc_co2_series)
+    em_back_calculated = ccmod.back_calculate_emissions(
+        conc_co2_series, dtemp_series=dtemp_series
+    )
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
 
 
@@ -95,24 +110,25 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True},
     )
-    conc_co2_series_no_feedback = cscm.results["concentrations"]["CO2"].values
+    conc_co2_series_default = cscm.results["concentrations"]["CO2"].values
     print(cscm.ce_handler.carbon_cycle.pamset)
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True},
-        pamset_carbon={"fnpp_temp_coeff": -10},
+        pamset_carbon={"t_threshold": 2, "w_threshold": 2},
     )
-    conc_co2_series = cscm.results["concentrations"]["CO2"].values
+    conc_co2_series_all_die = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
     temp_timseries = cscm.results["dT_glob"]
     print(cscm.ce_handler.carbon_cycle.pamset)
 
     ccmod = carbon_cycle_mod.CarbonCycleModel(
-        {"nyend": 2100, "nystart": 1750}, pamset_carbon={"fnpp_temp_coeff": -10}
+        {"nyend": 2100, "nystart": 1750},
+        pamset_carbon={"t_threshold": 2, "w_threshold": 2},
     )
     em_back_calculated = ccmod.back_calculate_emissions(
-        conc_co2_series, dtemp_series=temp_timseries
+        conc_co2_series_all_die, dtemp_series=temp_timseries
     )
-    assert not np.allclose(conc_co2_series, conc_co2_series_no_feedback)
+    assert not np.allclose(conc_co2_series_all_die, conc_co2_series_default)
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
     # TODO: Test carbon cycle outputs with feedbacks
 

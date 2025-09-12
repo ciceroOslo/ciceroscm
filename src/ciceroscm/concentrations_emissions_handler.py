@@ -57,6 +57,16 @@ def check_pamset(pamset):
         "qnmvoc": 0.0,
         "qnh3": 0.0,
         "qnox": 0.0,
+        "ml_w_sigmoid": 3.0,
+        "ml_fracmax": 0.5,
+        "ml_t_half": 0.5,
+        "npp0": 60.0,
+        "npp_t_half": 0.5,
+        "npp_w_sigmoid": 7,
+        "npp_t_threshold": 4,
+        "npp_w_threshold": 7,
+        "solubility_sens": 0.02,
+        "solubility_limit": 0.5,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
