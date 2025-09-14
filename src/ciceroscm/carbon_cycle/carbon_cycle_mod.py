@@ -683,8 +683,6 @@ class CarbonCycleModel:
             co2_conc_series=co2_conc_series,
             dtemp_series=dtemp_series,
         )
-        print("ffer in back_calculate")
-        print(ffer)
         for i, co2_conc in enumerate(co2_conc_series):
             ffer_here = ffer[i * self.pamset["idtm"]]
             em_series[i] = self._guess_emissions_iteration(
