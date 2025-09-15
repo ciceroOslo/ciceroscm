@@ -94,7 +94,9 @@ The concentration and emission parameterset (which is needed for emission runs) 
 The parameterset for the carbon cycle (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
 * beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
 * mixed_carbon (75.0) - Depth of mixed layer in Joos scheme carbon cycle
-* fnpp_temp_coeff - A coefficient which sets up a simple temperature feedback in the biosphere carbon cycle. If sent and non-zero it will be the coefficient in a linear relation ship between the fnpp and temperature change.
+* ml_fracmax (0.5), ml_t_half (0.5) and ml_w_sigmoid (3.0) describe temperature feedback for the ocean mixed layer. This is controlled by a sigmoid decrease in mixed layer depth. ml_fracmax gives the maximum fractional loss of mixed layer depth from temperature allowed, ml_t_half is the temperature of the sigmoid half-way point and ml_w_sigmoid is the width of the sigmoid (in K).
+* npp0 (60), t_half (0.5), w_sigmoid (7), t_threshold (4), w_threshold (7) describes the temperature feedback on the primary production on land. npp0 is the npp at temperature 0, from there the behaviour is controlled by a peak sigmoid inrease and a threshold damping decline, t_half is the temperature of the halfway point of the sigmoid, w_sigmoid is the width of the sigmoid, t_threshold is the point at which the threshold has dampened the effect to half of its maximum and threshold width is the width of the threshold (all in K).
+* solubility_sens (0.02) and solubility_limit (0.5) control temperature feedbacks on the ocean carbon solubility. solubility_sens describes an exponential scaling of solubility with temperature, while solubility_limit limits the amount of gain the scaling can have to (i.e. max scaling of 1 + solubility_limit).
 
 
 ## Parallelisation tools

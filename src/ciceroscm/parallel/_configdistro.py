@@ -31,6 +31,16 @@ prior_flat = {
     "qh2o_ch4": [0.08, 0.1],
     "beta_f": [0.110, 0.465],
     "mixed_carbon": [25, 125],
+    "ml_w_sigmoid": [2.0, 4.0],
+    "ml_fracmax": [-0.5, 1.0],
+    "ml_t_half": [0.3, 0.8],
+    "npp0": [55, 75],
+    "t_half": [0.3, 0.8],
+    "w_sigmoid": [5, 10],
+    "t_threshold": [3, 7],
+    "w_threshold": [5, 10],
+    "solubility_sens": [0.01, 0.03],
+    "solubility_limit": [0.4, 0.8],
 }
 """dict: Containing a default prior for parameters """
 
