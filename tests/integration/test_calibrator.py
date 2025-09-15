@@ -70,11 +70,21 @@ def test_calibrator(test_data_dir):
         "beta_f",
         "lambda",
         "mixed_carbon",
+        'ml_fracmax', 
+        'ml_t_half', 
+        'ml_w_sigmoid', 
+        'npp0',
         "ocean_efficacy",
         "qbc",
         "qdirso2",
         "qindso2",
         "qoc",
+        'solubility_limit', 
+        'solubility_sens', 
+        't_half', 
+        't_threshold', 
+        'w_sigmoid', 
+        'w_threshold'
     ]
     calibrator = Calibrator(calibdata, testconfig, scendata)
     drawn_cfgs = calibrator.get_n_samples(

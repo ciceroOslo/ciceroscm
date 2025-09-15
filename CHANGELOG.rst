@@ -41,6 +41,9 @@ The changes listed in this file are categorised as follows:
 - Newer gaspam files
 - Light check for emissions and gaspam file compatibility
 - Changeable ocean efficacy parameter to the upwelling diffusion model
+- Carbon cycle temperature feedbacks for mixed_layer ocean depth (sigmoid decline), 
+    land primary production (optimum increase and threshold dampening decline) and
+    ocean solubility (exponential scaling to limit)
 
 
 ### Fixed
