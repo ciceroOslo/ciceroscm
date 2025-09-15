@@ -313,9 +313,7 @@ class CarbonCycleModel:
         float
             Solubility scaling factor (max 1 + solubility_limit)
         """
-        scale = np.exp(-self.pamset["solubility_sens"] * dtemp) / np.exp(
-            -self.pamset["solubility_sens"] * 0.0
-        )
+        scale = np.exp(-self.pamset["solubility_sens"] * dtemp)
         scale = np.clip(scale, 0, 1 + self.pamset["solubility_limit"])
         # Limit the gain to 1 + solubility_limit (e.g. 1.5)
         return scale
