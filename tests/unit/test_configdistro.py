@@ -5,7 +5,13 @@ from ciceroscm.parallel._configdistro import _ConfigDistro
 
 def test_config_distro_methods():
     config_full = _ConfigDistro(
-        distro_array=np.array([[0, 1], [0, 1], [0, 1], [4, 6]]),
+        distro_dict={
+            "rlamdo": [0, 1],
+            "akapa": [0, 1],
+            "cpi": [0, 1],
+            "W": [4, 6],
+            "beta_f": [0.110, 0.465],
+        },
         setvalues={
             "qbmb": 0,
             "qo3": 0.5,
@@ -17,37 +23,24 @@ def test_config_distro_methods():
             "qh2o_ch4": 0.091915,
         },
     )
-    print(config_full.prior)
     assert np.array_equal(
         config_full.prior,
         np.array(
             [
-                [0, 1],
-                [0, 1],
-                [0, 1],
                 [4, 6],
-                [0, 7],
-                [2 / 3.71, 5 / 3.71],
-                [25, 125],
-                [0.004, 0.05],
-                [-0.008, -0.001],
+                [0, 1],
                 [0.110, 0.465],
-                [25, 125],
+                [0, 1],
+                [0, 1],
             ]
         ),
     )
     assert config_full.ordering == [
-        "rlamdo",
-        "akapa",
-        "cpi",
         "W",
-        "beto",
-        "lambda",
-        "mixed",
-        "qbc",
-        "qoc",
+        "akapa",
         "beta_f",
-        "mixed_carbon",
+        "cpi",
+        "rlamdo",
     ]
 
     num_latin = 100
@@ -60,21 +53,21 @@ def test_config_distro_methods():
         assert np.ma.allequal(masked, [True] * num_latin)
 
     config_list = config_full.make_config_list(20, indexer_pre="test")
+
     assert len(config_list) == 20
     assert config_list[4]["Index"] == "test4"
-    expected_emiconc = ["qbc", "qoc", "qbmb", "qdirso2", "qindso2", "qo3", "qh2o_ch4"]
+    expected_emiconc = ["qbmb", "qdirso2", "qindso2", "qo3", "qh2o_ch4"]
     expected_udm = [
         "rlamdo",
         "akapa",
         "cpi",
         "W",
-        "beto",
-        "lambda",
-        "mixed",
         "lm",
         "ldtime",
         "threstemp",
     ]
+    print(config_list[7]["pamset_udm"])
     assert all(pam in config_list[7]["pamset_udm"] for pam in expected_udm)
     print(config_list[13]["pamset_emiconc"])
     assert all(pam in config_list[13]["pamset_emiconc"] for pam in expected_emiconc)
+    assert set(["beta_f"]) == set(config_list[4]["pamset_carbon"].keys())
