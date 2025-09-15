@@ -1,6 +1,8 @@
 # ciceroscm
 Python version of the CICERO-SCM simple climate model/emulator
 
+Description paper: https://doi.org/10.5194/gmd-17-6589-2024
+
 ## Running
 To run the model, copy <code>run_full_forcing.py</code> or <code>run_scm.py</code>
 for a forcing, or full emissions run from the <code>scripts</code> directory. The forcing run currently
@@ -98,7 +100,7 @@ The parameterset for the carbon cycle (which is needed for emission runs) takes 
 ## Parallelisation tools
 The module also has a submodule of parallelisation tools. This includes:
 * The cscmparwrapper, which is a parallelisation wrapper, that you can use for parallel runs of both full runs and forcing specific runs, and parallelise over either multiple scenarios, or multiple configurations or a list of both configurations and scenarios. The wrapper will divide the runs by scenarios initially, but if more parallel workers are available, it will also divide the configuration sets. The scenariodata and the configuration sets both are sents at lists of dictionaries of keyword arguments required for runs
-* ConfigDistro, which is a class for creating configuration distributions. Given a prior in the form of a 2D array, where the first dimension is parameters to span the parameter space and the second goes over the two endpoints of the prior for this parameter, an ordering list for the prior, a list of variables not to be changed, but given set values and a preferred distribution method. The class has functionality to create sample values from the prior distribution space, assuming either gaussian distributions where the prior values span the interval between mean - 1 standard deviation and mean plus 1 standard deviation, or a latin hypercube over the prior extent. It can produce lists of configurations that can be used to run in parallel
+* ConfigDistro, which is a class for creating configuration distributions. Given a prior in the form of a dictionary, where the keys are parameters to span the parameter space and the values are arrays with two values corresponding to two endpoints of the prior for this parameter, a list of variables not to be changed, but given set values (which may differ from model defaults), final a dictionary of options which can list the method to use (gaussian or latin for gaussion distributions aor latin hypercube, the latter is default) and whether to fit only forcing parameters. The class has functionality to create sample values from the prior distribution space, assuming either gaussian distributions where the prior values span the interval between mean - 1 standard deviation and mean plus 1 standard deviation, or a latin hypercube over the prior extent. It can produce lists of configurations that can be used to run in parallel
 * DistributionRun, a simple class to wrap running over a distribution from a ConfigDistro, or from reading data from a json file of configurations
 * Calibrator, a class to make calibrated configuration sets based on data. Calibration data in the form of a pandas dataframe is used to define the calibrator, and from this it uses a probabilistic rejection method to pick samples that conform to the calibration data distribution.
 
