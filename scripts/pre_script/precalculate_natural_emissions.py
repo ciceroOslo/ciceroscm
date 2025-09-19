@@ -11,7 +11,7 @@ from ciceroscm import concentrations_emissions_handler, input_handler
 data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "tests", "test-data")
 
 # Change these years if you wish to adjust the estimated time range:
-nyend = 2023
+nyend = 2100
 nystart = 1750
 
 # Choose the lifetime mode assumption for methane 
@@ -23,9 +23,12 @@ pamset = {"nyend": nyend, "nystart": nystart, "lifetime_mode": lf_mode}
 ih_temp = input_handler.InputHandler(pamset)
 
 # If you want to fit from different data input files, then change these paths
-em_data = ih_temp.read_emissions(os.path.join(data_dir, "ssp245_em_RCMIP.txt"))
-conc_data =  input_handler.read_inputfile(os.path.join(data_dir, "ssp245_conc_RCMIP.txt"))
-gaspam_data = input_handler.read_components(os.path.join(data_dir, "gases_vupdate_2022_AR6.txt"))
+#em_data = ih_temp.read_emissions(os.path.join(data_dir, "ssp245_em_RCMIP.txt"))
+#conc_data =  input_handler.read_inputfile(os.path.join(data_dir, "ssp245_conc_RCMIP.txt"))
+#gaspam_data = input_handler.read_components(os.path.join(data_dir, "gases_vupdate_2022_AR6.txt"))
+em_data = ih_temp.read_emissions("../../../cscm-calibration/data/calibration_data_Sep2025/historical_em_gases_vupdate_2024_WMO_added_new.txt")
+conc_data =  input_handler.read_inputfile(os.path.join(data_dir, "../../../cscm-calibration/data/calibration_data_Sep2025/igcc_historical_conc_gases_vupdate_2024_WMO_added_new.txt"))
+gaspam_data = input_handler.read_components(os.path.join(data_dir, "gases_vupdate_2024_WMO_added_new.txt"))
 
 def get_lifetime(tracer, yr, ce_handler):
     """
