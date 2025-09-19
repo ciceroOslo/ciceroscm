@@ -184,7 +184,7 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
                 {"results_as_dict": True, "carbon_cycle_outputs": carbon_cycle_outputs},
                 pamset_udm=pamset["pamset_udm"],
                 pamset_emiconc=pamset["pamset_emiconc"],
-                pamset_carbon=pamset["pamset_carbon"]
+                pamset_carbon=pamset["pamset_carbon"],
             )
             for variable in output_variables:
                 (
