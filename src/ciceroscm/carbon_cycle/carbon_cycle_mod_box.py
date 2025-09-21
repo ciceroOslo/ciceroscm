@@ -5,25 +5,39 @@ Simple CarbonCycleModel with temperature feedback and no pre-computed pulse resp
 import numpy as np
 import pandas as pd
 
+from .._utils import cut_and_check_pamset, #update_pam_if_numeric
 from .common_carbon_cycle_functions import PPM_CO2_TO_PG_C  # OCEAN_AREA, GE_COEFF
 
+
+CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
+    "beta_f": 0.287,
+    "land_temp_sensitivity": 0.1,
+    "soil_respiration_rate": 0.02,
+    "ocean_mixed_layer_depth": 25.0,
+    "ocean_exchange_rate": 0.01,
+    "vegetation_to_soil_fraction": 0.1,
+    "ocean_solubility_base": 0.02,
+    "ocean_solubility_temp_coeff": -0.01,
+}
 
 class CarbonCycleModel:
     """
     CarbonCycleModel with explicit carbon pools and temperature-dependent dynamics.
     """
 
-    def __init__(self, pamset):
+    def __init__(self, pamset_emiconc, pamset_carbon = None):
         """
         Initialize the Carbon Cycle Model.
 
         Parameters
         ----------
-        pamset : dict
-            Parameter set for the model, containing:
+        pamset_emiconc : dict
+            Parameter set from the concentrations emission handler, containing:
             - idtm: Number of subyearly timesteps (e.g., 24 for monthly steps).
             - nystart: Start year of the simulation.
             - nyend: End year of the simulation.
+        pamset_carbon : dict
+            Optional carbon specific parameter set
             - beta_f: CO2 fertilization factor (affects land carbon uptake).
             - land_temp_sensitivity: Sensitivity of NPP to temperature (PgC/K).
             - soil_respiration_rate: Rate of soil carbon decay (yr^-1).
@@ -33,23 +47,22 @@ class CarbonCycleModel:
             - ocean_solubility_base: Base solubility of CO2 in the ocean (PgC/ppm).
             - ocean_solubility_temp_coeff: Temperature sensitivity of ocean CO2 solubility.
         """
-        self.pamset = {
-            "idtm": pamset.get("idtm", 24),
-            "nystart": pamset.get("nystart", 1750),
-            "nyend": pamset.get("nyend", 2100),
-            "beta_f": pamset.get("beta_f", 0.287),
-            "land_temp_sensitivity": pamset.get("land_temp_sensitivity", 0.1),
-            "soil_respiration_rate": pamset.get("soil_respiration_rate", 0.02),
-            "ocean_mixed_layer_depth": pamset.get("ocean_mixed_layer_depth", 25.0),
-            "ocean_exchange_rate": pamset.get("ocean_exchange_rate", 0.01),
-            "vegetation_to_soil_fraction": pamset.get(
-                "vegetation_to_soil_fraction", 0.1
-            ),
-            "ocean_solubility_base": pamset.get("ocean_solubility_base", 0.02),
-            "ocean_solubility_temp_coeff": pamset.get(
-                "ocean_solubility_temp_coeff", -0.01
-            ),
-        }
+        pamset = cut_and_check_pamset(
+            {
+                "idtm": 24,
+                "nystart": 1750,
+                "nyend": 2100,
+            },
+            pamset_emiconc,
+        )
+        if pamset_carbon is None:
+            pamset_carbon = CARBON_CYCLE_MODEL_REQUIRED_PAMSET
+        else: 
+            pamset_carbon = cut_and_check_pamset(
+                CARBON_CYCLE_MODEL_REQUIRED_PAMSET,
+                pamset_carbon,
+            )
+        self.pamset = {**pamset, **pamset_carbon}
         self.pamset["years_tot"] = self.pamset["nyend"] - self.pamset["nystart"] + 1
 
         # Initialize carbon pools

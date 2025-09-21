@@ -242,8 +242,13 @@ class CICEROSCM:
         )
 
     def _run(
-        self, cfg, pamset_udm={}, pamset_emiconc={}, make_plot=False
-    ):  # pylint: disable=dangerous-default-value
+        self,
+        cfg,
+        pamset_udm=None,
+        pamset_emiconc=None,
+        pamset_carbon=None,
+        make_plot=False,
+    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
         """
         Run CICEROSCM
 
@@ -264,6 +269,10 @@ class CICEROSCM:
         pamset_emiconc : dict
                       Parameter set for concentrations
                       emissions handler
+        pamset_carbon : dict
+            Parameter set for carbon cycle module
+        make_plot : bool
+            Whether to output plots automatically
         """
         self.initialise_output_arrays()
         # Setting up UDM
@@ -273,10 +282,7 @@ class CICEROSCM:
         udm = self.thermal(pamset_udm)
         values = None
         if not self.cfg["rf_run"]:
-            pamset_emiconc["emstart"] = self.cfg["emstart"]
-            pamset_emiconc["nystart"] = self.cfg["nystart"]
-            pamset_emiconc["nyend"] = self.cfg["nyend"]
-            self.ce_handler.reset_with_new_pams(pamset_emiconc)
+            self.ce_handler.reset_with_new_pams(pamset_emiconc, pamset_carbon)
         for yr in range(self.cfg["nystart"], self.cfg["nyend"] + 1):
             if not self.cfg["rf_run"]:
                 if values is not None:
@@ -304,17 +310,14 @@ class CICEROSCM:
         if ("results_as_dict" in cfg) and cfg["results_as_dict"]:
             if not self.cfg["rf_run"]:
                 self.results.update(
-                    self.ce_handler.get_emissions_to_forcing_output(
-                        cfg, dtemp_series=self.results["dT_glob"], write_to_files=False
+                    self.ce_handler.add_results_to_dict(
+                        cfg, dtemp_series=self.results["dT_glob"]
                     )
                 )
         else:
             if not self.cfg["rf_run"]:
-                self.ce_handler.get_emissions_to_forcing_output(
-                    cfg,
-                    dtemp_series=self.results["dT_glob"],
-                    write_to_files=True,
-                    make_plot=make_plot,
+                self.ce_handler.write_output_to_files(
+                    cfg, dtemp_series=self.results["dT_glob"], make_plot=make_plot
                 )
 
             self.write_data_to_file(cfg)

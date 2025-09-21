@@ -1,6 +1,8 @@
 # ciceroscm
 Python version of the CICERO-SCM simple climate model/emulator
 
+Description paper: https://doi.org/10.5194/gmd-17-6589-2024
+
 ## Running
 To run the model, copy <code>run_full_forcing.py</code> or <code>run_scm.py</code>
 for a forcing, or full emissions run from the <code>scripts</code> directory. The forcing run currently
@@ -65,6 +67,7 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 * threstemp (7.0) - Scales vertical velocity as a function of mixed layer temperature, unitless. Set to 0 if you don't want to include this parameter.
 * lambda (0.61) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing <img src="https://render.githubusercontent.com/render/math?math=\large \left( 3.71 \frac{\mathrm{W}}{\mathrm{m}^2} \right)">
 * mixed (107.) - Mixed layer depth, m, valid range 25-125
+* ocean_efficacy (1.0) - Ocean efficacy parameter, unitless, valid range 0-2
 * foan (0.61) - Fraction of Northern hemisphere covered by ocean
 * foas (0.81) - Fraction of Southern hemisphere covered by ocean
 * ebbeta (0.0) - Atmospheric interhemispheric heat exchange (not currently used)
@@ -75,25 +78,31 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 #### pamset_emiconc
 The concentration and emission parameterset (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
 
-* qbmb (0.0) - Biomass burning aerosol RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qbmb (0.0) - Biomass burning aerosol RF per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt BC}">
 * qo3 (0.5) - Tropospheric ozone RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qdirso2 (-0.36) - Direct RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qindso2 (-0.97) - Indirect RF sulphate in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qbc (0.16) - BC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
-* qoc (-0.08) - OC (fossil fuel + biofuel) RF in ref_yr, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2}">
+* qdirso2 (-0.00308) - Direct sulphate RF per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt SO2}"> (note unit in gaspam-file is the mass unit used)
+* qindso2 (-0.017) - Indirect sulphate RF in ref_yr  per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt SO2}"> (note unit in gaspam-file is the mass unit used)
+* qbc (0.0279) - BC (fossil fuel + biofuel) RF  per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt BC}">
+* qoc (-0.00433) - OC (fossil fuel + biofuel) RF in  per emissions mass change, <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2 Mt OC}">
 * qh2o_ch4 (0.091915) - Stratospheric water vapour ERF ratio to methane ERF
-* beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
-* mixed_carbon (75.0) - Depth of mixed layer in Joos scheme carbon cycle
-* fnpp_temp_coeff - A coefficient which sets up a simple temperature feedback in the biosphere carbon cycle. If sent and non-zero it will be the coefficient in a linear relation ship between the fnpp and temperature change.
 * ref_yr (2010) - Reference year for the above forcing values. To construct radiative forcing time series, these forcing values are scaled using emssions. The forcing in the reference year is equal to the forcing value set by the above parameters
 * idtm (24) - Number of subyearly timesteps for calculation of CO2 concentrations from emissions.
 * lifetime_mode - Lifetime mode for methane, valid options are TAR (for following the third IPCC assessment report), CONSTANT (for a constant value of 12 years) or a wigley exponent behaviour. TAR is the default, but wigley is a hidden default if you send a value for this option which is not TAR nor CONSTANT
 * just_one - this is an optional parameter which allows you to run with the forcing of a single component to the upwelling diffusion model. It should be set equal to the component you are interested in seeing the effects of.
 
+#### pamset_carbon
+The parameterset for the carbon cycle (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
+* beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
+* mixed_carbon (75.0) - Depth of mixed layer in Joos scheme carbon cycle
+* ml_fracmax (0.5), ml_t_half (0.5) and ml_w_sigmoid (3.0) describe temperature feedback for the ocean mixed layer. This is controlled by a sigmoid decrease in mixed layer depth. ml_fracmax gives the maximum fractional loss of mixed layer depth from temperature allowed, ml_t_half is the temperature of the sigmoid half-way point and ml_w_sigmoid is the width of the sigmoid (in K).
+* npp0 (60), t_half (0.5), w_sigmoid (7), t_threshold (4), w_threshold (7) describes the temperature feedback on the primary production on land. npp0 is the npp at temperature 0, from there the behaviour is controlled by a peak sigmoid inrease and a threshold damping decline, t_half is the temperature of the halfway point of the sigmoid, w_sigmoid is the width of the sigmoid, t_threshold is the point at which the threshold has dampened the effect to half of its maximum and threshold width is the width of the threshold (all in K).
+* solubility_sens (0.02) and solubility_limit (0.5) control temperature feedbacks on the ocean carbon solubility. solubility_sens describes an exponential scaling of solubility with temperature, while solubility_limit limits the amount of gain the scaling can have to (i.e. max scaling of 1 + solubility_limit).
+
+
 ## Parallelisation tools
 The module also has a submodule of parallelisation tools. This includes:
 * The cscmparwrapper, which is a parallelisation wrapper, that you can use for parallel runs of both full runs and forcing specific runs, and parallelise over either multiple scenarios, or multiple configurations or a list of both configurations and scenarios. The wrapper will divide the runs by scenarios initially, but if more parallel workers are available, it will also divide the configuration sets. The scenariodata and the configuration sets both are sents at lists of dictionaries of keyword arguments required for runs
-* ConfigDistro, which is a class for creating configuration distributions. Given a prior in the form of a 2D array, where the first dimension is parameters to span the parameter space and the second goes over the two endpoints of the prior for this parameter, an ordering list for the prior, a list of variables not to be changed, but given set values and a preferred distribution method. The class has functionality to create sample values from the prior distribution space, assuming either gaussian distributions where the prior values span the interval between mean - 1 standard deviation and mean plus 1 standard deviation, or a latin hypercube over the prior extent. It can produce lists of configurations that can be used to run in parallel
+* ConfigDistro, which is a class for creating configuration distributions. Given a prior in the form of a dictionary, where the keys are parameters to span the parameter space and the values are arrays with two values corresponding to two endpoints of the prior for this parameter, a list of variables not to be changed, but given set values (which may differ from model defaults), final a dictionary of options which can list the method to use (gaussian or latin for gaussion distributions aor latin hypercube, the latter is default) and whether to fit only forcing parameters. The class has functionality to create sample values from the prior distribution space, assuming either gaussian distributions where the prior values span the interval between mean - 1 standard deviation and mean plus 1 standard deviation, or a latin hypercube over the prior extent. It can produce lists of configurations that can be used to run in parallel
 * DistributionRun, a simple class to wrap running over a distribution from a ConfigDistro, or from reading data from a json file of configurations
 * Calibrator, a class to make calibrated configuration sets based on data. Calibration data in the form of a pandas dataframe is used to define the calibrator, and from this it uses a probabilistic rejection method to pick samples that conform to the calibration data distribution.
 

@@ -11,7 +11,7 @@ from ciceroscm import concentrations_emissions_handler, input_handler
 data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "tests", "test-data")
 
 # Change these years if you wish to adjust the estimated time range:
-nyend = 2500
+nyend = 2100
 nystart = 1750
 
 # Choose the lifetime mode assumption for methane
@@ -23,14 +23,12 @@ pamset = {"nyend": nyend, "nystart": nystart, "lifetime_mode": lf_mode}
 ih_temp = input_handler.InputHandler(pamset)
 
 # If you want to fit from different data input files, then change these paths
-em_data = ih_temp.read_emissions(os.path.join(data_dir, "ssp245_em_RCMIP.txt"))
-conc_data = input_handler.read_inputfile(
-    os.path.join(data_dir, "ssp245_conc_RCMIP.txt")
-)
-gaspam_data = input_handler.read_components(
-    os.path.join(data_dir, "gases_vupdate_2022_AR6.txt")
-)
-
+#em_data = ih_temp.read_emissions(os.path.join(data_dir, "ssp245_em_RCMIP.txt"))
+#conc_data =  input_handler.read_inputfile(os.path.join(data_dir, "ssp245_conc_RCMIP.txt"))
+#gaspam_data = input_handler.read_components(os.path.join(data_dir, "gases_vupdate_2022_AR6.txt"))
+em_data = ih_temp.read_emissions("../../../cscm-calibration/data/calibration_data_Sep2025/historical_em_gases_vupdate_2024_WMO_added_new.txt")
+conc_data =  input_handler.read_inputfile(os.path.join(data_dir, "../../../cscm-calibration/data/calibration_data_Sep2025/igcc_historical_conc_gases_vupdate_2024_WMO_added_new.txt"))
+gaspam_data = input_handler.read_components(os.path.join(data_dir, "gases_vupdate_2024_WMO_added_new.txt"))
 
 def get_lifetime(tracer, yr, ce_handler):
     """
@@ -39,7 +37,10 @@ def get_lifetime(tracer, yr, ce_handler):
     q = 1 / ce_handler.df_gas["TAU1"][tracer]
     if tracer != "CH4":
         return q
-    q = ce_handler.methane_lifetime(q, ce_handler.conc_in[tracer][yr - 1], yr)
+    if (yr-1) < ce_handler.conc_in.index[0]:
+        q = ce_handler.methane_lifetime(q, ce_handler.conc_in[tracer][yr], yr)
+    else:
+        q = ce_handler.methane_lifetime(q, ce_handler.conc_in[tracer][yr-1], yr)
     return q
 
 
@@ -151,20 +152,8 @@ for j, tracer in enumerate(tracers):
     # np.savetxt(f"natemis_{tracer}_old_method_from_rcmip.txt", em_nat_out_old,fmt='%1.4f')
 
     # Option for new (recommended) version calculation (comment out next three lines for old version):
-    em_nat_hist_ode = ode_get_nat_em_timeseries(
-        tau, beta, em_series, conc_series, ce_handler, sp=tracer
-    )
-    em_nat_out_ode = np.concatenate(
-        (
-            em_nat_hist_ode,
-            np.full(
-                (len(year_out) - len(em_nat_hist_ode)),
-                np.mean(em_nat_hist_ode[-11:]),
-                np.double,
-            ),
-        ),
-        axis=0,
-    )
-    np.savetxt(
-        f"natemis_{tracer}_ode_method_from_rcmip.txt", em_nat_out_ode, fmt="%1.4f"
-    )
+    em_nat_hist_ode = ode_get_nat_em_timeseries(tau, beta, em_series, conc_series, ce_handler, sp=tracer)
+    em_nat_out_ode = np.concatenate((em_nat_hist_ode,  np.full((len(year_out)-len(em_nat_hist_ode)), np.mean(em_nat_hist_ode[-11:]),np.double)), axis=0)
+    np.savetxt(f"natemis_{tracer}_ode_method_from_Sep2025_updates.txt", em_nat_out_ode,fmt='%1.4f')
+
+

@@ -22,6 +22,13 @@ The changes listed in this file are categorised as follows:
 - Moved carbon cycle functionality out of concentrations_emissions_handler.py to separate module carbon_cycle_mod.py
 - Changed methodology for parametrised decay functions for biotic decay (rb_function) and mixed layer pulse response rs_function, imposing a few more consistency criteria on them and makeing them changable by a dictionary for each with keys "coeffs" and "timescales" with values that should be lists or np.arrays of coefficient and timescale values 
 - Upgrade infrasturucture for development
+- Output data / output files no longer include empty columns for species that don't make sense (landuse albedo emissions, concentrations for aerosols like BC etc)
+- Aerosol forcing is no longer scaled to a reference year, but is per change in annual emissions, this also changes aerosol forcing parameter values and units
+- Added NMVOC, NH3 and NOx as forcing aerosols
+- Changed default gaspam unit for SO2 to Tg_SO2 rather than Tg_S
+- Carbon cycle parameters now passed in a separate dictionary
+- Simplifying _config_distro
+
 
 ### Added
 - Functionality to feedback current temperature change to the carbon cycle and have simple temperature feedback 
@@ -31,6 +38,12 @@ The changes listed in this file are categorised as follows:
 - Functionality to output new carbon cycle information
 - Functionality to output new carbon cycle information in parallel runs
 - Changeable parameter for the depth of the mixed_layer ocean seen by the carbon cycle
+- Newer gaspam files
+- Light check for emissions and gaspam file compatibility
+- Changeable ocean efficacy parameter to the upwelling diffusion model
+- Carbon cycle temperature feedbacks for mixed_layer ocean depth (sigmoid decline), 
+    land primary production (optimum increase and threshold dampening decline) and
+    ocean solubility (exponential scaling to limit)
 
 
 ### Fixed
