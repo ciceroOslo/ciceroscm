@@ -58,13 +58,6 @@ def test_cscmparwrapper(test_data_dir):
                 "qoc": -0.084,
                 "qh2o_ch4": 0.171,
             },
-            "pamset_carbon": {
-                "npp0": 60,
-                "solubility_sens": 0,
-                "ml_t_half": 10,
-                "t_half": 10,
-                "t_threshold": 10,
-            },
             "Index": "13555_old_NR_rounded",
         }
     ]
@@ -121,24 +114,6 @@ def test_ciceroscm_run_parallel_many_scenarios(test_data_dir):
     )
     cfgs = [
         {
-            "pamset_udm": {
-                "rlamdo": 15.1,
-                "akapa": 0.657,
-                "cpi": 0.208,
-                "W": 2.2,
-                "beto": 6.9,
-                "lambda": 0.606,
-                "mixed": 107.0,
-            },
-            "pamset_emiconc": {
-                "qbmb": 0.0,
-                "qo3": 0.5,
-                "qdirso2": -0.3701,
-                "qindso2": -0.4163,
-                "qbc": 0.163,
-                "qoc": -0.084,
-                "qh2o_ch4": 0.171,
-            },
             "pamset_carbon": {
                 "npp0": 60,
                 "solubility_sens": 0,
