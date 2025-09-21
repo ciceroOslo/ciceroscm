@@ -182,9 +182,9 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
         for pamset in cfgs:
             self.cscm._run(  # pylint: disable=protected-access
                 {"results_as_dict": True, "carbon_cycle_outputs": carbon_cycle_outputs},
-                pamset_udm=pamset["pamset_udm"],
-                pamset_emiconc=pamset["pamset_emiconc"],
-                pamset_carbon=pamset["pamset_carbon"],
+                pamset_udm=pamset.get("pamset_udm", None),
+                pamset_emiconc=pamset.get("pamset_emiconc", None),
+                pamset_carbon=pamset.get("pamset_carbon", None),
             )
             for variable in output_variables:
                 (
