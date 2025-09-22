@@ -10,7 +10,7 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
     Two layer Model with 2 thermal timescales.
     """
 
-    def __init__(self, params):
+    def __init__(self, params = None):
         """
         Initialize with parameters for multiple thermal timescales.
 
@@ -23,6 +23,8 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
             - c_slow: Heat capacity of the slow-response layer (J/m^2/K)
             - k: Coupling coefficient between fast and slow layers (W/m^2/K)
         """
+        if params is None:
+            params = {}
         self.lambda_ = params.get("lambda", 3.74 / 3)
         self.c_fast = params.get("mixed", 50) * 1000 * 4181 / (365 * 24 * 3600)
         self.c_slow = (

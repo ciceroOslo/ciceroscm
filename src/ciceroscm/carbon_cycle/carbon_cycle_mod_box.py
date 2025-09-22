@@ -5,9 +5,8 @@ Simple CarbonCycleModel with temperature feedback and no pre-computed pulse resp
 import numpy as np
 import pandas as pd
 
-from .._utils import cut_and_check_pamset, #update_pam_if_numeric
+from .._utils import cut_and_check_pamset  # , update_pam_if_numeric
 from .common_carbon_cycle_functions import PPM_CO2_TO_PG_C  # OCEAN_AREA, GE_COEFF
-
 
 CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
     "beta_f": 0.287,

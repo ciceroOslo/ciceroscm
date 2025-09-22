@@ -793,7 +793,6 @@ class CarbonCycleModel:
     def get_carbon_cycle_output(
         self, years, conc_run=False, conc_series=None, dtemp_series=None
     ):  # pylint: disable=unused-argument
-
         """
         Make and return a dataframe with carbon cycle data
 

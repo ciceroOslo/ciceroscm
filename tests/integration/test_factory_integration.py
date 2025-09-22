@@ -90,7 +90,7 @@ def test_ciceroscm_with_default_thermal_model(test_data_dir):
             "thermal_model": "default",  # Specify the default model
         },  # lambda it, idtm: 0.5 + 0.5 * np.exp(-it / idtm / 100.0),
     )
-    assert isinstance(cscm.thermal({}), UpwellingDiffusionModel)
+    assert isinstance(cscm.thermal(), UpwellingDiffusionModel)
 
 
 def test_ciceroscm_with_twolayer_thermal_model(test_data_dir):
@@ -108,6 +108,6 @@ def test_ciceroscm_with_twolayer_thermal_model(test_data_dir):
             "thermal_model": "twolayer",  # Specify the box model
         },
     )
-    assert isinstance(cscm.thermal({}), TwoLayerOceanModel)
+    assert isinstance(cscm.thermal(), TwoLayerOceanModel)
     cscm._run({"results_as_dict": True})
     assert len(cscm.results["RIB_glob"]) == 351

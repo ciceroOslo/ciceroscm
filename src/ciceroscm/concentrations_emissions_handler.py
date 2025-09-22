@@ -846,13 +846,11 @@ class ConcentrationsEmissionsHandler:
         cfg : dict
            Configurations to define where to put output
            files and what prefix to have for file name
-        results_dict : dict
-            Dictionary of results to write to files
-        make_plot : bool
-           Whether the output should be plottet or not
         dtemp_series : np.ndarray
             Yearly temperature to pass to carbon cycle, to get
             temperature feedback adjusted outputs
+        make_plot : bool
+           Whether the output should be plottet or not
         """
         if "output_folder" in cfg:
             # Make os independent?
@@ -1000,7 +998,7 @@ class ConcentrationsEmissionsHandler:
                 + self.emis["CO2_AFOLU"][self.years].values
             )
             df_carbon = self.carbon_cycle.get_carbon_cycle_output(
-                self.years, dtemp_series=dtemp_series
+                self.years, dtemp_series=dtemp_series, conc_series=conc_series
             )
             if df_carbon is None:
                 df_carbon = pd.DataFrame(

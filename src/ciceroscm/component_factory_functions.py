@@ -15,7 +15,10 @@ def create_carbon_cycle_model(model_type, pamset, pamset_carbon=None):
     model_type : str
         The type of carbon cycle model to create ("default" or "box").
     pamset : dict
-        Parameter set for the model.
+        Parameter set for the model, shared with concentrations emissions
+        handler
+    pamset_carbon : dict
+        Carbon cycle model parameters 
 
     Returns
     -------
