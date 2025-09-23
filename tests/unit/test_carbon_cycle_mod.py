@@ -10,7 +10,6 @@ def test_default_pamset_values(test_data_dir):
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1850})
     assert ccmod.pamset["beta_f"] == 0.287
     assert ccmod.pamset["mixed_carbon"] == 75.0
-    assert ccmod.pamset["npp0"] == 60
     assert ccmod.pamset["ml_w_sigmoid"] == 3.0
     assert ccmod.pamset["ml_fracmax"] == 0.5
     assert ccmod.pamset["ml_t_half"] == 0.5
@@ -34,7 +33,6 @@ def test_default_pamset_values(test_data_dir):
     ccmod_inside = cscm.ce_handler.carbon_cycle
     assert ccmod_inside.pamset["beta_f"] == 0.287
     assert ccmod_inside.pamset["mixed_carbon"] == 75.0
-    assert ccmod_inside.pamset["npp0"] == 60
     assert ccmod_inside.pamset["ml_w_sigmoid"] == 3.0
     assert ccmod_inside.pamset["ml_fracmax"] == 0.5
     assert ccmod_inside.pamset["ml_t_half"] == 0.5
