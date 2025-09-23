@@ -126,7 +126,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             Density in ocean layers
     """
 
-    def __init__(self, params = None):
+    def __init__(self, params=None):
         """
         Intialise
 

@@ -5,8 +5,11 @@ Simple CarbonCycleModel with temperature feedback and no pre-computed pulse resp
 import numpy as np
 import pandas as pd
 
-from .._utils import cut_and_check_pamset  # , update_pam_if_numeric
-from .common_carbon_cycle_functions import PPM_CO2_TO_PG_C  # OCEAN_AREA, GE_COEFF
+from .._utils import update_pam_if_numeric
+from .common_carbon_cycle_functions import (  # OCEAN_AREA, GE_COEFF
+    PPM_CO2_TO_PG_C,
+    carbon_cycle_init_pamsets,
+)
 
 CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
     "beta_f": 0.287,
@@ -19,12 +22,13 @@ CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
     "ocean_solubility_temp_coeff": -0.01,
 }
 
+
 class CarbonCycleModel:
     """
     CarbonCycleModel with explicit carbon pools and temperature-dependent dynamics.
     """
 
-    def __init__(self, pamset_emiconc, pamset_carbon = None):
+    def __init__(self, pamset_emiconc, pamset_carbon=None):
         """
         Initialize the Carbon Cycle Model.
 
@@ -46,21 +50,9 @@ class CarbonCycleModel:
             - ocean_solubility_base: Base solubility of CO2 in the ocean (PgC/ppm).
             - ocean_solubility_temp_coeff: Temperature sensitivity of ocean CO2 solubility.
         """
-        pamset = cut_and_check_pamset(
-            {
-                "idtm": 24,
-                "nystart": 1750,
-                "nyend": 2100,
-            },
-            pamset_emiconc,
+        pamset, pamset_carbon = carbon_cycle_init_pamsets(
+            pamset_emiconc, pamset_carbon, CARBON_CYCLE_MODEL_REQUIRED_PAMSET
         )
-        if pamset_carbon is None:
-            pamset_carbon = CARBON_CYCLE_MODEL_REQUIRED_PAMSET
-        else: 
-            pamset_carbon = cut_and_check_pamset(
-                CARBON_CYCLE_MODEL_REQUIRED_PAMSET,
-                pamset_carbon,
-            )
         self.pamset = {**pamset, **pamset_carbon}
         self.pamset["years_tot"] = self.pamset["nyend"] - self.pamset["nystart"] + 1
 
@@ -190,10 +182,31 @@ class CarbonCycleModel:
         # TODO: Do we need some error handling here?
         return solubility * (co2_conc_series - 278.0)
 
-    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0, fnpp_temp_coeff=0):
+    def reset_co2_hold(self, pamset_carbon=None):
         """
-        Stub
+        Reset values of co2 pools
+
+        This method is mainly called to do a new run with the same cscm instance,
+        in which case you need to reset pool values, and be able to update
+        parameter values for the carbon cycle free parameters
+
+        Parameters
+        ----------
+        pamset_carbon : dict
+            Optional dictionary of new values for a subset of the free
+            carbon cycle parameters
         """
+        self.atmospheric_co2 = 278.0  # Pre-industrial CO2 concentration (ppm)
+        self.vegetation_carbon = 600.0  # Vegetation carbon pool (PgC)
+        self.soil_carbon = 3000.0  # Soil carbon pool (PgC)
+        self.ocean_mixed_layer_carbon = 0.0  # Ocean mixed layer carbon anomaly (PgC)
+        self.ocean_deep_carbon = 0.0  # Deep ocean carbon anomaly (PgC)
+        if pamset_carbon is not None:
+            self.pamset = update_pam_if_numeric(
+                self.pamset,
+                pamset_new=pamset_carbon,
+                can_change=CARBON_CYCLE_MODEL_REQUIRED_PAMSET.keys(),
+            )
 
     # TODO: Improve
     def get_carbon_cycle_output(

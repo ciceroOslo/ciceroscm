@@ -18,7 +18,7 @@ def create_carbon_cycle_model(model_type, pamset, pamset_carbon=None):
         Parameter set for the model, shared with concentrations emissions
         handler
     pamset_carbon : dict
-        Carbon cycle model parameters 
+        Carbon cycle model parameters
 
     Returns
     -------

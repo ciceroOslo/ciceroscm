@@ -10,7 +10,7 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
     Two layer Model with 2 thermal timescales.
     """
 
-    def __init__(self, params = None):
+    def __init__(self, params=None):
         """
         Initialize with parameters for multiple thermal timescales.
 

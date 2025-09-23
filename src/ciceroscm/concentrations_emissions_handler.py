@@ -219,7 +219,9 @@ class ConcentrationsEmissionsHandler:
 
         # Setting up carbon cycle model
         model_type = self.pamset["carbon_cycle_model"]  # Default to "default"
-        self.carbon_cycle = create_carbon_cycle_model(model_type, self.pamset, pamset_carbon)
+        self.carbon_cycle = create_carbon_cycle_model(
+            model_type, self.pamset, pamset_carbon
+        )
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, pamset_carbon, preexisting=False)
 
