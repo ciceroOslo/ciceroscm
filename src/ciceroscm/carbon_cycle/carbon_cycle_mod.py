@@ -7,7 +7,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from .._utils import cut_and_check_pamset, update_pam_if_numeric
+from .._utils import update_pam_if_numeric
 from ..pub_utils import _check_array_consistency
 from .common_carbon_cycle_functions import (
     GE_COEFF,
@@ -16,6 +16,7 @@ from .common_carbon_cycle_functions import (
     PPMKG_TO_UMOL_PER_VOL,
     PREINDUSTRIAL_CO2_CONC,
     calculate_airborne_fraction,
+    carbon_cycle_init_pamsets,
 )
 from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
 
@@ -66,39 +67,12 @@ def threshold_gen(eval_point, threshold_half, threshold_width):
     return threshold
 
 
-def take_out_missing(pamset):
-    """
-    Take out values that are missing from pamset
-
-    Needed to take care of rs_function and rb_function
-
-    Parameters
-    ----------
-    pamset : dict
-        parameter set dictionary which might contain the value "missing"
-        for the rs_function and rb_function because of the way we deal
-        with expected values in the parameter set. In this case
-        we need to take them out of the parameterset so they can be run
-        with defaults
-
-    Returns
-    -------
-    dict
-        Updated version of the parameterset with "missing" values deleted
-    """
-    for key, value in pamset.items():
-        if value == "missing":
-            del pamset[key]
-    return pamset
-
-
 CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
     "beta_f": 0.287,
     "mixed_carbon": 75.0,
     "ml_w_sigmoid": 3.0,
     "ml_fracmax": 0.5,
     "ml_t_half": 0.5,
-    "npp0": 60,
     "t_half": 0.5,
     "w_sigmoid": 7,
     "t_threshold": 4,
@@ -119,25 +93,33 @@ class CarbonCycleModel:
 
         Parameters
         ----------
-            pamset : dict
+        pamset_emiconc : dict
+            Parameter set from the concentrations emission handler, containing:
+            - idtm: Number of subyearly timesteps (e.g., 24 for monthly steps).
+            - nystart: Start year of the simulation.
+            - nyend: End year of the simulation.
+        pamset_carbon : dict
+            Optional carbon specific parameter set allowed options
+            - beta_f: CO2 fertilization factor (affects land carbon uptake).
+            - mixed_carbon: depth of ocean mixed layer as seen by the carbon cycle (m)
+            - ml_w_sigmoid: Mixed layer dampening sigmoid width (K).
+            - ml_fracmax: Mixed layer max fractional dampening (0-1 unitless)
+            - ml_t_half: Temperature change of mixed layer dampening sigmoid center (K)
+            - t_half: Centerpoint of land uptake sigmoid (K),
+            - w_sigmoid: Width of land uptake sigmoid (K),
+            - t_threshold: Threshold temperature for land uptake decay (K),
+            - w_threshold: Width of land uptake decay (K),
+            - solubility_sen: Sensitivity of solubility of CO2 in the ocean to temperature.
+            - solubility_limit: Limit to temperature solubility gain with temperature.
+            - rs_function: User defined mixed layer to deep ocean impulse response function
+            - rb_function: User defined land carbon impulse response decay function
         """
-        pamset = cut_and_check_pamset(
-            {
-                "idtm": 24,
-                "nystart": 1750,
-                "nyend": 2100,
-            },
+        pamset, pamset_carbon = carbon_cycle_init_pamsets(
             pamset_emiconc,
+            pamset_carbon,
+            CARBON_CYCLE_MODEL_REQUIRED_PAMSET,
+            used={"rs_function": "missing", "rb_function": "missing"},
         )
-        if pamset_carbon is None:
-            pamset_carbon = CARBON_CYCLE_MODEL_REQUIRED_PAMSET
-        else:
-            pamset_carbon = cut_and_check_pamset(
-                CARBON_CYCLE_MODEL_REQUIRED_PAMSET,
-                pamset_carbon,
-                used={"rs_function": "missing", "rb_function": "missing"},
-            )
-        pamset_carbon = take_out_missing(pamset_carbon.copy())
         self.pamset = {**pamset, **pamset_carbon}
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
         self.reset_co2_hold(pamset_carbon)
@@ -149,7 +131,13 @@ class CarbonCycleModel:
 
         This method is mainly called to do a new run with the same cscm instance,
         in which case you need to reset hold values, and be able to update
-        parameter values for the carbon cycle free parameter beta_f
+        parameter values for the carbon cycle free parameters
+
+        Parameters
+        ----------
+        pamset_carbon : dict
+            Optional dictionary of new values for a subset of the free
+            carbon cycle parameters
         """
         self.co2_hold = {
             "yCO2": 0.0,
@@ -289,8 +277,8 @@ class CarbonCycleModel:
             threshold_half=self.pamset["t_threshold"],
             threshold_width=self.pamset["w_threshold"],
         )
-        # Threshold function
-        baseline = self.pamset["npp0"] / (sigmoid(0) * threshold(0))
+        # Threshold function, 60. is initial npp-value
+        baseline = 60.0 / (sigmoid(0) * threshold(0))
 
         return baseline * sigmoid(dtemp) * threshold(dtemp)
 
