@@ -52,7 +52,7 @@ def test_config_distro_methods():
         masked = np.ma.masked_inside(latin_samples[:, i], interval[0], interval[1])
         assert np.ma.allequal(masked, [True] * num_latin)
 
-    config_list = config_full.make_config_list(20, indexer_pre="test")
+    config_list = config_full.make_config_lists(20, indexer_pre="test")
 
     assert len(config_list) == 20
     assert config_list[4]["Index"] == "test4"

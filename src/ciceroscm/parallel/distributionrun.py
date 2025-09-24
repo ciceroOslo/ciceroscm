@@ -17,8 +17,13 @@ class DistributionRun:
     """
 
     def __init__(
-        self, distro_config, json_file_name="no_file", indexer_pre="", numvalues=100
-    ):
+        self,
+        distro_config,
+        json_file_name="no_file",
+        indexer_pre="",
+        numvalues=100,
+        max_chunk_size=None,
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         """
         Intialise DistributionRun
 
@@ -42,8 +47,8 @@ class DistributionRun:
             with open(json_file_name, "r", encoding="utf-8") as rfile:
                 self.cfgs = json.load(rfile)
         else:
-            self.cfgs = distro_config.make_config_list(
-                numvalues, indexer_pre=indexer_pre
+            self.cfgs = distro_config.make_config_lists(
+                numvalues, indexer_pre=indexer_pre, max_chunk_size=max_chunk_size
             )
 
     def run_over_distribution(self, scendata, output_vars, max_workers=4):
