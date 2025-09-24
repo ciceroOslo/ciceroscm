@@ -52,10 +52,15 @@ def test_config_distro_methods():
         masked = np.ma.masked_inside(latin_samples[:, i], interval[0], interval[1])
         assert np.ma.allequal(masked, [True] * num_latin)
 
-    config_list = config_full.make_config_lists(20, indexer_pre="test")
+    config_list = config_full.make_config_lists(
+        20, indexer_pre="test", max_chunk_size=7
+    )
 
-    assert len(config_list) == 20
-    assert config_list[4]["Index"] == "test4"
+    assert len(config_list) == 3
+    assert len(config_list[0]) == 7
+    assert len(config_list[1]) == 7
+    assert len(config_list[2]) == 6
+    assert config_list[0][4]["Index"] == "test4"
     expected_emiconc = ["qbmb", "qdirso2", "qindso2", "qo3", "qh2o_ch4"]
     expected_udm = [
         "rlamdo",
@@ -66,8 +71,8 @@ def test_config_distro_methods():
         "ldtime",
         "threstemp",
     ]
-    print(config_list[7]["pamset_udm"])
-    assert all(pam in config_list[7]["pamset_udm"] for pam in expected_udm)
-    print(config_list[13]["pamset_emiconc"])
-    assert all(pam in config_list[13]["pamset_emiconc"] for pam in expected_emiconc)
-    assert set(["beta_f"]) == set(config_list[4]["pamset_carbon"].keys())
+    # print(config_list[1][0]["pamset_udm"])
+    assert all(pam in config_list[1][0]["pamset_udm"] for pam in expected_udm)
+    # print(config_list[1][6]["pamset_emiconc"])
+    assert all(pam in config_list[1][6]["pamset_emiconc"] for pam in expected_emiconc)
+    assert set(["beta_f"]) == set(config_list[2][4]["pamset_carbon"].keys())
