@@ -14,9 +14,19 @@ The changes listed in this file are categorised as follows:
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
 
-## [Unreleased]
+[Unreleased]
 
 ### Changed
+
+### Added
+
+### Fixed
+
+[Version 1.5.0]
+---------------------------
+
+### Changed
+
 - Change so that non-changing gases are precalculated before a run in concentrations_emissions_handler.py to speed up and avoid looping over every component and looking up in pandas every timestep
 - Removed use of scmdata, and changed parallel output to be pandas to offload extra dependencies
 - Moved carbon cycle functionality out of concentrations_emissions_handler.py to separate module carbon_cycle_mod.py
@@ -31,6 +41,7 @@ The changes listed in this file are categorised as follows:
 
 
 ### Added
+
 - Functionality to feedback current temperature change to the carbon cycle and have simple temperature feedback 
 - Functionality to back calculate CO2 emissions from concentrations
 - Functionality to calculate carbon fluxes to ocean and land
@@ -42,8 +53,8 @@ The changes listed in this file are categorised as follows:
 - Light check for emissions and gaspam file compatibility
 - Changeable ocean efficacy parameter to the upwelling diffusion model
 - Carbon cycle temperature feedbacks for mixed_layer ocean depth (sigmoid decline), 
-    land primary production (optimum increase and threshold dampening decline) and
-    ocean solubility (exponential scaling to limit)
+- Land primary production (optimum increase and threshold dampening decline) and
+- Ocean solubility (exponential scaling to limit)
 
 
 ### Fixed
@@ -56,10 +67,10 @@ The changes listed in this file are categorised as follows:
 - Temporarily mute docs generation with sphinx on github as it is not working, plan to work in different method
 - Temporarily mute distribution generation, plan to work this back in with more updated package manager
 
-## [Versions 1.1.1 and v1.1.0]
-  
-### Added
+[Versions 1.1.1 and v1.1.0]
+---------------------------
 
+### Added
 
 - Support for flat natural emissions for NO2 and CH4 from gaspamfile as defaults
 - Update script to make natural emissions for NO2 and CH4 using ODE solution
