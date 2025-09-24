@@ -60,7 +60,7 @@ def test_config_distro_methods():
     assert len(config_list[0]) == 7
     assert len(config_list[1]) == 7
     assert len(config_list[2]) == 6
-    assert config_list[0][4]["Index"] == "test4"
+    assert config_list[0][4]["Index"] == "test_0_4"
     expected_emiconc = ["qbmb", "qdirso2", "qindso2", "qo3", "qh2o_ch4"]
     expected_udm = [
         "rlamdo",

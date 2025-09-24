@@ -6,6 +6,8 @@ import json
 import logging
 import os
 
+import pandas as pd
+
 from .cscmparwrapper import run_ciceroscm_parallel
 
 LOGGER = logging.getLogger(__name__)
@@ -46,10 +48,12 @@ class DistributionRun:
         if os.path.exists(json_file_name):
             with open(json_file_name, "r", encoding="utf-8") as rfile:
                 self.cfgs = json.load(rfile)
+                self.max_chunk_size = None
         else:
             self.cfgs = distro_config.make_config_lists(
                 numvalues, indexer_pre=indexer_pre, max_chunk_size=max_chunk_size
             )
+            self.max_chunk_size = max_chunk_size
 
     def run_over_distribution(self, scendata, output_vars, max_workers=4):
         """
@@ -66,8 +70,14 @@ class DistributionRun:
         """
         if isinstance(scendata, dict):
             scendata = [scendata]
-        results = run_ciceroscm_parallel(scendata, self.cfgs, output_vars, max_workers)
-        return results
+        if self.max_chunk_size is None:
+            return run_ciceroscm_parallel(scendata, self.cfgs, output_vars, max_workers)
+        results_total = [
+            run_ciceroscm_parallel(scendata, cfgs, output_vars, max_workers=max_workers)
+            for cfgs in self.cfgs
+        ]
+        print(self.cfgs)
+        return pd.concat(results_total)
 
     def write_configs_to_json(self, json_file_name):
         """

@@ -257,11 +257,11 @@ class _ConfigDistro:
             return self.make_single_config_list(
                 samples, numvalues, json_fname=json_fname, indexer_pre=indexer_pre
             )
-        config_nums = np.ceil(numvalues / max_chunk_size)
-        config_chunk_list = [None] * numvalues
-        for config_num in config_nums:
+        config_nums = np.ceil(numvalues / max_chunk_size).astype(int)
+        config_chunk_list = [None] * config_nums
+        for config_num in range(config_nums):
             num_this_chunk = np.min(
-                max_chunk_size, numvalues - config_num * max_chunk_size
+                (max_chunk_size, numvalues - config_num * max_chunk_size)
             )
             start_num = config_num * max_chunk_size
             json_fname_now = None
@@ -273,7 +273,7 @@ class _ConfigDistro:
                 samples[start_num : start_num + num_this_chunk],
                 numvalues=num_this_chunk,
                 json_fname=json_fname_now,
-                indexer_pre=indexer_pre,
+                indexer_pre=f"{indexer_pre}_{config_num}_",
             )
         return config_chunk_list
 
