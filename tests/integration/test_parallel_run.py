@@ -151,7 +151,9 @@ def test_ciceroscm_run_parallel_many_scenarios(test_data_dir):
         'variable=="Surface Air Temperature Change" & scenario=="ssp245-plus-1-percent" & run_id=="13555_old_NR_rounded"'
     )
     test_not_empty = results[2000]
+
     assert len(test_length.values[0]) == 158
+
     assert test_not_empty.values.any()
 
 

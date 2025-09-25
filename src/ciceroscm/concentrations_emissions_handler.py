@@ -10,8 +10,8 @@ import pandas as pd
 
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
-from .carbon_cycle.carbon_cycle_mod import CarbonCycleModel
 from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
+from .component_factory_functions import create_carbon_cycle_model
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -191,10 +191,15 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
+        print("Carbon Model=" + pamset["carbon_cycle_model"])
         self.pamset = cut_and_check_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
-            used={"rs_function": "missing", "rb_function": "missing"},
+            used={
+                "rs_function": "missing",
+                "rb_function": "missing",
+                "carbon_cycle_model": "default",
+            },
             cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
@@ -208,9 +213,15 @@ class ConcentrationsEmissionsHandler:
         self.pamset["cl_dict"], self.pamset["br_dict"] = make_cl_and_br_dictionaries(
             self.df_gas.index
         )
+        # Precalculating for vanilla gases
         self.precalc_dict = {}
         self._precalculate_vanilla_gases()
-        self.carbon_cycle = CarbonCycleModel(self.pamset, pamset_carbon)
+
+        # Setting up carbon cycle model
+        model_type = self.pamset["carbon_cycle_model"]  # Default to "default"
+        self.carbon_cycle = create_carbon_cycle_model(
+            model_type, self.pamset, pamset_carbon
+        )
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, pamset_carbon, preexisting=False)
 
@@ -837,11 +848,11 @@ class ConcentrationsEmissionsHandler:
         cfg : dict
            Configurations to define where to put output
            files and what prefix to have for file name
-        make_plot : bool
-           Whether the output should be plottet or not
         dtemp_series : np.ndarray
             Yearly temperature to pass to carbon cycle, to get
             temperature feedback adjusted outputs
+        make_plot : bool
+           Whether the output should be plottet or not
         """
         if "output_folder" in cfg:
             # Make os independent?
@@ -855,25 +866,23 @@ class ConcentrationsEmissionsHandler:
             filename_start = cfg["output_prefix"]
         else:
             filename_start = "output"
-        results_dict["forcing"].to_csv(
-            os.path.join(outdir, f"{filename_start}_forc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
-        results_dict["concentrations"].to_csv(
-            os.path.join(outdir, f"{filename_start}_conc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
 
-        results_dict["emissions"].to_csv(
-            os.path.join(outdir, f"{filename_start}_em.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
+        longname_shortname_dict = {
+            "emissions": "em",
+            "concentrations": "conc",
+            "forcing": "forc",
+            "carbon cycle": "carbon",
+        }
+        for outtype, df in results_dict.items():
+
+            df.to_csv(
+                os.path.join(
+                    outdir, f"{filename_start}_{longname_shortname_dict[outtype]}.txt"
+                ),
+                sep="\t",
+                index=False,
+                float_format="%.5e",
+            )
 
         if make_plot:
             plot_output2("forc", results_dict["forcing"], outdir)
@@ -925,6 +934,7 @@ class ConcentrationsEmissionsHandler:
         # Adding in precalculated values:
         df_forc = pd.concat([df_forc, self.precalc_dict["precalc_erf"]], axis=1)
         df_forc.drop(columns=["TOT_vanilla"], inplace=True)
+
         cols = df_forc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_forc = df_forc[cols]
@@ -947,6 +957,7 @@ class ConcentrationsEmissionsHandler:
         frame_order = self.df_gas.index.copy()
         frame_order = frame_order.drop(list(set(frame_order.to_list()) - set(cols)))
         frame_order = frame_order.insert(0, "Year")
+
         df_conc = df_conc[frame_order]
 
         results = {}
@@ -976,10 +987,12 @@ class ConcentrationsEmissionsHandler:
             Biosphere carbon flux and ocean carbon flux
         """
         conc_series = np.array([v for k, v in self.conc["CO2"].items()])
-
         if self.pamset["conc_run"]:
             df_carbon = self.carbon_cycle.get_carbon_cycle_output(
-                conc_series, conc_run=self.pamset["conc_run"], dtemp_series=dtemp_series
+                self.years,
+                conc_series=conc_series,
+                conc_run=self.pamset["conc_run"],
+                dtemp_series=dtemp_series,
             )
         else:
             em_series = (
@@ -987,7 +1000,7 @@ class ConcentrationsEmissionsHandler:
                 + self.emis["CO2_AFOLU"][self.years].values
             )
             df_carbon = self.carbon_cycle.get_carbon_cycle_output(
-                self.years, dtemp_series=dtemp_series
+                self.years, dtemp_series=dtemp_series, conc_series=conc_series
             )
             if df_carbon is None:
                 df_carbon = pd.DataFrame(

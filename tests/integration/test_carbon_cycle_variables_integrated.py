@@ -47,7 +47,6 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
         {
             "beta_f": 0.287,
             "mixed_carbon": 75.0,
-            "npp0": 60,
         },
     )
     print("Attempting to change parameters in carbon_cycle_model")
@@ -74,7 +73,6 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
         {
             "beta_f": 0.3,
             "mixed_carbon": 75.0,
-            "npp0": 60,
         },
     )
     cscm._run(
@@ -99,7 +97,6 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
         {
             "beta_f": 0.287,
             "mixed_carbon": 107.0,
-            "npp0": 60,
         },
     )
     cscm._run(
@@ -124,7 +121,6 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
         {
             "beta_f": 0.287,
             "mixed_carbon": 107.0,
-            "npp0": 60,
             "solubility_sens": 0.03,
             "t_half": 0.2,
         },
