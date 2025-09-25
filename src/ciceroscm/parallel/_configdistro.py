@@ -266,9 +266,7 @@ class _ConfigDistro:
             start_num = config_num * max_chunk_size
             json_fname_now = None
             if json_fname is not None:
-                json_fname_now = json_fname_now.replace(
-                    ".json", f"chunk_{config_num}.json"
-                )
+                json_fname_now = json_fname.replace(".json", f"chunk_{config_num}.json")
             config_chunk_list[config_num] = self.make_single_config_list(
                 samples[start_num : start_num + num_this_chunk],
                 numvalues=num_this_chunk,
