@@ -1,17 +1,35 @@
+"""
+Abstract carbon cycle model
+"""
+
 from abc import ABC, abstractmethod
 
+from common_carbon_cycle_functions import carbon_cycle_init_pamsets
+
 from .._utils import update_pam_if_numeric
-from common_carbon_cycle_functions import carbon_cycle_init_pamsets, calculate_airborne_fraction
 
 
 class AbstractCarbonCycleModel(ABC):
     """
     Abstract class to define carbon cycle methodology
     """
-    def carbon_cycle_model_required_pamset(self):
-        pass
 
+    @property
+    @abstractmethod
+    def carbon_cycle_model_required_pamset(self):
+        """
+        Overwrite this to set a required carbon cycle
+        model parameterset dictionary. This should be
+        a class variable
+        """
+
+    @classmethod
     def get_carbon_cycle_required_pamset(cls):
+        """
+        Get the class variable carbon_cycle_model_required_pamset
+        which should be a class variable. This setup is to
+        substitute for the lack of abstract class variables in python
+        """
         return cls.carbon_cycle_model_required_pamset
 
     def __init__(self, pamset_emiconc, pamset_carbon):
@@ -30,9 +48,7 @@ class AbstractCarbonCycleModel(ABC):
             in the inherited class
         """
         pamset, pamset_carbon = carbon_cycle_init_pamsets(
-            pamset_emiconc,
-            pamset_carbon,
-            self.get_carbon_cycle_required_pamset()
+            pamset_emiconc, pamset_carbon, self.get_carbon_cycle_required_pamset()
         )
         self.pamset = {**pamset, **pamset_carbon}
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
@@ -43,7 +59,7 @@ class AbstractCarbonCycleModel(ABC):
         Reset values of CO2_hold for new run
 
         This method is mainly called to do a new run with the same cscm instance,
-        in which case you might need to reset hold values 
+        in which case you might need to reset hold values
         (this needs to be implemented concretely in subclass),
         and be able to update parameter values for the carbon cycle free parameters
 
@@ -61,6 +77,7 @@ class AbstractCarbonCycleModel(ABC):
             )
 
     # TODO: Generalise so more than just temperature can be sent from thermal
+    @abstractmethod
     def co2em2conc(self, yr, em_co2_common, dtemp=0.0):
         """
         Calculate co2 concentrations from emissions
@@ -83,10 +100,10 @@ class AbstractCarbonCycleModel(ABC):
         float
              CO2 concetrations for year in question
         """
-        pass
 
+    @abstractmethod
     def get_carbon_cycle_output(
-            self, years, conc_run=False, conc_series=None, dtemp_series=None
+        self, years, conc_run=False, conc_series=None, dtemp_series=None
     ):
         """
         Make and return a dataframe with carbon cycle data
@@ -109,4 +126,3 @@ class AbstractCarbonCycleModel(ABC):
         Pandas.DataFrame
             Including carbon cycle variables
         """
-        pass
