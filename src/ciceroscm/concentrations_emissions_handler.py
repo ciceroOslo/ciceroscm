@@ -264,7 +264,7 @@ class ConcentrationsEmissionsHandler:
 
     def _precalculate_concentrations_vanilla_gases(self, df_gases_vanilla):
         conc_in_vanilla = self.conc_in.copy()[df_gases_vanilla.index]
-        if self.pamset["conc_run"]:
+        if self.pamset["conc_run"] or self.pamset["nyend"] <= self.pamset["emstart"]:
             return conc_in_vanilla.iloc[
                 self.pamset["nystart"]
                 - conc_in_vanilla.index[0] : self.pamset["nyend"]
@@ -285,7 +285,6 @@ class ConcentrationsEmissionsHandler:
             - emis_vanilla.index[0]
             + 1
         ]
-
         q = 1.0 / df_gases_vanilla["TAU1"].to_numpy()
         emis = emis_vanilla.to_numpy() + df_gases_vanilla["NAT_EM"].to_numpy()
         conc_rows = []
@@ -299,6 +298,11 @@ class ConcentrationsEmissionsHandler:
                 1 - np.exp(-q)
             ) + conc_prev * np.exp(-q)
             conc_rows.append(conc)
+        if conc_rows == []:
+            conc_rows_df = pd.DataFrame(
+                columns=conc_in_vanilla.columns,
+                index=emis_vanilla.index,
+            )
         conc_rows_df = pd.DataFrame(
             data=np.array(conc_rows),
             columns=conc_in_vanilla.columns,
