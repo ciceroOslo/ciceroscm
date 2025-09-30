@@ -298,11 +298,6 @@ class ConcentrationsEmissionsHandler:
                 1 - np.exp(-q)
             ) + conc_prev * np.exp(-q)
             conc_rows.append(conc)
-        if not conc_rows:
-            conc_rows_df = pd.DataFrame(
-                columns=conc_in_vanilla.columns,
-                index=emis_vanilla.index,
-            )
         conc_rows_df = pd.DataFrame(
             data=np.array(conc_rows),
             columns=conc_in_vanilla.columns,
