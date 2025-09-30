@@ -222,12 +222,69 @@ class _ConfigDistro:
         ).transpose()
         return samples
 
-    def make_config_list(self, numvalues, json_fname="No", indexer_pre=""):
+    def make_config_lists(
+        self, numvalues, json_fname=None, indexer_pre="", max_chunk_size=None
+    ):
         """
-        Make configuration list from samples over the distribution
+        Make configuration list or chunked lists from samples over the distribution
 
         Parameters
         ----------
+        numvalues: int
+           number of values in returned configuration set
+        json_fname: str
+           path to file to output configurations
+        indexer_pre: str
+           prefix to put on the Index for the samples
+        max_chunk_size : int
+            Maximum number of samples in a chunk, use this
+        to split the full distribution into more managable
+        chunks of maximum this size
+
+        Returns
+        -------
+        list
+           list of numvalue configuration dictionaries with parameter
+           values drawn according to the distribution objects prior and
+           distribution methods, along with set values for the parameters
+           that are defined with setvalues
+        """
+        if self.options["method"] == "latin":
+            samples = self.get_samples_from_distro_latin(numvalues)
+        else:
+            samples = self.get_samples_from_distro_gaussian(numvalues)
+        if max_chunk_size is None or max_chunk_size > numvalues:
+            return self.make_single_config_list(
+                samples, numvalues, json_fname=json_fname, indexer_pre=indexer_pre
+            )
+        config_nums = np.ceil(numvalues / max_chunk_size).astype(int)
+        config_chunk_list = [None] * config_nums
+        for config_num in range(config_nums):
+            num_this_chunk = np.min(
+                (max_chunk_size, numvalues - config_num * max_chunk_size)
+            )
+            start_num = config_num * max_chunk_size
+            json_fname_now = None
+            if json_fname is not None:
+                json_fname_now = json_fname.replace(".json", f"chunk_{config_num}.json")
+            config_chunk_list[config_num] = self.make_single_config_list(
+                samples[start_num : start_num + num_this_chunk],
+                numvalues=num_this_chunk,
+                json_fname=json_fname_now,
+                indexer_pre=f"{indexer_pre}_{config_num}_",
+            )
+        return config_chunk_list
+
+    def make_single_config_list(
+        self, samples, numvalues, json_fname=None, indexer_pre=""
+    ):
+        """
+        Make configuration list from samples
+
+        Parameters
+        ----------
+        samples : list
+            list of samples from the distribution to make into list
         numvalues: int
            number of values in returned configuration set
         json_fname: str
@@ -244,11 +301,6 @@ class _ConfigDistro:
            that are defined with setvalues
         """
         config_list = [None] * numvalues
-        if self.options["method"] == "latin":
-            samples = self.get_samples_from_distro_latin(numvalues)
-        else:
-            samples = self.get_samples_from_distro_gaussian(numvalues)
-
         for i in range(numvalues):
             pamset_udm = self.pamset_udm_start.copy()
             pamset_emiconc = self.pamset_emiconc_start.copy()
@@ -270,7 +322,7 @@ class _ConfigDistro:
                 "pamset_carbon": pamset_carbon.copy(),
                 "Index": f"{indexer_pre}{i}",
             }
-        if json_fname != "No":
+        if json_fname is not None:
             with open(json_fname, "w", encoding="utf-8") as wfile:
                 json.dump(config_list, wfile)
         return config_list

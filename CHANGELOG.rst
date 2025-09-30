@@ -20,7 +20,12 @@ The changes listed in this file are categorised as follows:
 
 ### Added
 
+- Option to chunk configuration distributions to allow for millions of member runs without killing memory
+- Option to output ozone and stratospheric water vapour effective radiative forcing in parallel run
+
 ### Fixed
+
+- Skip precaclulation of empty concentrations matrix if emstart >= nyend
 
 [Version 1.5.0]
 ---------------------------
