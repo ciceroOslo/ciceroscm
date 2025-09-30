@@ -5,28 +5,29 @@ Simple CarbonCycleModel with temperature feedback and no pre-computed pulse resp
 import numpy as np
 import pandas as pd
 
-from .._utils import update_pam_if_numeric
+from .carbon_cycle_abstract import AbstractCarbonCycleModel
 from .common_carbon_cycle_functions import (  # OCEAN_AREA, GE_COEFF
     PPM_CO2_TO_PG_C,
-    carbon_cycle_init_pamsets,
 )
 
-CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
-    "beta_f": 0.287,
-    "land_temp_sensitivity": 0.1,
-    "soil_respiration_rate": 0.02,
-    "ocean_mixed_layer_depth": 25.0,
-    "ocean_exchange_rate": 0.01,
-    "vegetation_to_soil_fraction": 0.1,
-    "ocean_solubility_base": 0.02,
-    "ocean_solubility_temp_coeff": -0.01,
-}
+CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {}
 
 
-class CarbonCycleModel:
+class CarbonCycleModel(AbstractCarbonCycleModel):
     """
     CarbonCycleModel with explicit carbon pools and temperature-dependent dynamics.
     """
+
+    carbon_cycle_model_required_pamset = {
+        "beta_f": 0.287,
+        "land_temp_sensitivity": 0.1,
+        "soil_respiration_rate": 0.02,
+        "ocean_mixed_layer_depth": 25.0,
+        "ocean_exchange_rate": 0.01,
+        "vegetation_to_soil_fraction": 0.1,
+        "ocean_solubility_base": 0.02,
+        "ocean_solubility_temp_coeff": -0.01,
+    }
 
     def __init__(self, pamset_emiconc, pamset_carbon=None):
         """
@@ -50,18 +51,7 @@ class CarbonCycleModel:
             - ocean_solubility_base: Base solubility of CO2 in the ocean (PgC/ppm).
             - ocean_solubility_temp_coeff: Temperature sensitivity of ocean CO2 solubility.
         """
-        pamset, pamset_carbon = carbon_cycle_init_pamsets(
-            pamset_emiconc, pamset_carbon, CARBON_CYCLE_MODEL_REQUIRED_PAMSET
-        )
-        self.pamset = {**pamset, **pamset_carbon}
-        self.pamset["years_tot"] = self.pamset["nyend"] - self.pamset["nystart"] + 1
-
-        # Initialize carbon pools
-        self.atmospheric_co2 = 278.0  # Pre-industrial CO2 concentration (ppm)
-        self.vegetation_carbon = 600.0  # Vegetation carbon pool (PgC)
-        self.soil_carbon = 3000.0  # Soil carbon pool (PgC)
-        self.ocean_mixed_layer_carbon = 0.0  # Ocean mixed layer carbon anomaly (PgC)
-        self.ocean_deep_carbon = 0.0  # Deep ocean carbon anomaly (PgC)
+        super().__init__(pamset_emiconc, pamset_carbon=pamset_carbon)
 
     def co2em2conc(self, yr, em_co2_common, dtemp=0):  # pylint: disable=unused-argument
         """
@@ -201,16 +191,11 @@ class CarbonCycleModel:
         self.soil_carbon = 3000.0  # Soil carbon pool (PgC)
         self.ocean_mixed_layer_carbon = 0.0  # Ocean mixed layer carbon anomaly (PgC)
         self.ocean_deep_carbon = 0.0  # Deep ocean carbon anomaly (PgC)
-        if pamset_carbon is not None:
-            self.pamset = update_pam_if_numeric(
-                self.pamset,
-                pamset_new=pamset_carbon,
-                can_change=CARBON_CYCLE_MODEL_REQUIRED_PAMSET.keys(),
-            )
+        super().reset_co2_hold(pamset_carbon)
 
     # TODO: Improve
     def get_carbon_cycle_output(
-        self, years, conc_series=None, dtemp_series=None, conc_run=False
+        self, years, conc_run=False, conc_series=None, dtemp_series=None
     ):  # pylint: disable=unused-argument
         """
         Get carbon cycle output to print out

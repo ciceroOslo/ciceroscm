@@ -4,9 +4,8 @@ Abstract carbon cycle model
 
 from abc import ABC, abstractmethod
 
-from common_carbon_cycle_functions import carbon_cycle_init_pamsets
-
 from .._utils import update_pam_if_numeric
+from .common_carbon_cycle_functions import carbon_cycle_init_pamsets
 
 
 class AbstractCarbonCycleModel(ABC):
@@ -73,7 +72,7 @@ class AbstractCarbonCycleModel(ABC):
             self.pamset = update_pam_if_numeric(
                 self.pamset,
                 pamset_new=pamset_carbon,
-                can_change=self.get_carbon_cycle_required_pamset.keys(),
+                can_change=self.get_carbon_cycle_required_pamset().keys(),
             )
 
     # TODO: Generalise so more than just temperature can be sent from thermal
