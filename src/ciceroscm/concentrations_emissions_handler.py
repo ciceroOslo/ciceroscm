@@ -648,6 +648,8 @@ class ConcentrationsEmissionsHandler:
         # TODO: Deal with forcing perturbation if precalculated species is perturbed
         if "forc_pert" in self.pamset:
             if self.pamset["forc_pert"].check_if_year_in_pert(yr):
+                print("Hello in forc_pert")
+                print(self.pamset["Forc pert"])
                 tot_forc, forc_nh, forc_sh, self.forc = self.pamset[
                     "forc_pert"
                 ].add_forcing_pert(tot_forc, forc_nh, forc_sh, self.forc, yr)

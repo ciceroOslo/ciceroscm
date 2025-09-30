@@ -76,7 +76,6 @@ class DistributionRun:
             run_ciceroscm_parallel(scendata, cfgs, output_vars, max_workers=max_workers)
             for cfgs in self.cfgs
         ]
-        print(self.cfgs)
         return pd.concat(results_total)
 
     def write_configs_to_json(self, json_file_name):
