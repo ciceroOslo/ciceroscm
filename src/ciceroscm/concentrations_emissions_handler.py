@@ -196,8 +196,6 @@ class ConcentrationsEmissionsHandler:
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
             used={
-                "rs_function": "missing",
-                "rb_function": "missing",
                 "carbon_cycle_model": "default",
             },
             cut_warnings=True,
