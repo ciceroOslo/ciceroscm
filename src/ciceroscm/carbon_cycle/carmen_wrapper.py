@@ -16,62 +16,63 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
     CarbonCycleModel coupling the CARMEN model.
     """
 
-    carbon_cycle_model_required_pamset = {
-        "gpp_t_l": 0.14199847,
-        "gpp_t_e": -0.11203268,
-        "gpp_c_l": -0.09139857,
-        "gpp_c_half": 384.32434502,
-        "gpp_c_e": 0.0698166,
-        "gpp_hyst": 0.01289971,
-        "gpp_c_tan": 0.0,
-        "gpp_fast": 0.91751023,
-        "gpp_slow": 0.92258006,
-        "gpp_c_tan2": 0.0,
-        "lit_t_l": 1.143e-05,
-        "lit_t_e": 0.01792216,
-        "lit_c_l": -0.61640124,
-        "lit_c_half": 256.69192703,
-        "lit_c_e": -0.23731487,
-        "lit_hyst": 0.0167247,
-        "lit_c_tan": 0.0,
-        "lit_fast": 0.92847622,
-        "lit_slow": 0.91882796,
-        "lit_c_tan2": 0.0,
-        "vres_t_l": 8.85e-06,
-        "vres_t_e": -0.07693331,
-        "vres_c_l": -0.47443673,
-        "vres_c_half": 808.47364366,
-        "vres_c_e": -0.37496243,
-        "vres_hyst": -0.04767878,
-        "vres_c_tan": 0.0,
-        "vres_fast": 0.90821573,
-        "vres_slow": 0.84546906,
-        "vres_c_tan2": 0.0,
-        "sres_t_l": 8.76e-06,
-        "sres_t_e": 0.06184566,
-        "sres_c_l": 1.43982004,
-        "sres_c_half": 92.12981868,
-        "sres_c_e": -0.24272656,
-        "sres_hyst": 0.04094068,
-        "sres_c_tan": 0.0,
-        "sres_fast": 0.89815371,
-        "sres_slow": 0.85285196,
-        "sres_c_tan2": 0.0,
-        "npp_t_l": 0.20958114,
-        "npp_t_e": -0.09892429,
-        "npp_c_l": -0.19742283,
-        "npp_c_half": 281.66916948,
-        "npp_c_e": 0.05305683,
-        "npp_hyst": 0.07758387,
-        "npp_c_tan": 0.0,
-        "npp_fast": 0.94904171,
-        "npp_slow": 0.71402205,
-        "npp_c_tan2": 0.0,
-        "docn": 41.80816876,
-        "docnfac": 9.50761817,
-        "ocntemp": 0.0, 
-        "docntemp": 0.12145903,
-    }
+    # carbon_cycle_model_required_pamset = {
+    #     "gpp_t_l": 0.14199847,
+    #     "gpp_t_e": -0.11203268,
+    #     "gpp_c_l": -0.09139857,
+    #     "gpp_c_half": 384.32434502,
+    #     "gpp_c_e": 0.0698166,
+    #     "gpp_hyst": 0.01289971,
+    #     "gpp_c_tan": 0.0,
+    #     "gpp_fast": 0.91751023,
+    #     "gpp_slow": 0.92258006,
+    #     "gpp_c_tan2": 0.0,
+    #     "lit_t_l": 1.143e-05,
+    #     "lit_t_e": 0.01792216,
+    #     "lit_c_l": -0.61640124,
+    #     "lit_c_half": 256.69192703,
+    #     "lit_c_e": -0.23731487,
+    #     "lit_hyst": 0.0167247,
+    #     "lit_c_tan": 0.0,
+    #     "lit_fast": 0.92847622,
+    #     "lit_slow": 0.91882796,
+    #     "lit_c_tan2": 0.0,
+    #     "vres_t_l": 8.85e-06,
+    #     "vres_t_e": -0.07693331,
+    #     "vres_c_l": -0.47443673,
+    #     "vres_c_half": 808.47364366,
+    #     "vres_c_e": -0.37496243,
+    #     "vres_hyst": -0.04767878,
+    #     "vres_c_tan": 0.0,
+    #     "vres_fast": 0.90821573,
+    #     "vres_slow": 0.84546906,
+    #     "vres_c_tan2": 0.0,
+    #     "sres_t_l": 8.76e-06,
+    #     "sres_t_e": 0.06184566,
+    #     "sres_c_l": 1.43982004,
+    #     "sres_c_half": 92.12981868,
+    #     "sres_c_e": -0.24272656,
+    #     "sres_hyst": 0.04094068,
+    #     "sres_c_tan": 0.0,
+    #     "sres_fast": 0.89815371,
+    #     "sres_slow": 0.85285196,
+    #     "sres_c_tan2": 0.0,
+    #     "npp_t_l": 0.20958114,
+    #     "npp_t_e": -0.09892429,
+    #     "npp_c_l": -0.19742283,
+    #     "npp_c_half": 281.66916948,
+    #     "npp_c_e": 0.05305683,
+    #     "npp_hyst": 0.07758387,
+    #     "npp_c_tan": 0.0,
+    #     "npp_fast": 0.94904171,
+    #     "npp_slow": 0.71402205,
+    #     "npp_c_tan2": 0.0,
+    #     "docn": 41.80816876,
+    #     "docnfac": 9.50761817,
+    #     "ocntemp": 0.0, 
+    #     "docntemp": 0.12145903,
+    # }
+    carbon_cycle_model_required_pamset ={}
 
     def __init__(self, pamset_emiconc, pamset_carbon=None):
         """
@@ -90,6 +91,9 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         """
         # Pass the necessary variable to the parent class
         super().__init__(pamset_emiconc, pamset_carbon=pamset_carbon)
+
+        if pamset_carbon is None:
+            pamset_carbon = self.carbon_cycle_model_required_pamset
 
         # Create and store an object implementing CARMEN
         carmen_instance = CarbonCycle(
@@ -131,21 +135,34 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         new_input = {
             # emis is technically the rate of yearly emissions, so if the step was
             # smaller than a year it would need to be converted into year-equivalent
-            "emis": em_co2_common/self.carmen.dtpred,
-            "dtocn": None, # TODO: need ocean temperature passed
+            "emis": em_co2_common,
+            "dtocn": dtemp, # TODO: need ocean temperature passed
             "dtglb": dtemp,
         }
 
         # Run model one step into the future
-        self.carmen.run_one_step(new_input)
+        # CICERO-SCM actually expect this function to run a whole year, so run the appropriate number of CARMEN steps
+        for _ in range(int(1/self.carmen.dtpred)):
+            self.carmen.run_one_step(new_input)
+
+        return self.carmen.catm[self.carmen.current_step]
 
 
     def get_carbon_cycle_output(
         self, years, conc_run=False, conc_series=None, dtemp_series=None
     ):
+        # Report the carbon cycle quantities in year format
+        self.carmen.interpolate_results(years)
         df_carbon = pd.DataFrame(
             data={
+                "Biosphere carbon flux": self.carmen.land.npp - self.carmen.land.sres,
+                "Biosphere carbon pool": self.carmen.land.cveg + self.carmen.land.sres,
+                "Vegetation carbon pool": self.carmen.land.cveg,
+                "Soil carbon pool": self.carmen.land.csoil,
+                "Ocean carbon pool": self.carmen.ocean.carbon_increase,
                 "Net primary production": self.carmen.land.npp,
+                "Litterfall": self.carmen.land.lit,
+                "Soil respiration": self.carmen.land.sres,
                 "Ocean carbon flux": self.carmen.ocean.oflux,
             },
             index=years,
