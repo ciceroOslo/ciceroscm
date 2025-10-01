@@ -10,8 +10,6 @@ from .common_carbon_cycle_functions import (  # OCEAN_AREA, GE_COEFF
     PPM_CO2_TO_PG_C,
 )
 
-CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {}
-
 
 class CarbonCycleModel(AbstractCarbonCycleModel):
     """
@@ -226,3 +224,27 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         concentrations and temperature series
         """
         return None
+
+    def get_initial_max_min_guess(
+        self, co2_conc_now, co2_conc_zero, yrix=0, dtemp=0, ffer=None
+    ):
+        if ffer is None:
+            ffer = self.calculate_npp(dtemp=dtemp, co2_conc_series=[co2_conc_now])
+        co2_change = co2_conc_now - co2_conc_zero
+        min_guess = np.min(
+            (
+                co2_change * PPM_CO2_TO_PG_C + 8 * ffer,
+                co2_change * PPM_CO2_TO_PG_C - 4 * ffer,
+            )
+        )  # self.simplified_em_backward(co2_conc_zero - 4*co2_change , co2_conc_zero)
+        max_guess = np.max(
+            (
+                co2_change * PPM_CO2_TO_PG_C + 8 * ffer,
+                co2_change * PPM_CO2_TO_PG_C - 4 * ffer,
+            )
+        )  # self.simplified_em_backward(co2_conc_zero + 4* co2_change, co2_conc_zero)
+        if max_guess - min_guess < 1:
+            max_guess = max_guess + 1
+            min_guess = min_guess - 1
+
+        return max_guess, min_guess
