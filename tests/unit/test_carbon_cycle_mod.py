@@ -58,10 +58,16 @@ def test_get_biosphere_carbon_flux():
 
 def test_guess_iteration():
     co2_conc_zero = carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC
+    print(co2_conc_zero)
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1750})
     co2_conc_now = 277.147003174
+    initial_guess = ccmod.get_initial_max_min_guess(co2_conc_now, co2_conc_zero)
+    print(initial_guess)
+    print()
     em_guess = ccmod._guess_emissions_iteration(
-        co2_conc_now=co2_conc_now, co2_conc_zero=co2_conc_zero
+        co2_conc_now=co2_conc_now,
+        co2_conc_zero=co2_conc_zero,
+        initial_max_min_guess=initial_guess,
     )
     print(f"Value for em_guess: {em_guess}")
     ccmod.reset_co2_hold()
