@@ -540,6 +540,7 @@ def test_parallel_conc_run(test_data_dir):
                 "mixed": 60.0,
                 "ocean_efficacy": 1.2,
             },
+            "pamset_carbon": {"mixed_carbon": 120},
             "Index": "test_test_oceff",
         },
     ]
@@ -561,5 +562,24 @@ def test_parallel_conc_run(test_data_dir):
     ]
 
     results = run_ciceroscm_parallel(scenarios, cfgs, output_vars)
-    print(results)
+    print(results.columns)
     assert set(results["variable"].unique()) == set(output_vars)
+    print(results["run_id"].unique())
+    back_em1 = (
+        results.loc[
+            (results["variable"] == "Emissions|CO2")
+            & (results["run_id"] == "test_test")
+        ]
+        .iloc[:, 7:]
+        .to_numpy(float)
+    )
+    print(back_em1)
+    back_em2 = (
+        results.loc[
+            (results["variable"] == "Emissions|CO2")
+            & (results["run_id"] == "test_test_oceff")
+        ]
+        .iloc[:, 7:]
+        .to_numpy(float)
+    )
+    assert not np.allclose(back_em1, back_em2)
