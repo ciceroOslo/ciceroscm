@@ -20,6 +20,117 @@ from .common_carbon_cycle_functions import (
 from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
 
 
+def _process_flat_carbon_parameters(pamset):
+    """
+    Process flat carbon cycle parameters and convert to dictionary format.
+
+    This function allows users to specify carbon cycle function parameters
+    as individual floats (e.g., rb_coef0, rb_coef1, rb_tim0, rb_tim1)
+    instead of requiring dictionary structures.
+
+    Parameters
+    ----------
+    pamset : dict
+        Parameter set that may contain flat carbon cycle parameters
+
+    Returns
+    -------
+    dict
+        Updated pamset with flat parameters converted to dictionary structures
+
+    Examples
+    --------
+    Input: {"rb_coef0": 0.5, "rb_coef1": 0.25, "rb_tim0": 2.5, "rb_tim1": 10}
+    Output: {"rb_function": {"coeffs": [0.5, 0.25], "timescales": [2.5, 10]}}
+    """
+    pamset = pamset.copy()
+
+    # Process rb_function parameters
+    rb_coefs = []
+    rb_tims = []
+    rb_keys_to_remove = []
+
+    # Find all rb_coef* and rb_tim* parameters
+    for key in pamset.keys():
+        if key.startswith("rb_coef") and key[7:].isdigit():
+            idx = int(key[7:])
+            # Ensure list is long enough
+            while len(rb_coefs) <= idx:
+                rb_coefs.append(None)
+            rb_coefs[idx] = pamset[key]
+            rb_keys_to_remove.append(key)
+        elif key.startswith("rb_tim") and key[6:].isdigit():
+            idx = int(key[6:])
+            # Ensure list is long enough
+            while len(rb_tims) <= idx:
+                rb_tims.append(None)
+            rb_tims[idx] = pamset[key]
+            rb_keys_to_remove.append(key)
+
+    # Convert to rb_function dictionary if parameters found
+    if rb_coefs or rb_tims:
+        # Remove None values and check for consistency
+        rb_coefs = [c for c in rb_coefs if c is not None]
+        rb_tims = [t for t in rb_tims if t is not None]
+
+        if len(rb_coefs) != len(rb_tims):
+            raise ValueError(
+                f"Number of rb_coef parameters ({len(rb_coefs)}) must match "
+                f"number of rb_tim parameters ({len(rb_tims)})"
+            )
+
+        if len(rb_coefs) > 0:
+            pamset["rb_function"] = {"coeffs": rb_coefs, "timescales": rb_tims}
+
+        # Remove individual parameters
+        for key in rb_keys_to_remove:
+            pamset.pop(key)
+
+    # Process rs_function parameters
+    rs_coefs = []
+    rs_tims = []
+    rs_keys_to_remove = []
+
+    # Find all rs_coef* and rs_tim* parameters
+    for key in pamset.keys():
+        if key.startswith("rs_coef") and key[7:].isdigit():
+            idx = int(key[7:])
+            # Ensure list is long enough
+            while len(rs_coefs) <= idx:
+                rs_coefs.append(None)
+            rs_coefs[idx] = pamset[key]
+            rs_keys_to_remove.append(key)
+        elif key.startswith("rs_tim") and key[6:].isdigit():
+            idx = int(key[6:])
+            # Ensure list is long enough
+            while len(rs_tims) <= idx:
+                rs_tims.append(None)
+            rs_tims[idx] = pamset[key]
+            rs_keys_to_remove.append(key)
+
+    # Convert to rs_function dictionary if parameters found
+    if rs_coefs or rs_tims:
+        # Remove None values and check for consistency
+        rs_coefs = [c for c in rs_coefs if c is not None]
+        rs_tims = [t for t in rs_tims if t is not None]
+
+        # For rs_function, coeffs should have one more element than timescales
+        if len(rs_coefs) != len(rs_tims) + 1:
+            raise ValueError(
+                f"For rs_function, number of rs_coef parameters ({len(rs_coefs)}) "
+                f"must be one more than number of rs_tim parameters ({len(rs_tims)})"
+            )
+
+        if len(rs_coefs) > 0:
+            pamset["rs_function"] = {"coeffs": rs_coefs, "timescales": rs_tims}
+
+        # Remove individual parameters
+        for key in rs_keys_to_remove:
+            pamset.pop(key)
+
+    return pamset
+
+
 def sigmoid_gen(eval_point, sigmoid_center, sigmoid_width):
     """
     Generalised sigmoid function
@@ -132,11 +243,14 @@ class CarbonCycleModel:
         if pamset_carbon is None:
             pamset_carbon = CARBON_CYCLE_MODEL_REQUIRED_PAMSET
         else:
+            # Process flat carbon cycle parameters first
+            pamset_carbon = _process_flat_carbon_parameters(pamset_carbon)
             pamset_carbon = cut_and_check_pamset(
                 CARBON_CYCLE_MODEL_REQUIRED_PAMSET,
                 pamset_carbon,
                 used={"rs_function": "missing", "rb_function": "missing"},
             )
+
         pamset_carbon = take_out_missing(pamset_carbon.copy())
         self.pamset = {**pamset, **pamset_carbon}
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
@@ -161,12 +275,27 @@ class CarbonCycleModel:
             "sums": 0.0,
         }
         if pamset_carbon is not None:
+            # Process flat carbon cycle parameters first
+            pamset_carbon = _process_flat_carbon_parameters(pamset_carbon)
+            # Check if we need to recompute r_functions
+            needs_rfunction_recompute = (
+                "rs_function" in pamset_carbon or "rb_function" in pamset_carbon
+            )
+
             self.pamset = update_pam_if_numeric(
                 self.pamset,
                 pamset_new=pamset_carbon,
                 can_change=CARBON_CYCLE_MODEL_REQUIRED_PAMSET.keys(),
             )
+            # Update with non-numeric parameters (like function dictionaries)
+            for key in ["rs_function", "rb_function"]:
+                if key in pamset_carbon:
+                    self.pamset[key] = pamset_carbon[key]
             self.fnpp_from_temp_vec = np.vectorize(self.fnpp_from_temp)
+
+            # Recompute r_functions if we updated any function parameters
+            if needs_rfunction_recompute:
+                self.precalc_r_functions()
 
     def _set_co2_hold(
         self, xco2=PREINDUSTRIAL_CO2_CONC, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
