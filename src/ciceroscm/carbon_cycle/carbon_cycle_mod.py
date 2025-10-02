@@ -638,14 +638,16 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             * OCEAN_AREA
         )
         return ocean_carbon_flux
-
-    def back_calculate_emissions(self, co2_conc_series, dtemp_series=None):
+    
+    def make_guess_emsize_estimates(self, co2_conc_series, dtemp_series=None):
         """
-        Back calculate emissions from conc_run
+        Make an estimate of emission size changes from a concentrations
+        change and a temperature size. This should just be used to scale
+        the possible emissions size for the bisection in backcalculation
 
-        co2_conc_series is assumed to be the series of concentrations
-        from the year 0
-
+        Here we make this estimate by using the ffer timeseries as an
+        assumptions.
+        
         Parameters
         ----------
         co2_conc_series : np.ndarray
@@ -659,61 +661,11 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         Returns
         -------
             np.ndarray
-            Timeseries of estimated emissions to match the concentration and
-            temperature timeseries sent
+            Timeseries of estimated emissions very rough size of possible
+            emission changes that can be used
         """
-        prev_co2_conc = PREINDUSTRIAL_CO2_CONC
-        em_series = np.zeros(len(co2_conc_series))
-        if dtemp_series is None:
-            dtemp_series = np.zeros(len(co2_conc_series))
-
-        ffer = self._get_ffer_timeseries(
-            conc_run=True,
-            co2_conc_series=co2_conc_series,
-            dtemp_series=dtemp_series,
-        )
-        for i, co2_conc in enumerate(co2_conc_series):
-            ffer_here = ffer[i * self.pamset["idtm"]]
-            em_series[i] = self._guess_emissions_iteration(
-                co2_conc,
-                prev_co2_conc,
-                self.get_initial_max_min_guess(co2_conc, prev_co2_conc, ffer=ffer_here),
-                yrix=i,
-                dtemp=dtemp_series[i],
-            )
-            prev_co2_conc = co2_conc
-        return em_series
-
-    def get_initial_max_min_guess(
-        self,
-        co2_conc_now,
-        co2_conc_zero,
-        yrix=0,
-        dtemp=0,
-        ffer=None,
-    ):
-        if ffer is None:
-            ffer = self._get_ffer_timeseries(
-                [co2_conc_zero, co2_conc_now], dtemp_series=[0, dtemp]
-            )[yrix * self.pamset["idtm"]]
-
-        co2_change = co2_conc_now - co2_conc_zero
-        min_guess = np.min(
-            (
-                co2_change * PPM_CO2_TO_PG_C + 8 * ffer,
-                co2_change * PPM_CO2_TO_PG_C - 4 * ffer,
-            )
-        )  # self.simplified_em_backward(co2_conc_zero - 4*co2_change , co2_conc_zero)
-        max_guess = np.max(
-            (
-                co2_change * PPM_CO2_TO_PG_C + 8 * ffer,
-                co2_change * PPM_CO2_TO_PG_C - 4 * ffer,
-            )
-        )  # self.simplified_em_backward(co2_conc_zero + 4* co2_change, co2_conc_zero)
-        if max_guess - min_guess < 1:
-            max_guess = max_guess + 1
-            min_guess = min_guess - 1
-        return max_guess, min_guess
+        return self._get_ffer_timeseries(conc_run=True, co2_conc_series=co2_conc_series, dtemp_series=dtemp_series)
+        
 
     def get_carbon_cycle_output(
         self, years, conc_run=False, conc_series=None, dtemp_series=None

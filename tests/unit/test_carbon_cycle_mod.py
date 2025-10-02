@@ -66,7 +66,6 @@ def test_guess_iteration():
     print()
     em_guess = ccmod._guess_emissions_iteration(
         co2_conc_now=co2_conc_now,
-        co2_conc_zero=co2_conc_zero,
         initial_max_min_guess=initial_guess,
     )
     print(f"Value for em_guess: {em_guess}")
