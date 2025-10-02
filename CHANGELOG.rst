@@ -26,6 +26,8 @@ The changes listed in this file are categorised as follows:
 ### Fixed
 
 - Skip precaclulation of empty concentrations matrix if emstart >= nyend
+- Carbon cycle output functioninng for concentrations runs
+- Parallel concentrations run pass back-calculated emissions series when prompted for Emissions|CO2
 
 [Version 1.5.0]
 ---------------------------

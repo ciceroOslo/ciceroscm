@@ -766,8 +766,6 @@ class CarbonCycleModel:
             self.pamset["nystart"] + yrix, guess, dtemp=dtemp
         )
         iteration = 0
-        if yrix % 50 == 0:
-            print(f"yr: {yrix} has minguess: {min_guess}, maxguess: {max_guess}")
         while (
             iteration < maxit
             and np.abs(co2_conc_now - estimated_conc) / co2_conc_now > rtol
@@ -784,10 +782,6 @@ class CarbonCycleModel:
                 self.pamset["nystart"] + yrix, guess, dtemp=dtemp
             )
             iteration = iteration + 1
-        if yrix % 50 == 0:
-            print(
-                f"End guess: {guess} {co2_conc_now} and {co2_conc_zero}  and estimated conc {estimated_conc}"
-            )
         return guess
 
     def get_carbon_cycle_output(
