@@ -11,8 +11,10 @@ import pytest
 import tempfile
 
 from ciceroscm.carbon_cycle.carbon_cycle_mod import (
-    _process_flat_carbon_parameters,
     CarbonCycleModel,
+)
+from ciceroscm.carbon_cycle.rfuns import (
+    _process_flat_carbon_parameters,
 )
 
 

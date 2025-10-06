@@ -5,6 +5,125 @@ Functionality for carbon decay functions for both land (biotic/ rb) and ocean mi
 import numpy as np
 
 
+def _process_flat_carbon_parameters(pamset):
+    """
+    Process flat carbon cycle parameters and convert to dictionary format.
+
+    This function allows users to specify carbon cycle function parameters
+    as individual floats (e.g., rb_coef0, rb_coef1, rb_tim0, rb_tim1)
+    instead of requiring dictionary structures.
+
+    Parameters
+    ----------
+    pamset : dict
+        Parameter set that may contain flat carbon cycle parameters
+
+    Returns
+    -------
+    dict
+        Updated pamset with flat parameters converted to dictionary structures
+
+    Examples
+    --------
+    Input: {"rb_coef0": 0.5, "rb_coef1": 0.25, "rb_tim0": 2.5, "rb_tim1": 10}
+    Output: {"rb_function": {"coeffs": [0.5, 0.25], "timescales": [2.5, 10]}}
+    """
+    # Early return if no flat carbon parameters are present
+    has_flat_params = any(
+        key.startswith(("rb_coef", "rb_tim", "rs_coef", "rs_tim"))
+        for key in pamset.keys()
+    )
+    if not has_flat_params:
+        return pamset
+
+    pamset = pamset.copy()
+
+    # Process rb_function parameters
+    rb_coefs = []
+    rb_tims = []
+    rb_keys_to_remove = []
+
+    # Find all rb_coef* and rb_tim* parameters
+    for key in pamset.keys():
+        if key.startswith("rb_coef") and key[7:].isdigit():
+            idx = int(key[7:])
+            # Ensure list is long enough
+            while len(rb_coefs) <= idx:
+                rb_coefs.append(None)
+            rb_coefs[idx] = pamset[key]
+            rb_keys_to_remove.append(key)
+        elif key.startswith("rb_tim") and key[6:].isdigit():
+            idx = int(key[6:])
+            # Ensure list is long enough
+            while len(rb_tims) <= idx:
+                rb_tims.append(None)
+            rb_tims[idx] = pamset[key]
+            rb_keys_to_remove.append(key)
+
+    # Convert to rb_function dictionary if parameters found
+    if rb_coefs or rb_tims:
+        # Remove None values and check for consistency
+        rb_coefs = [c for c in rb_coefs if c is not None]
+        rb_tims = [t for t in rb_tims if t is not None]
+
+        if len(rb_coefs) != len(rb_tims):
+            raise ValueError(
+                f"Number of rb_coef parameters ({len(rb_coefs)}) must match "
+                f"number of rb_tim parameters ({len(rb_tims)})"
+            )
+
+        if len(rb_coefs) > 0:
+            pamset["rb_function"] = {"coeffs": rb_coefs, "timescales": rb_tims}
+
+        # Remove individual parameters
+        for key in rb_keys_to_remove:
+            pamset.pop(key)
+
+    # Process rs_function parameters
+    rs_coefs = []
+    rs_tims = []
+    rs_keys_to_remove = []
+
+    # Find all rs_coef* and rs_tim* parameters
+    for key in pamset.keys():
+        if key.startswith("rs_coef") and key[7:].isdigit():
+            idx = int(key[7:])
+            # Ensure list is long enough
+            while len(rs_coefs) <= idx:
+                rs_coefs.append(None)
+            rs_coefs[idx] = pamset[key]
+            rs_keys_to_remove.append(key)
+        elif key.startswith("rs_tim") and key[6:].isdigit():
+            idx = int(key[6:])
+            # Ensure list is long enough
+            while len(rs_tims) <= idx:
+                rs_tims.append(None)
+            rs_tims[idx] = pamset[key]
+            rs_keys_to_remove.append(key)
+
+    # Convert to rs_function dictionary if parameters found
+    if rs_coefs or rs_tims:
+        # Remove None values and check for consistency
+        rs_coefs = [c for c in rs_coefs if c is not None]
+        rs_tims = [t for t in rs_tims if t is not None]
+
+        # For rs_function, coeffs should have one more element than timescales
+        if len(rs_coefs) != len(rs_tims) + 1:
+            raise ValueError(
+                f"For rs_function, number of rs_coef parameters ({len(rs_coefs)}) "
+                f"must be one more than number of rs_tim parameters ({len(rs_tims)})"
+            )
+
+        if len(rs_coefs) > 0:
+            pamset["rs_function"] = {"coeffs": rs_coefs, "timescales": rs_tims}
+
+        # Remove individual parameters
+        for key in rs_keys_to_remove:
+            pamset.pop(key)
+
+    return pamset
+
+
 def rb_function(it, idtm=24):
     """
     Calculate biotic decay function
