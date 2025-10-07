@@ -18,11 +18,11 @@ from .common_carbon_cycle_functions import (
     calculate_airborne_fraction,
 )
 from .rfuns import (
+    _process_flat_carbon_parameters,
     rb_function,
     rb_function2,
     rs_function2,
     rs_function_array,
-    _process_flat_carbon_parameters,
 )
 
 
@@ -417,7 +417,9 @@ class CarbonCycleModel:
             + 1.2425e-10 * (z_co2**5)
         )
 
-    def co2em2conc(self, yr, em_co2_common, dtemp=0.0):  # pylint: disable=too-many-locals
+    def co2em2conc(
+        self, yr, em_co2_common, dtemp=0.0
+    ):  # pylint: disable=too-many-locals
         """
         Calculate co2 concentrations from emissions
 
@@ -616,7 +618,8 @@ class CarbonCycleModel:
                 [
                     np.sum(
                         ffer[
-                            self.pamset["idtm"] * yrix : self.pamset["idtm"]
+                            self.pamset["idtm"]
+                            * yrix : self.pamset["idtm"]
                             * (yrix + 1)
                         ]
                     )
@@ -654,7 +657,8 @@ class CarbonCycleModel:
                 [
                     np.sum(
                         self.co2_hold["sCO2"][
-                            self.pamset["idtm"] * yrix : self.pamset["idtm"]
+                            self.pamset["idtm"]
+                            * yrix : self.pamset["idtm"]
                             * (yrix + 1)
                         ]
                     )

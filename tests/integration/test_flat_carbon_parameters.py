@@ -7,15 +7,12 @@ instead of requiring dictionary structures.
 """
 
 import os
-import pytest
 import tempfile
 
-from ciceroscm.carbon_cycle.carbon_cycle_mod import (
-    CarbonCycleModel,
-)
-from ciceroscm.carbon_cycle.rfuns import (
-    _process_flat_carbon_parameters,
-)
+import pytest
+
+from ciceroscm.carbon_cycle.carbon_cycle_mod import CarbonCycleModel
+from ciceroscm.carbon_cycle.rfuns import _process_flat_carbon_parameters
 
 
 def test_process_flat_rb_parameters():
