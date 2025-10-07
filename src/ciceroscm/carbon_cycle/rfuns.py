@@ -272,7 +272,6 @@ def rs_function2(it, rs_coef, rs_tim, idtm=24):
          It should be 1 at time zero and asymptote
          towards a small non-negative value in the infinte future
     """
-
     time = it / idtm
     ncoef = np.array(rs_coef) / np.sum(rs_coef)
     if hasattr(time, "__len__"):
