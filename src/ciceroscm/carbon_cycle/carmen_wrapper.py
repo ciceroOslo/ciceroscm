@@ -210,15 +210,19 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             "fcva": self.carmen.land.fcva,
             "fcsa": self.carmen.land.fcsa,
             "fcvs": self.carmen.land.fcvs,
+            "peak_t": self.carmen.land.peak_t,
+            "old_t": self.carmen.land.old_t,
+            "step_index_land": self.carmen.land.timestep_ind,
 
             # Ocean box
             "cocean": self.carmen.ocean.carbon_increase,
             "oflux": self.carmen.ocean.oflux,
+            "step_index_ocean": self.carmen.ocean.timestep_ind,
 
             # General carbon cycle box
             "catm": self.carmen.catm,
             "emis": self.carmen.emis,
-            "step_index": self.carmen.current_step,
+            "step_index_general": self.carmen.current_step,
         }
 
         return current_state
@@ -239,12 +243,16 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         self.carmen.land.fcva = hold_dict["fcva"]
         self.carmen.land.fcsa = hold_dict["fcsa"]
         self.carmen.land.fcvs = hold_dict["fcvs"]
+        self.carmen.land.peak_t = hold_dict["peak_t"]
+        self.carmen.land.old_t = hold_dict["old_t"]
+        self.carmen.land.timestep_ind = hold_dict["step_index_land"]
 
         # Ocean box
         self.carmen.ocean.carbon_increase = hold_dict["cocean"]
         self.carmen.ocean.oflux = hold_dict["oflux"]
+        self.carmen.ocean.timestep_ind = hold_dict["step_index_ocean"]
 
         # General carbon cycle box
         self.carmen.catm = hold_dict["catm"]
         self.carmen.emis = hold_dict["emis"]
-        self.carmen.current_step = hold_dict["step_index"]
+        self.carmen.current_step = hold_dict["step_index_general"]
