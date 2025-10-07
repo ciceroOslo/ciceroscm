@@ -17,7 +17,13 @@ from .common_carbon_cycle_functions import (
     PREINDUSTRIAL_CO2_CONC,
     calculate_airborne_fraction,
 )
-from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array, _process_flat_carbon_parameters
+from .rfuns import (
+    rb_function,
+    rb_function2,
+    rs_function2,
+    rs_function_array,
+    _process_flat_carbon_parameters,
+)
 
 
 def sigmoid_gen(eval_point, sigmoid_center, sigmoid_width):
@@ -411,9 +417,7 @@ class CarbonCycleModel:
             + 1.2425e-10 * (z_co2**5)
         )
 
-    def co2em2conc(
-        self, yr, em_co2_common, dtemp=0.0
-    ):  # pylint: disable=too-many-locals
+    def co2em2conc(self, yr, em_co2_common, dtemp=0.0):  # pylint: disable=too-many-locals
         """
         Calculate co2 concentrations from emissions
 
@@ -612,8 +616,7 @@ class CarbonCycleModel:
                 [
                     np.sum(
                         ffer[
-                            self.pamset["idtm"]
-                            * yrix : self.pamset["idtm"]
+                            self.pamset["idtm"] * yrix : self.pamset["idtm"]
                             * (yrix + 1)
                         ]
                     )
@@ -651,8 +654,7 @@ class CarbonCycleModel:
                 [
                     np.sum(
                         self.co2_hold["sCO2"][
-                            self.pamset["idtm"]
-                            * yrix : self.pamset["idtm"]
+                            self.pamset["idtm"] * yrix : self.pamset["idtm"]
                             * (yrix + 1)
                         ]
                     )
@@ -856,7 +858,8 @@ class CarbonCycleModel:
         if not conc_run:
             return df_carbon
         df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
-            em_series, conc_series  # pylint: disable=possibly-used-before-assignment
+            em_series,
+            conc_series,  # pylint: disable=possibly-used-before-assignment
         )
         df_carbon["Emissions"] = em_series
         return df_carbon
