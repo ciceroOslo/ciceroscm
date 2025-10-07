@@ -862,8 +862,8 @@ class CarbonCycleModel:
         if not conc_run:
             return df_carbon
         df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
-            em_series,
-            conc_series,  # pylint: disable=possibly-used-before-assignment
+            em_series,  # pylint: disable=possibly-used-before-assignment
+            conc_series,
         )
         df_carbon["Emissions"] = em_series
         return df_carbon
