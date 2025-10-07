@@ -6,9 +6,6 @@ parameters as individual float values (e.g., rb_coef0, rb_coef1, rb_tim0, rb_tim
 instead of requiring dictionary structures.
 """
 
-import os
-import tempfile
-
 import pytest
 
 from ciceroscm.carbon_cycle.carbon_cycle_mod import CarbonCycleModel
