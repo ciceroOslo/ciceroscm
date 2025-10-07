@@ -5,6 +5,80 @@ Functionality for carbon decay functions for both land (biotic/ rb) and ocean mi
 import numpy as np
 
 
+def _extract_indexed_parameters(pamset, prefix):
+    """
+    Extract indexed parameters from pamset.
+
+    Parameters
+    ----------
+    pamset : dict
+        Parameter set to extract from
+    prefix : str
+        Parameter prefix (e.g., "rb_coef", "rb_tim")
+
+    Returns
+    -------
+    tuple
+        (values_list, keys_to_remove)
+    """
+    values = []
+    keys_to_remove = []
+
+    for key in pamset.keys():
+        if key.startswith(prefix) and key[len(prefix) :].isdigit():
+            idx = int(key[len(prefix) :])
+            # Ensure list is long enough
+            while len(values) <= idx:
+                values.append(None)
+            values[idx] = pamset[key]
+            keys_to_remove.append(key)
+
+    # Remove None values
+    values = [v for v in values if v is not None]
+    return values, keys_to_remove
+
+
+def _process_rb_parameters(pamset):
+    """Process rb_function flat parameters."""
+    rb_coefs, rb_coef_keys = _extract_indexed_parameters(pamset, "rb_coef")
+    rb_tims, rb_tim_keys = _extract_indexed_parameters(pamset, "rb_tim")
+
+    if not (rb_coefs or rb_tims):
+        return pamset, []
+
+    if len(rb_coefs) != len(rb_tims):
+        raise ValueError(
+            f"Number of rb_coef parameters ({len(rb_coefs)}) must match "
+            f"number of rb_tim parameters ({len(rb_tims)})"
+        )
+
+    if rb_coefs:
+        pamset["rb_function"] = {"coeffs": rb_coefs, "timescales": rb_tims}
+
+    return pamset, rb_coef_keys + rb_tim_keys
+
+
+def _process_rs_parameters(pamset):
+    """Process rs_function flat parameters."""
+    rs_coefs, rs_coef_keys = _extract_indexed_parameters(pamset, "rs_coef")
+    rs_tims, rs_tim_keys = _extract_indexed_parameters(pamset, "rs_tim")
+
+    if not (rs_coefs or rs_tims):
+        return pamset, []
+
+    # For rs_function, coeffs should have one more element than timescales
+    if len(rs_coefs) != len(rs_tims) + 1:
+        raise ValueError(
+            f"For rs_function, number of rs_coef parameters ({len(rs_coefs)}) "
+            f"must be one more than number of rs_tim parameters ({len(rs_tims)})"
+        )
+
+    if rs_coefs:
+        pamset["rs_function"] = {"coeffs": rs_coefs, "timescales": rs_tims}
+
+    return pamset, rs_coef_keys + rs_tim_keys
+
+
 def _process_flat_carbon_parameters(pamset):
     """
     Process flat carbon cycle parameters and convert to dictionary format.
@@ -39,87 +113,14 @@ def _process_flat_carbon_parameters(pamset):
     pamset = pamset.copy()
 
     # Process rb_function parameters
-    rb_coefs = []
-    rb_tims = []
-    rb_keys_to_remove = []
-
-    # Find all rb_coef* and rb_tim* parameters
-    for key in pamset.keys():
-        if key.startswith("rb_coef") and key[7:].isdigit():
-            idx = int(key[7:])
-            # Ensure list is long enough
-            while len(rb_coefs) <= idx:
-                rb_coefs.append(None)
-            rb_coefs[idx] = pamset[key]
-            rb_keys_to_remove.append(key)
-        elif key.startswith("rb_tim") and key[6:].isdigit():
-            idx = int(key[6:])
-            # Ensure list is long enough
-            while len(rb_tims) <= idx:
-                rb_tims.append(None)
-            rb_tims[idx] = pamset[key]
-            rb_keys_to_remove.append(key)
-
-    # Convert to rb_function dictionary if parameters found
-    if rb_coefs or rb_tims:
-        # Remove None values and check for consistency
-        rb_coefs = [c for c in rb_coefs if c is not None]
-        rb_tims = [t for t in rb_tims if t is not None]
-
-        if len(rb_coefs) != len(rb_tims):
-            raise ValueError(
-                f"Number of rb_coef parameters ({len(rb_coefs)}) must match "
-                f"number of rb_tim parameters ({len(rb_tims)})"
-            )
-
-        if len(rb_coefs) > 0:
-            pamset["rb_function"] = {"coeffs": rb_coefs, "timescales": rb_tims}
-
-        # Remove individual parameters
-        for key in rb_keys_to_remove:
-            pamset.pop(key)
+    pamset, rb_keys_to_remove = _process_rb_parameters(pamset)
 
     # Process rs_function parameters
-    rs_coefs = []
-    rs_tims = []
-    rs_keys_to_remove = []
+    pamset, rs_keys_to_remove = _process_rs_parameters(pamset)
 
-    # Find all rs_coef* and rs_tim* parameters
-    for key in pamset.keys():
-        if key.startswith("rs_coef") and key[7:].isdigit():
-            idx = int(key[7:])
-            # Ensure list is long enough
-            while len(rs_coefs) <= idx:
-                rs_coefs.append(None)
-            rs_coefs[idx] = pamset[key]
-            rs_keys_to_remove.append(key)
-        elif key.startswith("rs_tim") and key[6:].isdigit():
-            idx = int(key[6:])
-            # Ensure list is long enough
-            while len(rs_tims) <= idx:
-                rs_tims.append(None)
-            rs_tims[idx] = pamset[key]
-            rs_keys_to_remove.append(key)
-
-    # Convert to rs_function dictionary if parameters found
-    if rs_coefs or rs_tims:
-        # Remove None values and check for consistency
-        rs_coefs = [c for c in rs_coefs if c is not None]
-        rs_tims = [t for t in rs_tims if t is not None]
-
-        # For rs_function, coeffs should have one more element than timescales
-        if len(rs_coefs) != len(rs_tims) + 1:
-            raise ValueError(
-                f"For rs_function, number of rs_coef parameters ({len(rs_coefs)}) "
-                f"must be one more than number of rs_tim parameters ({len(rs_tims)})"
-            )
-
-        if len(rs_coefs) > 0:
-            pamset["rs_function"] = {"coeffs": rs_coefs, "timescales": rs_tims}
-
-        # Remove individual parameters
-        for key in rs_keys_to_remove:
-            pamset.pop(key)
+    # Remove all flat parameter keys
+    for key in rb_keys_to_remove + rs_keys_to_remove:
+        pamset.pop(key)
 
     return pamset
 
