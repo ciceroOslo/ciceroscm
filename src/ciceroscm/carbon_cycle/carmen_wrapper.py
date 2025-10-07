@@ -2,6 +2,7 @@ import pandas as pd
 
 from .carbon_cycle_abstract import AbstractCarbonCycleModel
 from .carmen.src.carmen import CarbonCycle
+from .._utils import update_pam_if_numeric
 # from .carmen import CarbonCycle
 # from .carmen.utils import load_esm_data
 # from .carmen.constants import SCEN_DIR
@@ -17,6 +18,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
     """
 
     carbon_cycle_model_required_pamset = {
+        "esm_to_emulate": "NorESM2-LM",
         "gpp_t_l": 0.14199847,
         "gpp_t_e": -0.11203268,
         "gpp_c_l": -0.09139857,
@@ -72,7 +74,6 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         "ocntemp": 0.0, 
         "docntemp": 0.12145903,
     }
-    carbon_cycle_model_required_pamset ={}
 
     def __init__(self, pamset_emiconc, pamset_carbon=None):
         """
@@ -89,20 +90,20 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             Optional carbon specific parameter set
             TODO: explain what the model is expecting
         """
-        # Pass the necessary variable to the parent class
-        super().__init__(pamset_emiconc, pamset_carbon=pamset_carbon)
-
         if pamset_carbon is None:
             pamset_carbon = self.carbon_cycle_model_required_pamset
+
+        # Pass the necessary variable to the parent class
+        super().__init__(pamset_emiconc, pamset_carbon=pamset_carbon)
 
         # Create and store an object implementing CARMEN
         carmen_instance = CarbonCycle(
             # if you want to use ESM scenario data
             # {"model": "NorESM2-LM", "scenario": "ssp126"},
             # if you want to run without any pre-loaded scenario
-            {"model": pamset_carbon.get("ESM_to_emulate", "UKESM1-0-LL"), "initial_year": pamset_emiconc["nystart"], "final_year": pamset_emiconc["nyend"]},
-            1/pamset_emiconc["idtm"],
-            1/pamset_emiconc["idtm"],
+            {"model": self.pamset.get("esm_to_emulate"), "initial_year": self.pamset["nystart"], "final_year": self.pamset["nyend"]},
+            1/self.pamset["idtm"],
+            1/self.pamset["idtm"],
             npp_flag=True,
             **pamset_carbon,
         )
@@ -167,3 +168,83 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             index=years,
         )
         return df_carbon
+
+
+    def reset_co2_hold(self, pamset_carbon=None):
+        if pamset_carbon is not None:
+            self.pamset = update_pam_if_numeric(
+                self.pamset,
+                pamset_new=pamset_carbon,
+                can_change=list(self.carbon_cycle_model_required_pamset.keys())+["nystart", "nyend"],
+            )
+
+
+        carmen_instance = CarbonCycle(
+            # if you want to use ESM scenario data
+            # {"model": "NorESM2-LM", "scenario": "ssp126"},
+            # if you want to run without any pre-loaded scenario
+            {"model": self.pamset.get("esm_to_emulate"), "initial_year": self.pamset["nystart"], "final_year": self.pamset["nyend"]},
+            1/self.pamset.get("idtm"),
+            1/self.pamset.get("idtm"),
+            npp_flag=True,
+            **self.pamset,
+        )
+        self.carmen = carmen_instance
+
+
+    def _get_co2_hold_values(self):
+        """
+        Get a dictionary of state variables for the carbon cycle that allows you
+        to reset your model state, typically pool sizes, chemical composition
+        current year etc...
+
+        Make sure to overwrite this is if your model actually has state dependence
+        """
+        current_state = {
+            # land box
+            "cveg": self.carmen.land.cveg,
+            "csoil": self.carmen.land.csoil,
+            "npp": self.carmen.land.npp,
+            "lit": self.carmen.land.lit,
+            "sres": self.carmen.land.sres,
+            "fcva": self.carmen.land.fcva,
+            "fcsa": self.carmen.land.fcsa,
+            "fcvs": self.carmen.land.fcvs,
+
+            # Ocean box
+            "cocean": self.carmen.ocean.carbon_increase,
+            "oflux": self.carmen.ocean.oflux,
+
+            # General carbon cycle box
+            "catm": self.carmen.catm,
+            "emis": self.carmen.emis,
+            "step_index": self.carmen.current_step,
+        }
+
+        return current_state
+
+    def _set_co2_hold_values(self, hold_dict):
+        """
+        Set state variables for the carbon cycle from hold_dict dictionary
+        thereby resetting your model state, typically pool sizes, chemical composition
+        current year etc...
+
+        Make sure to overwrite this is if your model actually has state dependence
+        """
+        self.carmen.land.cveg = hold_dict["cveg"]
+        self.carmen.land.csoil = hold_dict["csoil"]
+        self.carmen.land.npp = hold_dict["npp"]
+        self.carmen.land.lit = hold_dict["lit"]
+        self.carmen.land.sres = hold_dict["sres"]
+        self.carmen.land.fcva = hold_dict["fcva"]
+        self.carmen.land.fcsa = hold_dict["fcsa"]
+        self.carmen.land.fcvs = hold_dict["fcvs"]
+
+        # Ocean box
+        self.carmen.ocean.carbon_increase = hold_dict["cocean"]
+        self.carmen.ocean.oflux = hold_dict["oflux"]
+
+        # General carbon cycle box
+        self.carmen.catm = hold_dict["catm"]
+        self.carmen.emis = hold_dict["emis"]
+        self.carmen.current_step = hold_dict["step_index"]
