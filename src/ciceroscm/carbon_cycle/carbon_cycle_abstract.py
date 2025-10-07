@@ -4,8 +4,14 @@ Abstract carbon cycle model
 
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 from .._utils import update_pam_if_numeric
-from .common_carbon_cycle_functions import carbon_cycle_init_pamsets
+from .common_carbon_cycle_functions import (
+    PPM_CO2_TO_PG_C,
+    PREINDUSTRIAL_CO2_CONC,
+    carbon_cycle_init_pamsets,
+)
 
 
 class AbstractCarbonCycleModel(ABC):
@@ -99,6 +105,208 @@ class AbstractCarbonCycleModel(ABC):
         float
              CO2 concetrations for year in question
         """
+
+    def _get_co2_hold_values(self):
+        """
+        Get a dictionary of state variables for the carbon cycle that allows you
+        to reset your model state, typically pool sizes, chemical composition
+        current year etc...
+
+        Make sure to overwrite this is if your model actually has state dependence
+        """
+        return {}
+
+    def _set_co2_hold_values(self, hold_dict):
+        """
+        Set state variables for the carbon cycle from hold_dict dictionary
+        thereby resetting your model state, typically pool sizes, chemical composition
+        current year etc...
+
+        Make sure to overwrite this is if your model actually has state dependence
+        """
+
+    def _guess_emissions_iteration(
+        self,
+        co2_conc_now,
+        initial_max_min_guess,
+        dtemp=0,
+        yrix=0,
+        rtol=1e-7,
+        maxit=100,
+    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
+        """
+        Iterate to get right emissions for a single year
+
+        Make sure the yrix is where you are at
+
+        Parameters
+        ----------
+        co2_conc_now : float
+            Value of CO2 concentration in timestep resulting after
+            the emissions you would like to find are applied
+        co2_conc_zero : float
+            Value of CO2 concentration in timestep before the step
+            for which you want to find the concentrations
+        yrix : int
+            Index of year to do back calculation for, should be the
+            year number starting with 0 of the total of years for which
+            the back calculated emissions in total for which this calculation
+            should be made
+        rtol : float
+            Relative tolerance in accuracy between concentrations change from
+            back calculated emissions set and input concentrations
+        maxit : int
+            Maximum number of iterations todo before cutting. This is a
+            safety switch to make sure we don't do infinite looping if
+            the solution doesn't converge
+        ffer : np.ndarray
+            biospheric fertilisation for the given concentrations change
+
+        Returns
+        -------
+        float
+            Back calculated emissions that yields a concentrations change
+            from the conc_co2_zero to conc_co2_now which
+
+        """
+        max_guess = initial_max_min_guess[0]
+        min_guess = initial_max_min_guess[1]
+        guess = np.mean((min_guess, max_guess))
+        hold_dict = self._get_co2_hold_values()
+        estimated_conc = self.co2em2conc(
+            self.pamset["nystart"] + yrix, guess, dtemp=dtemp
+        )
+        iteration = 0
+        while (
+            iteration < maxit
+            and np.abs(co2_conc_now - estimated_conc) / co2_conc_now > rtol
+        ):
+            if estimated_conc > co2_conc_now:
+                max_guess = guess
+                guess = (guess + min_guess) / 2
+
+            else:
+                min_guess = guess
+                guess = (guess + max_guess) / 2
+            self._set_co2_hold(**hold_dict)
+            estimated_conc = self.co2em2conc(
+                self.pamset["nystart"] + yrix, guess, dtemp=dtemp
+            )
+            iteration = iteration + 1
+        return guess
+
+    def get_initial_max_min_guess(
+        self, co2_conc_now, co2_conc_zero, yrix=0, dtemp=0, em_width=None
+    ):
+        """
+        Calculate initial max and min guess i.e.
+        maximum span of emissions that could have lead to the
+        change from co2_conc_zero to co2_conc_now
+        I.e. starting guess span for bisection
+        """
+        co2_change = co2_conc_now - co2_conc_zero
+        if em_width is None:
+            em_width = self.make_guess_emsize_estimates(
+                [co2_conc_zero, co2_conc_now], 
+                dtemp_series=[dtemp, dtemp]
+            )[1]
+
+        min_guess = np.min(
+            (
+                co2_change * PPM_CO2_TO_PG_C + 8 * em_width,
+                co2_change * PPM_CO2_TO_PG_C - 4 * em_width,
+            )
+        )  # self.simplified_em_backward(co2_conc_zero - 4*co2_change , co2_conc_zero)
+        max_guess = np.max(
+            (
+                co2_change * PPM_CO2_TO_PG_C + 8 * em_width,
+                co2_change * PPM_CO2_TO_PG_C - 4 * em_width,
+            )
+        )  # self.simplified_em_backward(co2_conc_zero + 4* co2_change, co2_conc_zero)
+        if max_guess - min_guess < 1:
+            max_guess = max_guess + 1
+            min_guess = min_guess - 1
+
+        return max_guess, min_guess
+    
+    def make_guess_emsize_estimates(
+        self,
+        co2_conc_series,
+        dtemp_series=None):
+        """
+        Make an estimate of emission size changes from a concentrations
+        change and a temperature size. This should just be used to scale
+        the possible emissions size for the bisection in backcalculation
+
+        This method should mostly be overwritten by concrete carbon cycle
+        as information about pool states or impulse response historical /
+        hysteresis effects might need to be taken into account
+
+        Parameters
+        ----------
+        co2_conc_series : np.ndarray
+            Timeseries of co2 concentrations for which to back
+            calculate emissions
+        dtemp_series : np.ndarray
+            Timeseries of temperature change for which to back calculate emissions
+            It should be the same length as the concentration timeseries
+            If no value is sent, a timeseries of zeros will be used
+
+        Returns
+        -------
+            np.ndarray
+            Timeseries of estimated emissions very rough size of possible
+            emission changes that can be used
+        """
+        if dtemp_series is None:
+            dtemp_series = np.zeros_like(co2_conc_series)
+        prev_co2_series = np.zeros_like(co2_conc_series)
+        prev_co2_series[0] = PREINDUSTRIAL_CO2_CONC
+        prev_co2_series[1:] = co2_conc_series[:-1]
+        return (co2_conc_series - prev_co2_series) * PPM_CO2_TO_PG_C
+    
+    def back_calculate_emissions(self, co2_conc_series, dtemp_series=None):
+        """
+        Back calculate emissions from conc_run
+
+        co2_conc_series is assumed to be the series of concentrations
+        from the year 0
+
+        Parameters
+        ----------
+        co2_conc_series : np.ndarray
+            Timeseries of co2 concentrations for which to back
+            calculate emissions
+        dtemp_series : np.ndarray
+            Timeseries of temperature change for which to back calculate emissions
+            It should be the same length as the concentration timeseries
+            If no value is sent, a timeseries of zeros will be used
+
+        Returns
+        -------
+            np.ndarray
+            Timeseries of estimated emissions to match the concentration and
+            temperature timeseries sent
+        """
+        prev_co2_conc = PREINDUSTRIAL_CO2_CONC
+        em_series = np.zeros(len(co2_conc_series))
+        if dtemp_series is None:
+            dtemp_series = np.zeros(len(co2_conc_series))
+
+        emissions_width = self.make_guess_emsize_estimates(
+            co2_conc_series=co2_conc_series,
+            dtemp_series=dtemp_series,
+        )
+        for i, co2_conc in enumerate(co2_conc_series):
+            em_width_here = emissions_width[i * self.pamset["idtm"]]
+            em_series[i] = self._guess_emissions_iteration(
+                co2_conc,
+                self.get_initial_max_min_guess(co2_conc, prev_co2_conc, em_width=em_width_here),
+                yrix=i,
+                dtemp=dtemp_series[i],
+            )
+            prev_co2_conc = co2_conc
+        return em_series
 
     @abstractmethod
     def get_carbon_cycle_output(

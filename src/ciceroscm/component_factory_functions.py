@@ -2,6 +2,7 @@
 
 from .carbon_cycle.carbon_cycle_mod import CarbonCycleModel as DefaultCarbonCycleModel
 from .carbon_cycle.carbon_cycle_mod_box import CarbonCycleModel as BoxCarbonCycleModel
+from .carbon_cycle.carmen_wrapper import CarbonCycleModel as CarmenCarbonCycleModel
 from .two_layer_ocean import TwoLayerOceanModel
 from .upwelling_diffusion_model import UpwellingDiffusionModel
 
@@ -34,6 +35,8 @@ def create_carbon_cycle_model(model_type, pamset, pamset_carbon=None):
         return DefaultCarbonCycleModel(pamset, pamset_carbon)
     if model_type == "box":
         return BoxCarbonCycleModel(pamset, pamset_carbon)
+    if model_type == "carmen":
+        return CarmenCarbonCycleModel(pamset, pamset_carbon)
     raise ValueError(f"Unknown model type: {model_type}")
 
 

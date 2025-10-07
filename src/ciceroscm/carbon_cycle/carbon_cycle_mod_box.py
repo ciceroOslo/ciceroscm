@@ -10,8 +10,6 @@ from .common_carbon_cycle_functions import (  # OCEAN_AREA, GE_COEFF
     PPM_CO2_TO_PG_C,
 )
 
-CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {}
-
 
 class CarbonCycleModel(AbstractCarbonCycleModel):
     """

@@ -86,7 +86,12 @@ carbon_cycle_outputs = [
     "Ocean carbon flux",
     "Airborne fraction CO2",
     "Biosphere carbon pool",
+    "Vegetation carbon pool",
+    "Soil carbon pool",
     "Ocean carbon pool",
+    "Net primary production",
+    "Litterfall",
+    "Soil respiration",
 ]
 
 
