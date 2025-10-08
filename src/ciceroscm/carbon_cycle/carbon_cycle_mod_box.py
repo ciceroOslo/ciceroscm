@@ -10,8 +10,6 @@ from .common_carbon_cycle_functions import (  # OCEAN_AREA, GE_COEFF
     PPM_CO2_TO_PG_C,
 )
 
-CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {}
-
 
 class CarbonCycleModel(AbstractCarbonCycleModel):
     """
@@ -53,7 +51,9 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         """
         super().__init__(pamset_emiconc, pamset_carbon=pamset_carbon)
 
-    def co2em2conc(self, yr, em_co2_common, dtemp=0):  # pylint: disable=unused-argument
+    def co2em2conc(
+        self, yr, em_co2_common, feedback_dict=None
+    ):  # pylint: disable=unused-argument
         """
         Calculate CO2 concentrations from emissions.
 
@@ -63,8 +63,8 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             Year for which to calculate.
         em_co2_common : float
             Total CO2 emissions (GtC/yr).
-        dtemp : float
-            Global mean temperature difference from pre-industrial (K).
+        feedback_dict : dict
+            Dictionary containing feedback variables (e.g., {"dtemp": float}).
 
         Returns
         -------
@@ -72,6 +72,10 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             Updated atmospheric CO2 concentration (ppm).
         """
         dt = 1.0  # / self.pamset["idtm"]  # Timestep length (years)
+        if feedback_dict is None:
+            dtemp = 0.0
+        else:
+            dtemp = feedback_dict.get("dtemp", 0.0)
 
         # Convert emissions from GtC/yr to PgC/yr
         emissions = em_co2_common
@@ -195,7 +199,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
 
     # TODO: Improve
     def get_carbon_cycle_output(
-        self, years, conc_run=False, conc_series=None, dtemp_series=None
+        self, years, conc_run=False, conc_series=None, feedback_dict_series=None
     ):  # pylint: disable=unused-argument
         """
         Get carbon cycle output to print out
@@ -204,8 +208,10 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         # print(years)
         if conc_series is None:
             return None
-        if dtemp_series is None:
+        if feedback_dict_series is None:
             dtemp_series = np.zeros_like(conc_series)
+        else:
+            dtemp_series = feedback_dict_series.get("dtemp", np.zeros_like(conc_series))
         df_carbon = pd.DataFrame(
             data={
                 "Net primary production": self.calculate_npp(dtemp_series, conc_series),
@@ -219,7 +225,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         return df_carbon
 
     def back_calculate_emissions(
-        self, conc_series, dtemp_series=None
+        self, co2_conc_series, feedback_dict_series=None
     ):  # pylint: disable=unused-argument
         """
         Do backwards calculation to get emissions time series given

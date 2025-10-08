@@ -58,10 +58,15 @@ def test_get_biosphere_carbon_flux():
 
 def test_guess_iteration():
     co2_conc_zero = carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC
+    print(co2_conc_zero)
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2015, "nystart": 1750})
     co2_conc_now = 277.147003174
+    initial_guess = ccmod.get_initial_max_min_guess(co2_conc_now, co2_conc_zero)
+    print(initial_guess)
+    print()
     em_guess = ccmod._guess_emissions_iteration(
-        co2_conc_now=co2_conc_now, co2_conc_zero=co2_conc_zero
+        co2_conc_now=co2_conc_now,
+        initial_max_min_guess=initial_guess,
     )
     print(f"Value for em_guess: {em_guess}")
     ccmod.reset_co2_hold()
@@ -88,7 +93,7 @@ def test_back_calculate_emissions(test_data_dir):
     dtemp_series = cscm.results["dT_glob"]
     ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2100, "nystart": 1750})
     em_back_calculated = ccmod.back_calculate_emissions(
-        conc_co2_series, dtemp_series=dtemp_series
+        conc_co2_series, feedback_dict_series={"dtemp": dtemp_series}
     )
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
 
@@ -124,7 +129,7 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
         pamset_carbon={"t_threshold": 2, "w_threshold": 2},
     )
     em_back_calculated = ccmod.back_calculate_emissions(
-        conc_co2_series_all_die, dtemp_series=temp_timseries
+        conc_co2_series_all_die, feedback_dict_series={"dtemp": temp_timseries}
     )
     assert not np.allclose(conc_co2_series_all_die, conc_co2_series_default)
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
