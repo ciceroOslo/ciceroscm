@@ -19,7 +19,13 @@ from .common_carbon_cycle_functions import (
     calculate_airborne_fraction,
     carbon_cycle_init_pamsets,
 )
-from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
+from .rfuns import (
+    _process_flat_carbon_parameters,
+    rb_function,
+    rb_function2,
+    rs_function2,
+    rs_function_array,
+)
 
 
 def sigmoid_gen(eval_point, sigmoid_center, sigmoid_width):
@@ -152,12 +158,27 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             "sums": 0.0,
         }
         if pamset_carbon is not None:
+            # Process flat carbon cycle parameters first
+            pamset_carbon = _process_flat_carbon_parameters(pamset_carbon)
+            # Check if we need to recompute r_functions
+            needs_rfunction_recompute = (
+                "rs_function" in pamset_carbon or "rb_function" in pamset_carbon
+            )
+
             self.pamset = update_pam_if_numeric(
                 self.pamset,
                 pamset_new=pamset_carbon,
                 can_change=CARBON_CYCLE_MODEL_REQUIRED_PAMSET.keys(),
             )
+            # Update with non-numeric parameters (like function dictionaries)
+            for key in ["rs_function", "rb_function"]:
+                if key in pamset_carbon:
+                    self.pamset[key] = pamset_carbon[key]
             self.fnpp_from_temp_vec = np.vectorize(self.fnpp_from_temp)
+
+            # Recompute r_functions if we updated any function parameters
+            if needs_rfunction_recompute:
+                self.precalc_r_functions()
 
     def _set_co2_hold(
         self, xco2=PREINDUSTRIAL_CO2_CONC, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -715,7 +736,8 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         if not conc_run:
             return df_carbon
         df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
-            em_series, conc_series  # pylint: disable=possibly-used-before-assignment
+            em_series,  # pylint: disable=possibly-used-before-assignment
+            conc_series,
         )
         df_carbon["Emissions"] = em_series
         return df_carbon
