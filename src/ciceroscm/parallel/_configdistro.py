@@ -59,6 +59,18 @@ ordering_standard_forc = [
 ]
 """list: Containing a default ordering of parameters for forcing run"""
 
+set_values_default = {
+    "threstemp": 7.0,
+    "lm": 40,
+    "ldtime": 12,
+    "qbmb": 0,
+    "qh2o_ch4": 0.091915,
+}
+"""dict: Containing default set values for parameters"""
+
+options_default = {"forc": False, "method": "latin"}
+"""dict: Containing default options for making parameter distributions"""
+
 
 class _ConfigDistro:
     """
@@ -66,21 +78,7 @@ class _ConfigDistro:
     to create sample parameter sets from
     """
 
-    def __init__(
-        self,
-        distro_dict=prior_flat,
-        setvalues={
-            "threstemp": 7.0,
-            "lm": 40,
-            "ldtime": 12,
-            "qbmb": 0,
-            "qh2o_ch4": 0.091915,
-        },
-        options={
-            "forc": False,
-            "method": "latin",
-        },
-    ):  # pylint:disable=dangerous-default-value
+    def __init__(self, distro_dict=None, setvalues=None, options=None):
         """
         Intialise _ConfigDistro
 
@@ -109,6 +107,12 @@ class _ConfigDistro:
               parameters. This method will also be cosen if some other random
               string or object is sent for this keyword argument.
         """
+        if options is None:
+            options = options_default.copy()
+        if setvalues is None:
+            setvalues = set_values_default.copy()
+        if distro_dict is None:
+            distro_dict = prior_flat.copy()
         self.options = options
         if "forc" not in options:
             self.options["forc"] = False
@@ -127,6 +131,7 @@ class _ConfigDistro:
 
         self.ordering = ordering
         self.prior = self._set_prior(distro_dict)
+
         self.setvalues = setvalues
         self._set_pamsets_start()
 
