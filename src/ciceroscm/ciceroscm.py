@@ -13,8 +13,33 @@ from .component_factory_functions import create_thermal_model
 from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
 from .input_handler import InputHandler
 from .make_plots import plot_output1
+from .pub_utils import get_first_key
 
 LOGGER = logging.getLogger(__name__)
+
+OUTPUTS_DICT_DEFAULT = {
+    "RIB_glob": "RIB",
+    "RIB_N": "RIBN",
+    "RIB_S": "RIBS",
+    "dT_glob": "dtemp",
+    "dT_NH": "dtempnh",
+    "dT_SH": "dtempsh",
+    "dT_glob_air": "dtemp_air",
+    "dT_NH_air": "dtempnh_air",
+    "dT_SH_air": "dtempsh_air",
+    "dT_glob_sea": "dtemp_sea",
+    "dT_NH_sea": "dtempnh_sea",
+    "dT_SHsea": "dtempsh_sea",
+    "OHC700": "OHC700",
+    "OHCTOT": "OHCTOT",
+}
+
+FORC_OUTPUT_LIST = [
+    "Total_forcing",
+    "Solar_forcing",
+    "Volcanic_forcing_NH",
+    "Volcanic_forcing_SH",
+]
 
 
 class CICEROSCM:
@@ -117,6 +142,7 @@ class CICEROSCM:
             self.ce_handler = ConcentrationsEmissionsHandler(
                 input_handler, pamset_emiconc
             )
+            self.feedback_list = self.ce_handler.get_feedback_list()
         self.results = {}
         # Reading in solar and volcanic forcing
         self.rf_volc_sun = {
@@ -137,26 +163,7 @@ class CICEROSCM:
         Dictionary for all results from upwelling diffusion
         model outputs is initialised with empty arrays
         """
-        output_variables = [
-            "OHC700",
-            "OHCTOT",
-            "RIB_glob",
-            "RIB_N",
-            "RIB_S",
-            "dT_glob",
-            "dT_NH",
-            "dT_SH",
-            "dT_glob_air",
-            "dT_NH_air",
-            "dT_SH_air",
-            "dT_glob_sea",
-            "dT_NH_sea",
-            "dT_SHsea",
-            "Total_forcing",
-            "Solar_forcing",
-            "Volcanic_forcing_NH",
-            "Volcanic_forcing_SH",
-        ]
+        output_variables = list(OUTPUTS_DICT_DEFAULT.keys()) + FORC_OUTPUT_LIST
         for output in output_variables:
             self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
 
@@ -213,24 +220,7 @@ class CICEROSCM:
         index : int
              Index equalling year number in the possible years
         """
-        simple_outputs = ["OHC700", "OHCTOT"]
-        for output in simple_outputs:
-            self.results[output][index] = values[output]
-        outputs_dict = {
-            "RIB_glob": "RIB",
-            "RIB_N": "RIBN",
-            "RIB_S": "RIBS",
-            "dT_glob": "dtemp",
-            "dT_NH": "dtempnh",
-            "dT_SH": "dtempsh",
-            "dT_glob_air": "dtemp_air",
-            "dT_NH_air": "dtempnh_air",
-            "dT_SH_air": "dtempsh_air",
-            "dT_glob_sea": "dtemp_sea",
-            "dT_NH_sea": "dtempnh_sea",
-            "dT_SHsea": "dtempsh_sea",
-        }
-        for output, name in outputs_dict.items():
+        for output, name in OUTPUTS_DICT_DEFAULT.items():
             self.results[output][index] = values[name]
         self.results["Total_forcing"][index] = forc
         self.results["Solar_forcing"][index] = self.rf_volc_sun["sun"].iloc[index, 0]
@@ -285,8 +275,10 @@ class CICEROSCM:
             self.ce_handler.reset_with_new_pams(pamset_emiconc, pamset_carbon)
         for yr in range(self.cfg["nystart"], self.cfg["nyend"] + 1):
             if not self.cfg["rf_run"]:
-                if values is not None:
-                    self.ce_handler.emi2conc(yr, dtemp=values["dtemp"])
+                if values is not None and self.feedback_list is not None:
+                    self.ce_handler.emi2conc(
+                        yr, {key: values.get(key, 0) for key in self.feedback_list}
+                    )
                 else:
                     self.ce_handler.emi2conc(yr)
                 forc, fn, fs = self.ce_handler.conc2forc(
@@ -311,13 +303,22 @@ class CICEROSCM:
             if not self.cfg["rf_run"]:
                 self.results.update(
                     self.ce_handler.add_results_to_dict(
-                        cfg, dtemp_series=self.results["dT_glob"]
+                        cfg,
+                        feedback_dict_series={
+                            key: self.results[get_first_key(OUTPUTS_DICT_DEFAULT, key)]
+                            for key in self.feedback_list
+                        },
                     )
                 )
         else:
             if not self.cfg["rf_run"]:
                 self.ce_handler.write_output_to_files(
-                    cfg, dtemp_series=self.results["dT_glob"], make_plot=make_plot
+                    cfg,
+                    feedback_dict_series={
+                        key: self.results[get_first_key(OUTPUTS_DICT_DEFAULT, key)]
+                        for key in self.feedback_list
+                    },
+                    make_plot=make_plot,
                 )
 
             self.write_data_to_file(cfg)

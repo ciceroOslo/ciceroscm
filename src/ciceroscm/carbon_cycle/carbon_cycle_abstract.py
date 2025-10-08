@@ -81,9 +81,8 @@ class AbstractCarbonCycleModel(ABC):
                 can_change=self.get_carbon_cycle_required_pamset().keys(),
             )
 
-    # TODO: Generalise so more than just temperature can be sent from thermal
     @abstractmethod
-    def co2em2conc(self, yr, em_co2_common, dtemp=0.0):
+    def co2em2conc(self, yr, em_co2_common, feedback_dict=None):
         """
         Calculate co2 concentrations from emissions
 
@@ -97,8 +96,8 @@ class AbstractCarbonCycleModel(ABC):
         em_co2_common : float
              Sum of CO2 emissions from fossil fuels, land use change and natural emissions
              for the year in question
-        dtemp : float
-            temperature change from start of run at previous timestep
+        feedback_dict : dict
+            Dictionary containing feedback variables and their values
 
         Returns
         -------
@@ -116,7 +115,7 @@ class AbstractCarbonCycleModel(ABC):
         """
         return {}
 
-    def _set_co2_hold_values(self, hold_dict):
+    def _set_co2_hold(self, hold_dict=None):
         """
         Set state variables for the carbon cycle from hold_dict dictionary
         thereby resetting your model state, typically pool sizes, chemical composition
@@ -125,11 +124,25 @@ class AbstractCarbonCycleModel(ABC):
         Make sure to overwrite this is if your model actually has state dependence
         """
 
+    def get_feedback_list(self):
+        """
+        Get a list of feedback variables for the carbon cycle model
+
+        Overwrite this if your carbon cycle model has needs more or other feedback variables
+        If your carbon cycle doesn't need any feedback variables, you should return None
+
+        Returns
+        -------
+        list or None
+            List of feedback variable names or None if no feedback variables are needed
+        """
+        return ["dtemp"]
+
     def _guess_emissions_iteration(
         self,
         co2_conc_now,
         initial_max_min_guess,
-        dtemp=0,
+        feedback_dict=None,
         yrix=0,
         rtol=1e-7,
         maxit=100,
@@ -144,9 +157,11 @@ class AbstractCarbonCycleModel(ABC):
         co2_conc_now : float
             Value of CO2 concentration in timestep resulting after
             the emissions you would like to find are applied
-        co2_conc_zero : float
-            Value of CO2 concentration in timestep before the step
-            for which you want to find the concentrations
+        initial_max_min_guess : tuple
+            Initial maximum and minimum guess for emissions
+            to start the bisection iteration
+        feedback_dict : dict
+            Dictionary containing feedback variables and their values
         yrix : int
             Index of year to do back calculation for, should be the
             year number starting with 0 of the total of years for which
@@ -159,8 +174,6 @@ class AbstractCarbonCycleModel(ABC):
             Maximum number of iterations todo before cutting. This is a
             safety switch to make sure we don't do infinite looping if
             the solution doesn't converge
-        ffer : np.ndarray
-            biospheric fertilisation for the given concentrations change
 
         Returns
         -------
@@ -174,7 +187,7 @@ class AbstractCarbonCycleModel(ABC):
         guess = np.mean((min_guess, max_guess))
         hold_dict = self._get_co2_hold_values()
         estimated_conc = self.co2em2conc(
-            self.pamset["nystart"] + yrix, guess, dtemp=dtemp
+            self.pamset["nystart"] + yrix, guess, feedback_dict=feedback_dict
         )
         iteration = 0
         while (
@@ -188,27 +201,35 @@ class AbstractCarbonCycleModel(ABC):
             else:
                 min_guess = guess
                 guess = (guess + max_guess) / 2
-            self._set_co2_hold(**hold_dict)
+            self._set_co2_hold(hold_dict)
             estimated_conc = self.co2em2conc(
-                self.pamset["nystart"] + yrix, guess, dtemp=dtemp
+                self.pamset["nystart"] + yrix, guess, feedback_dict=feedback_dict
             )
             iteration = iteration + 1
         return guess
 
     def get_initial_max_min_guess(
-        self, co2_conc_now, co2_conc_zero, yrix=0, dtemp=0, em_width=None
-    ):
+        self, co2_conc_now, co2_conc_zero, yrix=0, feedback_dict=None, em_width=None
+    ):  # pylint: disable=too-many-positional-arguments, too-many-arguments, unused-argument
         """
         Calculate initial max and min guess i.e.
         maximum span of emissions that could have lead to the
         change from co2_conc_zero to co2_conc_now
         I.e. starting guess span for bisection
         """
+        if feedback_dict is None:
+            feedback_dict_series = {
+                key: np.zeros(2) for key in self.get_feedback_list()
+            }
+        else:
+            feedback_dict_series = {
+                key: np.array([feedback_dict.get(key, 0), feedback_dict.get(key, 0)])
+                for key in feedback_dict
+            }
         co2_change = co2_conc_now - co2_conc_zero
         if em_width is None:
             em_width = self.make_guess_emsize_estimates(
-                [co2_conc_zero, co2_conc_now], 
-                dtemp_series=[dtemp, dtemp]
+                [co2_conc_zero, co2_conc_now], feedback_dict_series=feedback_dict_series
             )[1]
 
         min_guess = np.min(
@@ -228,11 +249,10 @@ class AbstractCarbonCycleModel(ABC):
             min_guess = min_guess - 1
 
         return max_guess, min_guess
-    
+
     def make_guess_emsize_estimates(
-        self,
-        co2_conc_series,
-        dtemp_series=None):
+        self, co2_conc_series, feedback_dict_series=None
+    ):  # pylint: disable=unused-argument
         """
         Make an estimate of emission size changes from a concentrations
         change and a temperature size. This should just be used to scale
@@ -247,10 +267,12 @@ class AbstractCarbonCycleModel(ABC):
         co2_conc_series : np.ndarray
             Timeseries of co2 concentrations for which to back
             calculate emissions
-        dtemp_series : np.ndarray
-            Timeseries of temperature change for which to back calculate emissions
+        feedback_dict_series : np.ndarray
+            Timeseries of feedback variables for which to back calculate emissions
             It should be the same length as the concentration timeseries
             If no value is sent, a timeseries of zeros will be used
+            In this abstract class we only do not use this variable
+            but it might be useful in concrete implementations
 
         Returns
         -------
@@ -258,14 +280,12 @@ class AbstractCarbonCycleModel(ABC):
             Timeseries of estimated emissions very rough size of possible
             emission changes that can be used
         """
-        if dtemp_series is None:
-            dtemp_series = np.zeros_like(co2_conc_series)
         prev_co2_series = np.zeros_like(co2_conc_series)
         prev_co2_series[0] = PREINDUSTRIAL_CO2_CONC
         prev_co2_series[1:] = co2_conc_series[:-1]
         return (co2_conc_series - prev_co2_series) * PPM_CO2_TO_PG_C
-    
-    def back_calculate_emissions(self, co2_conc_series, dtemp_series=None):
+
+    def back_calculate_emissions(self, co2_conc_series, feedback_dict_series=None):
         """
         Back calculate emissions from conc_run
 
@@ -277,10 +297,11 @@ class AbstractCarbonCycleModel(ABC):
         co2_conc_series : np.ndarray
             Timeseries of co2 concentrations for which to back
             calculate emissions
-        dtemp_series : np.ndarray
-            Timeseries of temperature change for which to back calculate emissions
-            It should be the same length as the concentration timeseries
-            If no value is sent, a timeseries of zeros will be used
+        feedback_dict_series : dict
+            Timeseries of feedback variables for which to back calculate emissions
+            For each variable key, the value should be an np.ndarray timeseries of
+            the same length as the concentration timeseries
+            If no value is sent, timeseries of zeros will be used
 
         Returns
         -------
@@ -290,27 +311,32 @@ class AbstractCarbonCycleModel(ABC):
         """
         prev_co2_conc = PREINDUSTRIAL_CO2_CONC
         em_series = np.zeros(len(co2_conc_series))
-        if dtemp_series is None:
-            dtemp_series = np.zeros(len(co2_conc_series))
-
+        if feedback_dict_series is None:
+            feedback_dict_series = {
+                key: np.zeros(len(co2_conc_series)) for key in self.get_feedback_list()
+            }
         emissions_width = self.make_guess_emsize_estimates(
             co2_conc_series=co2_conc_series,
-            dtemp_series=dtemp_series,
+            feedback_dict_series=feedback_dict_series,
         )
         for i, co2_conc in enumerate(co2_conc_series):
             em_width_here = emissions_width[i * self.pamset["idtm"]]
             em_series[i] = self._guess_emissions_iteration(
                 co2_conc,
-                self.get_initial_max_min_guess(co2_conc, prev_co2_conc, em_width=em_width_here),
+                self.get_initial_max_min_guess(
+                    co2_conc, prev_co2_conc, em_width=em_width_here
+                ),
                 yrix=i,
-                dtemp=dtemp_series[i],
+                feedback_dict={
+                    key: feedback_dict_series[key][i] for key in feedback_dict_series
+                },
             )
             prev_co2_conc = co2_conc
         return em_series
 
     @abstractmethod
     def get_carbon_cycle_output(
-        self, years, conc_run=False, conc_series=None, dtemp_series=None
+        self, years, conc_run=False, conc_series=None, feedback_dict_series=None
     ):
         """
         Make and return a dataframe with carbon cycle data
@@ -324,9 +350,11 @@ class AbstractCarbonCycleModel(ABC):
         conc_series : np.array
             Numpy array of concentrations, must be included for a concentrations
             driven run to back calculate emissions
-        dtemp_series : np.ndarray
-            Timeseries of temperature change, should be included for calculation of
-            outputs if temperature feedbacks are on
+        feedback_dict_series : dict
+            Timeseries of feedback variables for which to back calculate emissions
+            For each variable key, the value should be an np.ndarray timeseries of
+            the same length as the concentration timeseries
+            If no value is sent, timeseries of zeros will be used
 
         Returns
         -------
