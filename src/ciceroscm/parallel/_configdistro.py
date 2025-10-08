@@ -223,8 +223,13 @@ class _ConfigDistro:
         return samples
 
     def make_config_lists(
-        self, numvalues, json_fname=None, indexer_pre="", max_chunk_size=None
-    ):
+        self,
+        numvalues,
+        json_fname=None,
+        indexer_pre="",
+        max_chunk_size=None,
+        meta_info=None,
+    ):  # pylint:disable=too-many-arguments,too-many-positional-arguments
         """
         Make configuration list or chunked lists from samples over the distribution
 
@@ -240,6 +245,8 @@ class _ConfigDistro:
             Maximum number of samples in a chunk, use this
         to split the full distribution into more managable
         chunks of maximum this size
+        meta_info: dict, optional
+            dictionary with meta optional information to add to the json file
 
         Returns
         -------
@@ -255,7 +262,11 @@ class _ConfigDistro:
             samples = self.get_samples_from_distro_gaussian(numvalues)
         if max_chunk_size is None or max_chunk_size > numvalues:
             return self.make_single_config_list(
-                samples, numvalues, json_fname=json_fname, indexer_pre=indexer_pre
+                samples,
+                numvalues,
+                json_fname=json_fname,
+                indexer_pre=indexer_pre,
+                meta_info=meta_info,
             )
         config_nums = np.ceil(numvalues / max_chunk_size).astype(int)
         config_chunk_list = [None] * config_nums
@@ -272,12 +283,13 @@ class _ConfigDistro:
                 numvalues=num_this_chunk,
                 json_fname=json_fname_now,
                 indexer_pre=f"{indexer_pre}_{config_num}_",
+                meta_info=meta_info,
             )
         return config_chunk_list
 
     def make_single_config_list(
-        self, samples, numvalues, json_fname=None, indexer_pre=""
-    ):
+        self, samples, numvalues, json_fname=None, indexer_pre="", meta_info=None
+    ):  # pylint:disable=too-many-arguments,too-many-positional-arguments
         """
         Make configuration list from samples
 
@@ -291,6 +303,8 @@ class _ConfigDistro:
            path to file to output configurations
         indexer_pre: str
            prefix to put on the Index for the samples
+        meta_info: dict, optional
+            dictionary with meta optional information to add to the json file
 
         Returns
         -------
@@ -323,6 +337,12 @@ class _ConfigDistro:
                 "Index": f"{indexer_pre}{i}",
             }
         if json_fname is not None:
-            with open(json_fname, "w", encoding="utf-8") as wfile:
-                json.dump(config_list, wfile)
+            if meta_info is None:
+                with open(json_fname, "w", encoding="utf-8") as wfile:
+                    json.dump(config_list, wfile)
+            else:
+                with open(json_fname, "w", encoding="utf-8") as wfile:
+                    json.dump(
+                        {"configurations": config_list, "meta_info": meta_info}, wfile
+                    )
         return config_list
