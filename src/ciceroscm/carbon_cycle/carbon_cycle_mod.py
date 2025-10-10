@@ -17,7 +17,13 @@ from .common_carbon_cycle_functions import (
     PREINDUSTRIAL_CO2_CONC,
     calculate_airborne_fraction,
 )
-from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
+from .rfuns import (
+    _process_flat_carbon_parameters,
+    rb_function,
+    rb_function2,
+    rs_function2,
+    rs_function_array,
+)
 
 
 def sigmoid_gen(eval_point, sigmoid_center, sigmoid_width):
@@ -132,11 +138,14 @@ class CarbonCycleModel:
         if pamset_carbon is None:
             pamset_carbon = CARBON_CYCLE_MODEL_REQUIRED_PAMSET
         else:
+            # Process flat carbon cycle parameters first
+            pamset_carbon = _process_flat_carbon_parameters(pamset_carbon)
             pamset_carbon = cut_and_check_pamset(
                 CARBON_CYCLE_MODEL_REQUIRED_PAMSET,
                 pamset_carbon,
                 used={"rs_function": "missing", "rb_function": "missing"},
             )
+
         pamset_carbon = take_out_missing(pamset_carbon.copy())
         self.pamset = {**pamset, **pamset_carbon}
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
@@ -161,12 +170,27 @@ class CarbonCycleModel:
             "sums": 0.0,
         }
         if pamset_carbon is not None:
+            # Process flat carbon cycle parameters first
+            pamset_carbon = _process_flat_carbon_parameters(pamset_carbon)
+            # Check if we need to recompute r_functions
+            needs_rfunction_recompute = (
+                "rs_function" in pamset_carbon or "rb_function" in pamset_carbon
+            )
+
             self.pamset = update_pam_if_numeric(
                 self.pamset,
                 pamset_new=pamset_carbon,
                 can_change=CARBON_CYCLE_MODEL_REQUIRED_PAMSET.keys(),
             )
+            # Update with non-numeric parameters (like function dictionaries)
+            for key in ["rs_function", "rb_function"]:
+                if key in pamset_carbon:
+                    self.pamset[key] = pamset_carbon[key]
             self.fnpp_from_temp_vec = np.vectorize(self.fnpp_from_temp)
+
+            # Recompute r_functions if we updated any function parameters
+            if needs_rfunction_recompute:
+                self.precalc_r_functions()
 
     def _set_co2_hold(
         self, xco2=PREINDUSTRIAL_CO2_CONC, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
@@ -766,8 +790,6 @@ class CarbonCycleModel:
             self.pamset["nystart"] + yrix, guess, dtemp=dtemp
         )
         iteration = 0
-        if yrix % 50 == 0:
-            print(f"yr: {yrix} has minguess: {min_guess}, maxguess: {max_guess}")
         while (
             iteration < maxit
             and np.abs(co2_conc_now - estimated_conc) / co2_conc_now > rtol
@@ -784,10 +806,6 @@ class CarbonCycleModel:
                 self.pamset["nystart"] + yrix, guess, dtemp=dtemp
             )
             iteration = iteration + 1
-        if yrix % 50 == 0:
-            print(
-                f"End guess: {guess} {co2_conc_now} and {co2_conc_zero}  and estimated conc {estimated_conc}"
-            )
         return guess
 
     def get_carbon_cycle_output(
@@ -838,7 +856,8 @@ class CarbonCycleModel:
         if not conc_run:
             return df_carbon
         df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
-            em_series, conc_series  # pylint: disable=possibly-used-before-assignment
+            em_series,  # pylint: disable=possibly-used-before-assignment
+            conc_series,
         )
         df_carbon["Emissions"] = em_series
         return df_carbon

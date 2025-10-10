@@ -953,7 +953,10 @@ class ConcentrationsEmissionsHandler:
 
         if self.pamset["conc_run"]:
             df_carbon = self.carbon_cycle.get_carbon_cycle_output(
-                conc_series, conc_run=self.pamset["conc_run"], dtemp_series=dtemp_series
+                self.years,
+                conc_series=conc_series,
+                conc_run=self.pamset["conc_run"],
+                dtemp_series=dtemp_series,
             )
         else:
             em_series = (
