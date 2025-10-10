@@ -98,7 +98,25 @@ The parameterset for the carbon cycle (which is needed for emission runs) takes 
 * npp0 (60), t_half (0.5), w_sigmoid (7), t_threshold (4), w_threshold (7) describes the temperature feedback on the primary production on land. npp0 is the npp at temperature 0, from there the behaviour is controlled by a peak sigmoid inrease and a threshold damping decline, t_half is the temperature of the halfway point of the sigmoid, w_sigmoid is the width of the sigmoid, t_threshold is the point at which the threshold has dampened the effect to half of its maximum and threshold width is the width of the threshold (all in K).
 * solubility_sens (0.02) and solubility_limit (0.5) control temperature feedbacks on the ocean carbon solubility. solubility_sens describes an exponential scaling of solubility with temperature, while solubility_limit limits the amount of gain the scaling can have to (i.e. max scaling of 1 + solubility_limit).
 
+## MetaData
+CICERO-SCM supports optional metadata in parameter configuration JSON files. When generating configuration files for parameter distributions, you can add a meta_info dictionary containing model version, settings, or other relevant information. The resulting JSON file will include both the list of configurations and the metadata, making it easier to track origin and context.  There is no enforced schema, and the metadata dictionary can be defined by the user.
+```
+# Define metadata to include
+meta_info = {
+    "Model_version": "ciceroscm-v1.5.0",
+    "carbon_cycle": "Default",
+    "thermal_model": "Default",
+    "dump_date": "2025-10-10"
+}
 
+# Write configuration list to JSON with metadata
+config.make_config_lists(
+    numvalues=10,
+    json_fname="my_config_with_meta.json",
+    meta_info=meta_info
+) 
+```
+Both legacy (list-only) and new (metadata-inclusive) formats are supported for full backward compatibility.
 ## Parallelisation tools
 The module also has a submodule of parallelisation tools. This includes:
 * The cscmparwrapper, which is a parallelisation wrapper, that you can use for parallel runs of both full runs and forcing specific runs, and parallelise over either multiple scenarios, or multiple configurations or a list of both configurations and scenarios. The wrapper will divide the runs by scenarios initially, but if more parallel workers are available, it will also divide the configuration sets. The scenariodata and the configuration sets both are sents at lists of dictionaries of keyword arguments required for runs
