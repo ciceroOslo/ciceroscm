@@ -196,6 +196,8 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
                 )
                 if isinstance(years, pd.DataFrame) and years.empty:  # pragma: no cover
                     continue  # pragma: no cover
+                # TODO: change CICERO-SCM-PY to include version number and/or
+                # thermal model and carbon cycle used from the cscm instance
                 data = [
                     "CICERO-SCM-PY",
                     self.model,
