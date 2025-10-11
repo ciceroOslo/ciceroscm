@@ -2,8 +2,8 @@
 
 from .carbon_cycle.carbon_cycle_mod import CarbonCycleModel as DefaultCarbonCycleModel
 from .carbon_cycle.carbon_cycle_mod_box import CarbonCycleModel as BoxCarbonCycleModel
-from .two_layer_ocean import TwoLayerOceanModel
-from .upwelling_diffusion_model import UpwellingDiffusionModel
+from .thermal_model.two_layer_ocean import TwoLayerOceanModel
+from .thermal_model.upwelling_diffusion_model import UpwellingDiffusionModel
 
 
 def create_carbon_cycle_model(model_type, pamset, pamset_carbon=None):

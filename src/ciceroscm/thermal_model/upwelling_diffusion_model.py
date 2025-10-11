@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from scipy.linalg import solve_banded
 
-from ._utils import cut_and_check_pamset
+from .._utils import cut_and_check_pamset
 
 SEC_DAY = 86400
 DAY_YEAR = 365.0

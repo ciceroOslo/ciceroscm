@@ -10,8 +10,8 @@ from ciceroscm.carbon_cycle.carbon_cycle_mod import (
 from ciceroscm.carbon_cycle.carbon_cycle_mod_box import (
     CarbonCycleModel as BoxCarbonCycleModel,
 )
-from ciceroscm.two_layer_ocean import TwoLayerOceanModel
-from ciceroscm.upwelling_diffusion_model import UpwellingDiffusionModel
+from ciceroscm.thermal_model.two_layer_ocean import TwoLayerOceanModel
+from ciceroscm.thermal_model.upwelling_diffusion_model import UpwellingDiffusionModel
 
 
 def test_ciceroscm_with_default_carbon_cycle_model(test_data_dir):

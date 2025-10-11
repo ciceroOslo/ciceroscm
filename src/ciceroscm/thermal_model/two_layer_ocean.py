@@ -4,6 +4,8 @@
 
 import numpy as np
 
+from .upwelling_diffusion_model import SEC_DAY, DAY_YEAR
+
 
 class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
     """
@@ -26,9 +28,9 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
         if params is None:
             params = {}
         self.lambda_ = params.get("lambda", 3.74 / 3)
-        self.c_fast = params.get("mixed", 50) * 1000 * 4181 / (365 * 24 * 3600)
+        self.c_fast = params.get("mixed", 50) * 1000 * 4181 / (SEC_DAY * DAY_YEAR)
         self.c_slow = (
-            params.get("deep", 1200) * 1000 * 4181 / (365 * 24 * 3600)
+            params.get("deep", 1200) * 1000 * 4181 / (SEC_DAY * DAY_YEAR)
         )  # Default value: 100.0
         self.k = params.get("k", 0.5)  # eta, Default value: 0.5
         self.efficacy = params.get("efficacy", 1)

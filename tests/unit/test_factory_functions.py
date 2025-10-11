@@ -10,8 +10,8 @@ from ciceroscm.component_factory_functions import (
     create_carbon_cycle_model,
     create_thermal_model,
 )
-from ciceroscm.two_layer_ocean import TwoLayerOceanModel
-from ciceroscm.upwelling_diffusion_model import UpwellingDiffusionModel
+from ciceroscm.thermal_model.two_layer_ocean import TwoLayerOceanModel
+from ciceroscm.thermal_model.upwelling_diffusion_model import UpwellingDiffusionModel
 
 
 def test_create_default_carbon_cycle_model():
