@@ -8,14 +8,14 @@ This test demonstrates that:
 3. The carbon cycle responds to flat parameter perturbations
 """
 
-import pytest
 import numpy as np
+import pytest
 
-from ciceroscm.parallel._configdistro import _ConfigDistro, prior_flat
 from ciceroscm.carbon_cycle.carbon_cycle_mod import (
-    CarbonCycleModel,
     PREINDUSTRIAL_CO2_CONC,
+    CarbonCycleModel,
 )
+from ciceroscm.parallel._configdistro import _ConfigDistro, prior_flat
 
 
 def test_flat_parameters_are_perturbed_in_distro():
@@ -118,10 +118,10 @@ def test_flat_parameters_affect_carbon_functions():
         rs_coeffs_different or rs_times_different
     ), "rs_function should differ between models with different flat parameters"
 
-    print(f"✅ rb_function differs between models:")
+    print("✅ rb_function differs between models:")
     print(f"   Model 1 coeffs: {[f'{c:.3f}' for c in rb_func1['coeffs']]}")
     print(f"   Model 2 coeffs: {[f'{c:.3f}' for c in rb_func2['coeffs']]}")
-    print(f"✅ rs_function differs between models:")
+    print("✅ rs_function differs between models:")
     print(f"   Model 1 coeffs: {[f'{c:.3f}' for c in rs_func1['coeffs']]}")
     print(f"   Model 2 coeffs: {[f'{c:.3f}' for c in rs_func2['coeffs']]}")
 
@@ -200,13 +200,13 @@ def test_flat_parameters_affect_model_output():
         co2_atm2 > PREINDUSTRIAL_CO2_CONC
     ), "Model 2 should show CO2 increase from emission pulse"
 
-    print(f"✅ Model outputs differ significantly:")
+    print("✅ Model outputs differ significantly:")
     print(f"   Model 1 CO2 concentration: {co2_atm1:.3f} ppm")
     print(f"   Model 2 CO2 concentration: {co2_atm2:.3f} ppm")
     print(f"   Absolute difference: {abs_diff:.3f} ppm")
 
     # Print the actual flat parameter values that caused the difference
-    print(f"✅ Flat parameter values that caused the difference:")
+    print("✅ Flat parameter values that caused the difference:")
     for param in ["rb_coef0", "rb_tim0", "rs_coef0", "rs_tim0"]:
         val1 = pamset_carbon1.get(param, "N/A")
         val2 = pamset_carbon2.get(param, "N/A")
