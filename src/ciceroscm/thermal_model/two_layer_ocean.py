@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from .upwelling_diffusion_model import SEC_DAY, DAY_YEAR
+from .upwelling_diffusion_model import DAY_YEAR, SEC_DAY
 
 
 class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
