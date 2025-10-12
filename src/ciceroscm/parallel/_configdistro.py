@@ -346,7 +346,7 @@ class _ConfigDistro:
                     and pam in CARBON_CYCLE_MODEL_REQUIRED_PAMSET
                 ):
                     pamset_carbon[pam] = samples[i, j]
-                elif not self.options["forc"] and pam.startswith(('rb_', 'rs_')):
+                elif not self.options["forc"] and pam.startswith(("rb_", "rs_")):
                     pamset_carbon[pam] = samples[i, j]
                 elif not self.options["forc"]:
                     pamset_emiconc[pam] = samples[i, j]
