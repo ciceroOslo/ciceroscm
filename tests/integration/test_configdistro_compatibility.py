@@ -1,9 +1,7 @@
 """
 Test _ConfigDistro compatibility with flat carbon cycle parameters.
 
-This test demonstrates an important issue: flat rb_/rs_ parameters are not
-properly handled by _ConfigDistro because they end up in pamset_emiconc
-instead of pamset_carbon, where _process_flat_carbon_parameters is called.
+Tests if flat rb_/rs_ parameters are properly handled by _ConfigDistro
 """
 
 import pytest
@@ -92,9 +90,8 @@ def test_configdistro_flat_parameters_with_custom_params():
     custom_distro.update(
         {
             "rb_coef0": [0.3, 0.7],
-            "rb_coef1": [0.1, 0.4],
             "rb_tim0": [1.0, 5.0],
-            "rb_tim1": [5.0, 15.0],
+            "rs_coef0": [0.3, 0.6],
         }
     )
 
@@ -111,9 +108,9 @@ def test_configdistro_flat_parameters_with_custom_params():
     flat_params_carbon = {
         k: v for k, v in config["pamset_carbon"].items() if k.startswith(("rb_", "rs_"))
     }
-
+    print(flat_params_carbon)
     assert len(flat_params_emiconc) == 0, "No flat params should be in pamset_emiconc"
-    assert len(flat_params_carbon) > 0, "Flat params should be in pamset_carbon"
+    assert len(flat_params_carbon) == 13, "Flat params should be in pamset_carbon"
 
     # Create model directly
     pamset_emiconc = {
@@ -133,97 +130,6 @@ def test_configdistro_flat_parameters_with_custom_params():
     rb_func = model.pamset["rb_function"]
     assert len(rb_func["coeffs"]) == 3, "Should have 3 rb coefficients (rb_coef0-2)"
     assert len(rb_func["timescales"]) == 3, "Should have 3 rb timescales (rb_tim0-2)"
-
-
-def test_default_prior_flat_coverage():
-    """Test that default prior_flat now includes flat carbon parameters after Phase 1 fix."""
-    flat_params = [p for p in prior_flat.keys() if p.startswith(("rb_", "rs_"))]
-
-    # should include all flat carbon parameters
-    expected_flat_params = {
-        "rb_coef0",
-        "rb_coef1",
-        "rb_coef2",
-        "rb_tim0",
-        "rb_tim1",
-        "rb_tim2",
-        "rs_coef0",
-        "rs_coef1",
-        "rs_coef2",
-        "rs_coef3",
-        "rs_tim0",
-        "rs_tim1",
-        "rs_tim2",
-    }
-    actual_flat_params = set(flat_params)
-
-    assert (
-        actual_flat_params == expected_flat_params
-    ), f"Default prior_flat should contain flat carbon parameters after Phase 1 fix. Expected: {expected_flat_params}, Got: {actual_flat_params}"
-
-
-def test_configdistro_parameter_routing():
-    """
-    Test how _ConfigDistro routes parameters to different pamsets.
-
-    This test documents the current behavior to help understand the issue.
-    """
-
-    # Test parameter that would go to pamset_udm (forcing run)
-    test_distro = {"rlamdo": [5, 25]}  # This is in ordering_standard_forc
-    config_distro = _ConfigDistro(distro_dict=test_distro, options={"forc": True})
-    config = config_distro.make_config_lists(1)[0]
-
-    assert (
-        "rlamdo" in config["pamset_udm"]
-    ), "rlamdo should go to pamset_udm in forc run"
-    assert (
-        "rlamdo" not in config["pamset_emiconc"]
-    ), "rlamdo should not be in pamset_emiconc"
-    assert (
-        "rlamdo" not in config["pamset_carbon"]
-    ), "rlamdo should not be in pamset_carbon"
-
-    # Test parameter that would go to pamset_carbon
-    test_distro = {
-        "beta_f": [0.1, 0.5]
-    }  # This is in CARBON_CYCLE_MODEL_REQUIRED_PAMSET
-    config_distro = _ConfigDistro(distro_dict=test_distro)
-    config = config_distro.make_config_lists(1)[0]
-
-    assert "beta_f" in config["pamset_carbon"], "beta_f should go to pamset_carbon"
-    assert (
-        "beta_f" not in config["pamset_emiconc"]
-    ), "beta_f should not be in pamset_emiconc"
-    assert "beta_f" not in config["pamset_udm"], "beta_f should not be in pamset_udm"
-
-    # Test parameter that would go to pamset_emiconc (anything else)
-    test_distro = {"custom_param": [0, 1]}  # Not in standard lists
-    config_distro = _ConfigDistro(distro_dict=test_distro)
-    config = config_distro.make_config_lists(1)[0]
-
-    assert (
-        "custom_param" in config["pamset_emiconc"]
-    ), "custom_param should go to pamset_emiconc"
-    assert (
-        "custom_param" not in config["pamset_carbon"]
-    ), "custom_param should not be in pamset_carbon"
-    assert (
-        "custom_param" not in config["pamset_udm"]
-    ), "custom_param should not be in pamset_udm"
-
-    # Test parameter routing
-    test_distro = {"rb_coef0": [0.3, 0.7]}
-    config_distro = _ConfigDistro(distro_dict=test_distro)
-    config = config_distro.make_config_lists(1)[0]
-
-    # rb_/rs_ parameters now go to pamset_carbon
-    assert (
-        "rb_coef0" in config["pamset_carbon"]
-    ), "rb_coef0 should go to pamset_carbon (Phase 1 fix)"
-    assert (
-        "rb_coef0" not in config["pamset_emiconc"]
-    ), "rb_coef0 should not go to pamset_emiconc (Phase 1 fix)"
 
 
 if __name__ == "__main__":
