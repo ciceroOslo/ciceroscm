@@ -17,6 +17,8 @@ The changes listed in this file are categorised as follows:
 [Unreleased]
 
 ### Changed
+- Simplified Tropospheric Ozone forcing calculation, using the same calculation throughout both before and after emstart 
+    (previous implementation relied on fossil fuel CO2 concentration likely for historical reasons of missing data).
 
 ### Added
 

@@ -503,52 +503,27 @@ class ConcentrationsEmissionsHandler:
         float
              tropospheric ozone forcing
         """
-        emstart = self.pamset["emstart"]
         yr_0 = self.years[0]
-        yr_emstart = emstart - yr_0
-        yr_ix = yr - yr_0
         tracer = "TROP_O3"
-        if yr_ix < yr_emstart or self.pamset["conc_run"]:
-            # Uses change in CO2_FF emissions
-            if self.emis["CO2_FF"][self.pamset["ref_yr"]] != self.emis["CO2_FF"][yr_0]:
-                q = (
-                    (self.emis["CO2_FF"][yr] - self.emis["CO2_FF"][yr_0])
-                    / (
-                        self.emis["CO2_FF"][self.pamset["ref_yr"]]
-                        - self.emis["CO2_FF"][yr_0]
-                    )
-                    * self.pamset["qo3"]
-                )
-            else:
-                q = (
-                    (self.emis["CO2_FF"][yr] - self.emis["CO2_FF"][yr_0])
-                ) * self.pamset["qo3"]
-
-        else:
-            # ALOG(1700.0))  !Concentration in 2010 &
-            self.conc[tracer][yr] = (
-                30.0
-                + 6.7
-                * (
-                    np.log(self.conc["CH4"][yr])
-                    - np.log(self.conc_in["CH4"][self.pamset["ref_yr"]])
-                )
-                + 0.17
-                * (self.emis["NOx"][yr] - self.emis["NOx"][self.pamset["ref_yr"]])
-                + 0.0014
-                * (self.emis["CO"][yr] - self.emis["CO"][self.pamset["ref_yr"]])
-                + 0.0042
-                * (self.emis["NMVOC"][yr] - self.emis["NMVOC"][self.pamset["ref_yr"]])
+        # ALOG(1700.0))  !Concentration in 2010 &
+        self.conc[tracer][yr] = (
+            30.0
+            + 6.7
+            * (
+                np.log(self.conc["CH4"][yr])
+                - np.log(self.conc_in["CH4"][self.pamset["ref_yr"]])
             )
-            # RBS101115
-            # IF (yr_ix.LT.yr_2010) THEN ! Proportional to TROP_O3 build-up
-            # Rewritten a bit, place to check for differences...
-            forc_pre_emstart = self.forc[tracer][yr_emstart - 1]
-            value = self.conc[tracer][yr]
-            value_0 = self.conc[tracer][self.pamset["emstart"]]
-            q = forc_pre_emstart + (value - value_0) / (30.0 - value_0) * (
-                self.pamset["qo3"] - forc_pre_emstart
-            )
+            + 0.17 * (self.emis["NOx"][yr] - self.emis["NOx"][self.pamset["ref_yr"]])
+            + 0.0014 * (self.emis["CO"][yr] - self.emis["CO"][self.pamset["ref_yr"]])
+            + 0.0042
+            * (self.emis["NMVOC"][yr] - self.emis["NMVOC"][self.pamset["ref_yr"]])
+        )
+        # RBS101115
+        # IF (yr_ix.LT.yr_2010) THEN ! Proportional to TROP_O3 build-up
+        # Rewritten a bit, place to check for differences...
+        value = self.conc[tracer][yr]
+        value_0 = self.conc[tracer][yr_0]
+        q = (value - value_0) / (30.0 - value_0) * (self.pamset["qo3"])
         return q
 
     def conc2forc(self, yr, rf_luc, rf_sun):  # pylint: disable=too-many-branches
