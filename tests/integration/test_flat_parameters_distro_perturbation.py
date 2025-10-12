@@ -133,36 +133,36 @@ def test_flat_parameters_affect_model_output():
 
     # Configuration 1: Fast carbon cycle (high first coefficient, fast timescales)
     pamset_carbon1 = {
-        "rb_coef0": 0.6,   # High first coefficient
-        "rb_coef1": 0.2,   # Medium coefficient  
-        "rb_coef2": 0.2,   # Medium coefficient
-        "rb_tim0": 1.5,    # Fast timescale
-        "rb_tim1": 8.0,    # Medium timescale
-        "rb_tim2": 45.0,   # Slow timescale
-        "rs_coef0": 0.1,   # Low first coefficient
-        "rs_coef1": 0.6,   # High coefficient
+        "rb_coef0": 0.6,  # High first coefficient
+        "rb_coef1": 0.2,  # Medium coefficient
+        "rb_coef2": 0.2,  # Medium coefficient
+        "rb_tim0": 1.5,  # Fast timescale
+        "rb_tim1": 8.0,  # Medium timescale
+        "rb_tim2": 45.0,  # Slow timescale
+        "rs_coef0": 0.1,  # Low first coefficient
+        "rs_coef1": 0.6,  # High coefficient
         "rs_coef2": 0.15,  # Medium coefficient
         "rs_coef3": 0.15,  # Medium coefficient
-        "rs_tim0": 0.8,    # Fast timescale
-        "rs_tim1": 6.0,    # Medium timescale
-        "rs_tim2": 65.0,   # Slow timescale
+        "rs_tim0": 0.8,  # Fast timescale
+        "rs_tim1": 6.0,  # Medium timescale
+        "rs_tim2": 65.0,  # Slow timescale
     }
 
     # Configuration 2: Slow carbon cycle (low first coefficient, slow timescales)
     pamset_carbon2 = {
-        "rb_coef0": 0.3,   # Low first coefficient
+        "rb_coef0": 0.3,  # Low first coefficient
         "rb_coef1": 0.35,  # Higher coefficient
         "rb_coef2": 0.35,  # Higher coefficient
-        "rb_tim0": 4.0,    # Slow timescale
-        "rb_tim1": 12.0,   # Slower timescale
-        "rb_tim2": 70.0,   # Very slow timescale
+        "rb_tim0": 4.0,  # Slow timescale
+        "rb_tim1": 12.0,  # Slower timescale
+        "rb_tim2": 70.0,  # Very slow timescale
         "rs_coef0": 0.15,  # Higher first coefficient
-        "rs_coef1": 0.5,   # Lower coefficient
-        "rs_coef2": 0.175, # Higher coefficient
-        "rs_coef3": 0.175, # Higher coefficient
-        "rs_tim0": 1.1,    # Slower timescale
-        "rs_tim1": 9.0,    # Slower timescale
-        "rs_tim2": 85.0,   # Very slow timescale
+        "rs_coef1": 0.5,  # Lower coefficient
+        "rs_coef2": 0.175,  # Higher coefficient
+        "rs_coef3": 0.175,  # Higher coefficient
+        "rs_tim0": 1.1,  # Slower timescale
+        "rs_tim1": 9.0,  # Slower timescale
+        "rs_tim2": 85.0,  # Very slow timescale
     }
 
     # Base parameter set for both models
