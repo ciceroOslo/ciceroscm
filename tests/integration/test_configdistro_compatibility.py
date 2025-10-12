@@ -7,10 +7,9 @@ instead of pamset_carbon, where _process_flat_carbon_parameters is called.
 """
 
 import pytest
-import numpy as np
 
-from ciceroscm.parallel._configdistro import _ConfigDistro, prior_flat
 from ciceroscm.carbon_cycle.carbon_cycle_mod import CarbonCycleModel
+from ciceroscm.parallel._configdistro import _ConfigDistro, prior_flat
 
 
 def test_configdistro_flat_parameters_phase1_fix():
@@ -116,7 +115,7 @@ def test_configdistro_flat_parameters_with_custom_params():
     assert len(flat_params_emiconc) == 0, "No flat params should be in pamset_emiconc"
     assert len(flat_params_carbon) > 0, "Flat params should be in pamset_carbon"
 
-    # Create model directly 
+    # Create model directly
     pamset_emiconc = {
         "idtm": 24,
         "nystart": 1750,
@@ -169,10 +168,6 @@ def test_configdistro_parameter_routing():
 
     This test documents the current behavior to help understand the issue.
     """
-    from ciceroscm.carbon_cycle.carbon_cycle_mod import (
-        CARBON_CYCLE_MODEL_REQUIRED_PAMSET,
-    )
-    from ciceroscm.parallel._configdistro import ordering_standard_forc
 
     # Test parameter that would go to pamset_udm (forcing run)
     test_distro = {"rlamdo": [5, 25]}  # This is in ordering_standard_forc
@@ -217,7 +212,7 @@ def test_configdistro_parameter_routing():
         "custom_param" not in config["pamset_udm"]
     ), "custom_param should not be in pamset_udm"
 
-    # Test parameter routing 
+    # Test parameter routing
     test_distro = {"rb_coef0": [0.3, 0.7]}
     config_distro = _ConfigDistro(distro_dict=test_distro)
     config = config_distro.make_config_lists(1)[0]
