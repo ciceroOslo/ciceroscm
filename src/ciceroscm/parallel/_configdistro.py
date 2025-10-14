@@ -41,6 +41,20 @@ prior_flat = {
     "w_threshold": [5, 10],
     "solubility_sens": [0.01, 0.03],
     "solubility_limit": [0.4, 0.8],
+    # Flat carbon cycle decay function parameters
+    "rb_coef0": [0.3, 0.7],
+    "rb_coef1": [0.1, 0.4],
+    "rb_coef2": [0.1, 0.4],
+    "rb_tim0": [1.0, 5.0],
+    "rb_tim1": [5.0, 20.0],
+    "rb_tim2": [40.0, 200.0],
+    "rs_coef0": [0.05, 0.15],
+    "rs_coef1": [0.5, 0.7],
+    "rs_coef2": [0.1, 0.2],
+    "rs_coef3": [0.1, 0.2],
+    "rs_tim0": [0.5, 3],
+    "rs_tim1": [5.0, 20.0],
+    "rs_tim2": [40.0, 200.0],
 }
 """dict: Containing a default prior for parameters """
 
@@ -331,6 +345,8 @@ class _ConfigDistro:
                     not self.options["forc"]
                     and pam in CARBON_CYCLE_MODEL_REQUIRED_PAMSET
                 ):
+                    pamset_carbon[pam] = samples[i, j]
+                elif not self.options["forc"] and pam.startswith(("rb_", "rs_")):
                     pamset_carbon[pam] = samples[i, j]
                 elif not self.options["forc"]:
                     pamset_emiconc[pam] = samples[i, j]
