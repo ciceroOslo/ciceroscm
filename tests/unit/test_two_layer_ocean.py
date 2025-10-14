@@ -73,8 +73,12 @@ class TestTwoLayerOceanModel:
 
         # Check defaults are used for unspecified parameters
         assert model.pamset["efficacy"] == 1
-        expected_c_fast = 50 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)  # from default mixed=50
-        expected_c_slow = 1200 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)  # from default deep=1200
+        expected_c_fast = (
+            50 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
+        )  # from default mixed=50
+        expected_c_slow = (
+            1200 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
+        )  # from default deep=1200
         assert model.pamset["c_fast"] == pytest.approx(expected_c_fast, rel=1e-10)
         assert model.pamset["c_slow"] == pytest.approx(expected_c_slow, rel=1e-10)
 
@@ -127,7 +131,7 @@ class TestTwoLayerOceanModel:
         fn_volc = [-0.5, -0.3, -0.1]
         fs_volc = [-0.4, -0.2, 0.0]
 
-        result = model.energy_budget(1.0, 1.0, fn_volc, fs_volc)
+        model.energy_budget(1.0, 1.0, fn_volc, fs_volc)
 
         # The total forcing should be 1.0 + np.mean(fn_volc + fs_volc)
         expected_volc_forcing = np.mean(np.array(fn_volc) + np.array(fs_volc))
@@ -169,7 +173,7 @@ class TestTwoLayerOceanModel:
         initial_fast = model.temp_fast
         initial_slow = model.temp_slow
 
-        result = model.energy_budget(0.0, 0.0, [0.0], [0.0])
+        model.energy_budget(0.0, 0.0, [0.0], [0.0])
 
         # Fast layer should cool due to heat transfer to slow layer
         # Slow layer should warm due to heat from fast layer
@@ -201,35 +205,58 @@ class TestTwoLayerOceanModel:
 
         # Check all expected keys are present for interface compatibility
         expected_keys = [
-            "dtemp", "dtemp_fast", "dtemp_slow", "dtemp_air",
-            "dtempnh", "dtempsh", "dtempnh_air", "dtempsh_air",
-            "dtemp_sea", "dtempnh_sea", "dtempsh_sea",
-            "RIBN", "RIBS", "RIB", "OHC700", "OHCTOT",
-            "OHC_MIXED", "OHC_DEEP"
+            "dtemp",
+            "dtemp_fast",
+            "dtemp_slow",
+            "dtemp_air",
+            "dtempnh",
+            "dtempsh",
+            "dtempnh_air",
+            "dtempsh_air",
+            "dtemp_sea",
+            "dtempnh_sea",
+            "dtempsh_sea",
+            "RIBN",
+            "RIBS",
+            "RIB",
+            "OHC700",
+            "OHCTOT",
+            "OHC_MIXED",
+            "OHC_DEEP",
         ]
 
         for key in expected_keys:
             assert key in result, f"Missing key: {key}"
 
         # Check that some values make sense
-        assert result["dtemp"] != result["dtemp_fast"]  # Should be different (weighted combination)
+        assert (
+            result["dtemp"] != result["dtemp_fast"]
+        )  # Should be different (weighted combination)
         assert isinstance(result["RIB"], (float, np.floating))
-        
+
         # Check that meaningful outputs are non-zero and placeholders are zero
         assert result["OHC_MIXED"] != 0.0  # Should have meaningful value
-        assert result["OHC_DEEP"] == 0.0   # Should be zero with zero forcing on slow layer initially
-        assert result["dtempnh"] != 0.0    # Should have meaningful value now
-        assert result["dtempsh"] != 0.0    # Should have meaningful value now
+        assert (
+            result["OHC_DEEP"] == 0.0
+        )  # Should be zero with zero forcing on slow layer initially
+        assert result["dtempnh"] != 0.0  # Should have meaningful value now
+        assert result["dtempsh"] != 0.0  # Should have meaningful value now
         assert result["dtemp_air"] != 0.0  # Should have meaningful value now
         assert result["dtemp_sea"] != 0.0  # Should have meaningful value now
-        assert result["OHC700"] != 0.0     # Should have meaningful calculated value
-        assert result["RIBN"] != 0.0       # Should have meaningful hemisphere-specific RIB
-        assert result["RIBS"] != 0.0       # Should have meaningful hemisphere-specific RIB
-        
+        assert result["OHC700"] != 0.0  # Should have meaningful calculated value
+        assert result["RIBN"] != 0.0  # Should have meaningful hemisphere-specific RIB
+        assert result["RIBS"] != 0.0  # Should have meaningful hemisphere-specific RIB
+
         # Verify air/sea temperature relationships
-        assert result["dtemp_sea"] == result["dtemp_fast"]  # Sea temp should equal fast layer
-        assert result["dtempnh_sea"] == result["dtemp_fast"]  # NH sea temp should equal fast layer
-        assert result["dtempsh_sea"] == result["dtemp_fast"]  # SH sea temp should equal fast layer
+        assert (
+            result["dtemp_sea"] == result["dtemp_fast"]
+        )  # Sea temp should equal fast layer
+        assert (
+            result["dtempnh_sea"] == result["dtemp_fast"]
+        )  # NH sea temp should equal fast layer
+        assert (
+            result["dtempsh_sea"] == result["dtemp_fast"]
+        )  # SH sea temp should equal fast layer
 
     def test_efficacy_effect(self):
         """Test that efficacy parameter affects the coupling correctly"""
@@ -241,8 +268,8 @@ class TestTwoLayerOceanModel:
 
         # Apply same forcing to both
         for _ in range(5):
-            result1 = model1.energy_budget(1.0, 1.0, [0.0], [0.0])
-            result2 = model2.energy_budget(1.0, 1.0, [0.0], [0.0])
+            model1.energy_budget(1.0, 1.0, [0.0], [0.0])
+            model2.energy_budget(1.0, 1.0, [0.0], [0.0])
 
         # With lower efficacy, the coupling between layers is different
         # Let's just verify that different efficacy values produce different results
@@ -262,8 +289,8 @@ class TestTwoLayerOceanModel:
 
         # Apply same forcing multiple times to see the effect
         for _ in range(10):  # More steps to see the cumulative effect
-            result_low = model_low_lambda.energy_budget(1.0, 1.0, [0.0], [0.0])
-            result_high = model_high_lambda.energy_budget(1.0, 1.0, [0.0], [0.0])
+            model_low_lambda.energy_budget(1.0, 1.0, [0.0], [0.0])
+            model_high_lambda.energy_budget(1.0, 1.0, [0.0], [0.0])
 
         # Lower lambda (less climate feedback) should result in more warming after multiple steps
         assert model_low_lambda.temp_fast > model_high_lambda.temp_fast
@@ -288,27 +315,29 @@ class TestTwoLayerOceanModel:
     def test_ocean_heat_content_calculation(self):
         """Test that ocean heat content is calculated correctly"""
         model = TwoLayerOceanModel()
-        
+
         # Apply forcing to warm up the ocean
         result = model.energy_budget(2.0, 2.0, [0.0], [0.0])
-        
+
         # Check that OHC values are calculated
         assert result["OHC_MIXED"] > 0  # Should have some heat in mixed layer
         assert result["OHC_DEEP"] == 0  # Deep layer starts with no heat
-        assert result["OHCTOT"] > 0     # Total should be positive
-        
+        assert result["OHCTOT"] > 0  # Total should be positive
+
         # Check that OHCTOT equals sum of components
         expected_total = result["OHC_MIXED"] + result["OHC_DEEP"]
         assert result["OHCTOT"] == pytest.approx(expected_total, rel=1e-10)
-        
+
         # Apply more forcing to see heat transfer to deep layer
         for _ in range(5):
             result = model.energy_budget(1.0, 1.0, [0.0], [0.0])
-        
+
         # Now deep layer should have some heat
         assert result["OHC_DEEP"] > 0
-        assert result["OHC_MIXED"] > result["OHC_DEEP"]  # Mixed layer should still be warmer
-        
+        assert (
+            result["OHC_MIXED"] > result["OHC_DEEP"]
+        )  # Mixed layer should still be warmer
+
         # Total should still equal sum of components
         expected_total = result["OHC_MIXED"] + result["OHC_DEEP"]
         assert result["OHCTOT"] == pytest.approx(expected_total, rel=1e-10)
@@ -393,28 +422,28 @@ class TestTwoLayerOceanModelEdgeCases:
         # Case 1: Mixed layer deeper than 700m
         model1 = TwoLayerOceanModel({"mixed": 800, "deep": 1200})
         result1 = model1.energy_budget(2.0, 2.0, [0.0], [0.0])
-        
+
         # OHC700 should be 700/800 of mixed layer OHC (since mixed > 700m)
         expected_ratio = 700 / 800
         actual_ratio = result1["OHC700"] / result1["OHC_MIXED"]
         assert abs(actual_ratio - expected_ratio) < 1e-10
-        
+
         # Case 2: Mixed layer shallower than 700m (default case)
         model2 = TwoLayerOceanModel({"mixed": 50, "deep": 1200})
         # Run multiple steps to get some deep layer heating
         for _ in range(3):
             result2 = model2.energy_budget(2.0, 2.0, [0.0], [0.0])
-        
+
         # OHC700 should be all mixed + (650/1200) of deep layer
         deep_fraction = (700 - 50) / 1200  # 650/1200
         expected_ohc700 = result2["OHC_MIXED"] + result2["OHC_DEEP"] * deep_fraction
         assert abs(result2["OHC700"] - expected_ohc700) < 1e-6
-        
+
         # Case 3: Very shallow layers
         model3 = TwoLayerOceanModel({"mixed": 30, "deep": 500})
         for _ in range(3):
             result3 = model3.energy_budget(2.0, 2.0, [0.0], [0.0])
-        
+
         # OHC700 should be all mixed + all deep (since 30 + 500 < 700)
         expected_ohc700 = result3["OHC_MIXED"] + result3["OHC_DEEP"]
         assert abs(result3["OHC700"] - expected_ohc700) < 1e-6
@@ -422,60 +451,64 @@ class TestTwoLayerOceanModelEdgeCases:
     def test_air_sea_temperature_calculations(self):
         """Test air/sea temperature calculations following upwelling diffusion pattern"""
         model = TwoLayerOceanModel()
-        
+
         # Test with asymmetric forcing (NH vs SH)
         result = model.energy_budget(3.0, 1.0, [0.0], [0.0])
-        
+
         # Air temperatures should be forcing / lambda
         expected_nh_air = 3.0 / model.pamset["lambda"]
         expected_sh_air = 1.0 / model.pamset["lambda"]
         assert abs(result["dtempnh_air"] - expected_nh_air) < 1e-10
         assert abs(result["dtempsh_air"] - expected_sh_air) < 1e-10
-        
+
         # Sea temperatures should equal fast layer (globally averaged)
         assert result["dtempnh_sea"] == result["dtemp_fast"]
         assert result["dtempsh_sea"] == result["dtemp_fast"]
         assert result["dtemp_sea"] == result["dtemp_fast"]
-        
+
         # Total temperatures should be weighted combinations
         foan = model.pamset["foan"]
         foas = model.pamset["foas"]
-        expected_nh_total = foan * result["dtempnh_sea"] + (1.0 - foan) * result["dtempnh_air"]
-        expected_sh_total = foas * result["dtempsh_sea"] + (1.0 - foas) * result["dtempsh_air"]
-        
+        expected_nh_total = (
+            foan * result["dtempnh_sea"] + (1.0 - foan) * result["dtempnh_air"]
+        )
+        expected_sh_total = (
+            foas * result["dtempsh_sea"] + (1.0 - foas) * result["dtempsh_air"]
+        )
+
         assert abs(result["dtempnh"] - expected_nh_total) < 1e-10
         assert abs(result["dtempsh"] - expected_sh_total) < 1e-10
-        
+
         # Global averages should be consistent
         expected_global_air = (result["dtempnh_air"] + result["dtempsh_air"]) / 2.0
         expected_global_total = (result["dtempnh"] + result["dtempsh"]) / 2.0
-        
+
         assert abs(result["dtemp_air"] - expected_global_air) < 1e-10
         assert abs(result["dtemp"] - expected_global_total) < 1e-10
 
     def test_hemisphere_radiative_imbalance_calculations(self):
         """Test RIBN and RIBS calculations"""
         model = TwoLayerOceanModel()
-        
+
         # Test with asymmetric forcing and volcanic
         forc_nh = 3.0
         forc_sh = 1.0
         fn_volc = [0.5]
         fs_volc = [-0.2]
-        
+
         result = model.energy_budget(forc_nh, forc_sh, fn_volc, fs_volc)
-        
+
         # Total hemisphere forcing including volcanic
         total_forc_nh = forc_nh + np.mean(fn_volc)
         total_forc_sh = forc_sh + np.mean(fs_volc)
-        
+
         # RIBN/RIBS should follow: RIB = forcing - lambda * temperature
         expected_ribn = total_forc_nh - model.pamset["lambda"] * result["dtempnh"]
         expected_ribs = total_forc_sh - model.pamset["lambda"] * result["dtempsh"]
-        
+
         assert abs(result["RIBN"] - expected_ribn) < 1e-10
         assert abs(result["RIBS"] - expected_ribs) < 1e-10
-        
+
         # Test symmetry: equal forcing should give same RIB
         result_sym = model.energy_budget(2.0, 2.0, [0.0], [0.0])
         # Note: RIBN and RIBS may differ due to different ocean fractions (foan vs foas)
