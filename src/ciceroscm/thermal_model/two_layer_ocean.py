@@ -4,13 +4,24 @@
 
 import numpy as np
 
+from .abstract_thermal_model import AbstractThermalModel
 from .upwelling_diffusion_model import DAY_YEAR, SEC_DAY
 
 
-class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
+class TwoLayerOceanModel(
+    AbstractThermalModel
+):  # pylint: disable=too-few-public-methods
     """
     Two layer Model with 2 thermal timescales.
     """
+
+    thermal_model_required_pamset = {
+        "lambda": 3.74 / 3,  # Climate feedback parameter (W/m^2/K)
+        "mixed": 50,  # Ocean mixed layer depth (m)
+        "deep": 1200,  # Deep ocean layer depth (m)
+        "k": 0.5,  # Coupling coefficient between layers (W/m^2/K)
+        "efficacy": 1,  # Efficacy of deep ocean heat uptake
+    }
 
     def __init__(self, params=None):
         """
@@ -25,6 +36,8 @@ class TwoLayerOceanModel:  # pylint: disable=too-few-public-methods
             - c_slow: Heat capacity of the slow-response layer (J/m^2/K)
             - k: Coupling coefficient between fast and slow layers (W/m^2/K)
         """
+        # TODO make this a self.params thing so super can be called to fix
+        # with some calculattion after...
         if params is None:
             params = {}
         self.lambda_ = params.get("lambda", 3.74 / 3)

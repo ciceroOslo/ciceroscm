@@ -1,15 +1,10 @@
-
-
 """
 Abstract carbon cycle model
 """
 
 from abc import ABC, abstractmethod
 
-import numpy as np
-
 from .._utils import cut_and_check_pamset
-
 
 
 class AbstractThermalModel(ABC):
@@ -25,7 +20,6 @@ class AbstractThermalModel(ABC):
         model parameterset dictionary. This should be
         a class variable
         """
-        pass
 
     @classmethod
     def get_thermal_model_required_pamset(cls):
@@ -58,19 +52,25 @@ class AbstractThermalModel(ABC):
     # TODO: Should this have an option to pass the state?
     # Alternatively, should there be a separate method to
     # update the state?
+    # Also now we send four specific forcings, maybe it should be a dict?
     @abstractmethod
-    def energy_balance(self, forcings):
+    def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc):
         """
         Calculate the energy balance
 
         Parameters
         ----------
-        forcings : dict
-            A dictionary of forcings
+        forc_nh : float
+            Northern hemispheric forcing (W/m^2)
+        forc_sh : float
+            Southern hemispheric forcing (W/m^2)
+        fn_volc : float
+            Northern hemispheric volcanic forcing (W/m^2)
+        fs_volc : float
+            Northern hemispheric volcanic forcing (W/m^2)
 
         Returns
         -------
         float
             The energy balance
         """
-        pass
