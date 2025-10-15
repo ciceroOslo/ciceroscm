@@ -4,7 +4,13 @@
 
 import numpy as np
 
-from ..constants import DAY_YEAR, SEC_DAY, WATER_DENSITY, WATER_HEAT_CAPACITY
+from ..constants import (
+    DAY_YEAR,
+    SEC_DAY,
+    WATER_DENSITY,
+    WATER_HEAT_CAPACITY,
+    OCEAN_AREA,
+)
 from .abstract_thermal_model import AbstractThermalModel
 
 
@@ -25,13 +31,13 @@ class TwoLayerOceanModel(
         "foas": 0.81,  # Southern hemisphere ocean area fraction
     }
 
-    def __init__(self, params=None):
+    def __init__(self, pamset=None):
         """
         Initialize with parameters for multiple thermal timescales.
 
         Parameters
         ----------
-        params : dict
+        pamset : dict
             Dictionary containing model parameters:
             - lambda: Climate feedback parameter (W/m^2/K)
             - mixed: Mixed layer depth (m)
@@ -41,23 +47,13 @@ class TwoLayerOceanModel(
             - foan: Northern hemisphere ocean area fraction
             - foas: Southern hemisphere ocean area fraction
         """
-        # Initialize pamset with defaults and provided parameters
-        if params is None:
-            params = {}
-
-        # Call parent constructor
-        super().__init__()
-
-        # Start with default values from thermal_model_required_pamset
-        self.pamset = self.thermal_model_required_pamset.copy()
-
-        # Update with provided parameters
-        for key, value in params.items():
-            if key in self.pamset:
-                self.pamset[key] = value
+        # Call parent constructor which handles parameter validation and
+        # filtering
+        super().__init__(pamset)
 
         # Calculate derived parameters and store in pamset
-        # Heat capacity per unit area (J/m^2/K) = depth(m) * density(kg/m^3) * specific_heat(J/kg/K) / time_conversion
+        # Heat capacity per unit area (J/m^2/K) = depth(m) * density(kg/m^3) *
+        # specific_heat(J/kg/K) / time_conversion
         self.pamset["c_fast"] = (
             self.pamset["mixed"]
             * WATER_DENSITY
@@ -102,7 +98,8 @@ class TwoLayerOceanModel(
             - dtempnh/dtempsh: Hemispheric total temperatures
             - dtemp_air/dtempnh_air/dtempsh_air: Pure atmospheric temperatures
             - dtemp_sea/dtempnh_sea/dtempsh_sea: Ocean surface temperatures
-            - RIB/RIBN/RIBS: Radiative imbalances (global and hemisphere-specific)
+            - RIB/RIBN/RIBS: Radiative imbalances (global and
+              hemisphere-specific)
             - OHCTOT/OHC_MIXED/OHC_DEEP/OHC700: Ocean heat content diagnostics
         """
         forc = (forc_nh + forc_sh) / 2 + np.mean(fn_volc + fs_volc)
@@ -118,19 +115,23 @@ class TwoLayerOceanModel(
 
         # Slow layer temperature change
         dtemp_slow = (
-            self.pamset["k"] * (self.temp_fast - self.temp_slow) / self.pamset["c_slow"]
+            self.pamset["k"]
+            * (self.temp_fast - self.temp_slow)
+            / self.pamset["c_slow"]
         )
 
         # Update temperatures
         self.temp_fast += dtemp_fast
         self.temp_slow += dtemp_slow
 
-        # Calculate air temperature response (pure atmospheric response without ocean coupling)
+        # Calculate air temperature response (pure atmospheric response
+        # without ocean coupling)
         # Air responds directly to forcing with climate feedback
         forc_nh_air = forc_nh + np.mean(fn_volc)
         forc_sh_air = forc_sh + np.mean(fs_volc)
 
-        # Air temperature = forcing / lambda (simplified energy balance for atmosphere)
+        # Air temperature = forcing / lambda (simplified energy balance
+        # for atmosphere)
         tempn_air = forc_nh_air / self.pamset["lambda"]
         temps_air = forc_sh_air / self.pamset["lambda"]
 
@@ -143,14 +144,17 @@ class TwoLayerOceanModel(
         # Combined temperature following upwelling diffusion model pattern:
         # Total = ocean_fraction * ocean_temp + (1 - ocean_fraction) * air_temp
         tempn = (
-            self.pamset["foan"] * tempn_sea + (1.0 - self.pamset["foan"]) * tempn_air
+            self.pamset["foan"] * tempn_sea
+            + (1.0 - self.pamset["foan"]) * tempn_air
         )
         temps = (
-            self.pamset["foas"] * temps_sea + (1.0 - self.pamset["foas"]) * temps_air
+            self.pamset["foas"] * temps_sea
+            + (1.0 - self.pamset["foas"]) * temps_air
         )
 
         # Calculate hemisphere-specific radiative imbalances
-        # Following upwelling diffusion model: RIB = forcing - lambda * temperature
+        # Following upwelling diffusion model: RIB = forcing - lambda *
+        # temperature
         ribn = forc_nh_air - self.pamset["lambda"] * tempn
         ribs = forc_sh_air - self.pamset["lambda"] * temps
 
@@ -162,23 +166,36 @@ class TwoLayerOceanModel(
             * (self.temp_fast - self.temp_slow)
         )
 
-        # Calculate ocean heat content (J/m^2)
-        # OHC = temperature_change * heat_capacity_per_unit_area
+        # Calculate ocean heat content (10^22 J)
+        # OHC = temperature_change * heat_capacity_per_unit_area *
+        # ocean_area / 1e22
+        # Following UDM convention: convert from J/m² to 10^22 J units
+
         ohc_mixed = (
-            self.temp_fast * self.pamset["c_fast"] * (SEC_DAY * DAY_YEAR)
-        )  # Convert back to J/m^2
+            self.temp_fast
+            * self.pamset["c_fast"]
+            * (SEC_DAY * DAY_YEAR)
+            * OCEAN_AREA
+            / 1e22
+        )  # Convert to 10^22 J
         ohc_deep = (
-            self.temp_slow * self.pamset["c_slow"] * (SEC_DAY * DAY_YEAR)
-        )  # Convert back to J/m^2
+            self.temp_slow
+            * self.pamset["c_slow"]
+            * (SEC_DAY * DAY_YEAR)
+            * OCEAN_AREA
+            / 1e22
+        )  # Convert to 10^22 J
         ohc_total = ohc_mixed + ohc_deep
 
         # Calculate OHC700 (ocean heat content down to 700m)
-        # For 2-layer model, we need to estimate how much of each layer contributes to the top 700m
+        # For 2-layer model, we need to estimate how much of each layer
+        # contributes to the top 700m
         mixed_depth = self.pamset["mixed"]  # Mixed layer depth (m)
         deep_depth = self.pamset["deep"]  # Deep layer depth (m)
 
         if mixed_depth >= 700:
-            # If mixed layer is deeper than 700m, OHC700 is just a fraction of mixed layer
+            # If mixed layer is deeper than 700m, OHC700 is just a
+            # fraction of mixed layer
             ohc700 = ohc_mixed * (700 / mixed_depth)
         else:
             # Mixed layer + part of deep layer contributes to top 700m
@@ -194,20 +211,24 @@ class TwoLayerOceanModel(
             "dtemp_fast": self.temp_fast,  # Fast layer temperature
             "dtemp_slow": self.temp_slow,  # Slow layer temperature
             "RIB": rib_toa,  # Radiative imbalance at top of atmosphere
-            "OHCTOT": ohc_total,  # Total ocean heat content
-            "OHC_MIXED": ohc_mixed,  # Mixed layer ocean heat content
-            "OHC_DEEP": ohc_deep,  # Deep layer ocean heat content
-            # Air/sea temperature components following upwelling diffusion model pattern
+            "OHCTOT": ohc_total,  # Total ocean heat content (10^22 J)
+            "OHC_MIXED": ohc_mixed,  # Mixed layer ocean heat content (10^22 J)
+            "OHC_DEEP": ohc_deep,  # Deep layer ocean heat content (10^22 J)
+            # Air/sea temperature components following upwelling diffusion
+            # model pattern
             "dtempnh": tempn,  # Northern hemisphere total temperature
             "dtempsh": temps,  # Southern hemisphere total temperature
-            "dtemp_air": (tempn_air + temps_air) / 2.0,  # Global air temperature
+            "dtemp_air": (tempn_air + temps_air)
+            / 2.0,  # Global air temperature
             "dtempnh_air": tempn_air,  # Northern hemisphere air temperature
             "dtempsh_air": temps_air,  # Southern hemisphere air temperature
             "dtemp_sea": (tempn_sea + temps_sea)
             / 2.0,  # Global sea surface temperature
-            "dtempnh_sea": tempn_sea,  # Northern hemisphere sea surface temperature
-            "dtempsh_sea": temps_sea,  # Southern hemisphere sea surface temperature
+            "dtempnh_sea": tempn_sea,  # Northern hemisphere sea surface
+            # temperature
+            "dtempsh_sea": temps_sea,  # Southern hemisphere sea surface
+            # temperature
             "RIBN": ribn,  # Northern hemisphere radiative imbalance
             "RIBS": ribs,  # Southern hemisphere radiative imbalance
-            "OHC700": ohc700,  # Ocean heat content down to 700m (approximated for 2-layer structure)
+            "OHC700": ohc700,  # Ocean heat content down to 700m (10^22 J)
         }
