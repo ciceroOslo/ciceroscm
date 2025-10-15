@@ -99,9 +99,9 @@ class UpwellingDiffusionModel(
     """
     Upwelling Diffusion Model for ocean thermal dynamics.
 
-    A 40-layer ocean thermal model that simulates heat diffusion 
+    A 40-layer ocean thermal model that simulates heat diffusion
     into the ocean from the surface using upwelling and diffusion processes.
-    This model provides vertical ocean temperature structure and 
+    This model provides vertical ocean temperature structure and
     accounts for hemisphere-specific ocean dynamics.
 
     The model inherits from AbstractThermalModel, enabling integration
@@ -113,10 +113,10 @@ class UpwellingDiffusionModel(
     pamset : dict, optional
         Parameter set containing model configuration. If None, default
         parameters are used. Key parameters include:
-        
+
         - lambda : float
             Climate feedback parameter (W/m²/K)
-        - mixed : float  
+        - mixed : float
             Mixed layer depth (m)
         - akapa : float
             Thermal diffusion coefficient
@@ -126,7 +126,7 @@ class UpwellingDiffusionModel(
             Number of ocean layers (default 40)
         - ldtime : int
             Number of time steps per year
-            
+
     Attributes
     ----------
     thermal_model_required_pamset : set
@@ -139,7 +139,7 @@ class UpwellingDiffusionModel(
         Layer thicknesses (m)
     tn, ts : np.ndarray
         Northern and Southern hemisphere ocean temperatures by layer (K)
-        
+
     See Also
     --------
     AbstractThermalModel : Base class for thermal models
@@ -148,7 +148,7 @@ class UpwellingDiffusionModel(
 
     thermal_model_required_pamset = {
         "W",
-        "akapa", 
+        "akapa",
         "beto",
         "cpi",
         "ebbeta",
@@ -197,8 +197,8 @@ class UpwellingDiffusionModel(
         """
         Get the required parameter set for the Upwelling Diffusion Model.
 
-        Returns the set of parameter names that are required for proper 
-        operation of the UDM thermal model. This method enables the 
+        Returns the set of parameter names that are required for proper
+        operation of the UDM thermal model. This method enables the
         AbstractThermalModel interface compatibility and supports the
         factory system's parameter validation.
 
@@ -208,9 +208,9 @@ class UpwellingDiffusionModel(
             Set of required parameter names as strings. These parameters
             must be provided (or have defaults) for the model to function
             correctly. The set includes physical parameters such as:
-            
+
             - Climate feedback parameters (lambda, rlamdo)
-            - Ocean structure (mixed, lm, ldtime)  
+            - Ocean structure (mixed, lm, ldtime)
             - Thermal properties (akapa, W, cpi)
             - Ocean fractions (foan, foas)
             - Other physics constants (beto, ebbeta, fnso, etc.)
@@ -227,7 +227,7 @@ class UpwellingDiffusionModel(
         >>> required_params = UpwellingDiffusionModel.get_thermal_model_required_pamset()
         >>> print(f"UDM requires {len(required_params)} parameters")
         >>> print(sorted(required_params))
-        
+
         See Also
         --------
         thermal_model_required_pamset : Class attribute containing the same information
@@ -255,7 +255,7 @@ class UpwellingDiffusionModel(
             Dictionary of physical parameters to configure the model instance.
             If None, default parameter values are used. Required parameters
             are validated through the parent AbstractThermalModel class.
-            
+
             Key parameters include:
             - lambda : Climate feedback parameter (W/m²/K)
             - mixed : Mixed layer depth (m)
@@ -263,7 +263,7 @@ class UpwellingDiffusionModel(
             - foan, foas : Ocean fractions for N/S hemispheres
             - lm : Number of ocean layers (default 40)
             - ldtime : Time steps per year
-            
+
         Notes
         -----
         The constructor automatically calculates several derived parameters:
@@ -272,7 +272,7 @@ class UpwellingDiffusionModel(
         - dt : Time step in seconds
         - c1 : Heat capacity conversion factor
         - fnx, fsx : Hemisphere-specific thermal response factors
-        
+
         The ocean layer structure is set up with variable thickness layers,
         starting with the mixed layer depth and continuing with 100m layers
         down to the deep ocean.
@@ -281,11 +281,11 @@ class UpwellingDiffusionModel(
         --------
         >>> # Initialize with default parameters
         >>> udm = UpwellingDiffusionModel()
-        
+
         >>> # Initialize with custom parameters
         >>> params = {'lambda': 0.6, 'mixed': 120.0, 'akapa': 0.8}
         >>> udm = UpwellingDiffusionModel(params)
-        
+
         >>> # Use through factory system
         >>> from ciceroscm.component_factory_functions import create_thermal_model
         >>> thermal_class = create_thermal_model('default')
@@ -586,7 +586,7 @@ class UpwellingDiffusionModel(
         ----------
         forc_nh : float
             Northern hemisphere radiative forcing (W/m²)
-        forc_sh : float  
+        forc_sh : float
             Southern hemisphere radiative forcing (W/m²)
         fn_volc : array-like
             Northern hemisphere volcanic forcing perturbation (W/m²)
@@ -597,7 +597,7 @@ class UpwellingDiffusionModel(
         -------
         dict
             Dictionary containing comprehensive thermal model outputs:
-            
+
             Temperature Changes:
             - 'dtemp' : Global mean temperature change (K)
             - 'dtempnh' : Northern hemisphere temperature change (K)
@@ -608,12 +608,12 @@ class UpwellingDiffusionModel(
             - 'dtemp_sea' : Global sea surface temperature change (K)
             - 'dtempnh_sea' : Northern hemisphere sea temperature (K)
             - 'dtempsh_sea' : Southern hemisphere sea temperature (K)
-            
+
             Radiative Imbalances:
             - 'RIB' : Global radiative imbalance (W/m²)
             - 'RIBN' : Northern hemisphere radiative imbalance (W/m²)
             - 'RIBS' : Southern hemisphere radiative imbalance (W/m²)
-            
+
             Ocean Heat Content (in 10²² J units):
             - 'OHCTOT' : Total ocean heat content change
             - 'OHC700' : Ocean heat content change down to 700m depth
@@ -637,7 +637,7 @@ class UpwellingDiffusionModel(
         >>> result = udm.energy_budget(1.0, 1.0, [0.0], [0.0])
         >>> print(f"Temperature change: {result['dtemp']:.3f} K")
         >>> print(f"Ocean heat content: {result['OHCTOT']:.3f} x10²² J")
-        
+
         See Also
         --------
         _get_ocean_heat_content : Calculate ocean heat content diagnostics
