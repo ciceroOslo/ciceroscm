@@ -9,16 +9,16 @@ from scipy.linalg import solve_banded
 
 from .._utils import cut_and_check_pamset
 from ..constants import (
-    SEC_DAY,
     DAY_YEAR,
-    SEAWATER_DENSITY_UDM,
-    SEAWATER_DENSITY_OHC,
-    SEAWATER_HEAT_CAPACITY_UDM,
-    UDM_CONVERSION_FACTOR,
-    UDM_OHC_CONSTANT,
+    DEPTH_700M_LAYER_INDEX,
     HEMISPHERE_OCEAN_AREA,
     OCEAN_LAYER_THICKNESS,
-    DEPTH_700M_LAYER_INDEX,
+    SEAWATER_DENSITY_OHC,
+    SEAWATER_DENSITY_UDM,
+    SEAWATER_HEAT_CAPACITY_UDM,
+    SEC_DAY,
+    UDM_CONVERSION_FACTOR,
+    UDM_OHC_CONSTANT,
 )
 from .abstract_thermal_model import AbstractThermalModel
 
@@ -107,7 +107,7 @@ def check_pamset(pamset):
 
 class UpwellingDiffusionModel(
     AbstractThermalModel
-):  # pylint: disable=too-few-public-methods
+):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     """
     Upwelling Diffusion Model for ocean thermal dynamics.
 
@@ -158,24 +158,6 @@ class UpwellingDiffusionModel(
     TwoLayerOceanModel : Alternative simplified thermal model
     """
 
-    thermal_model_required_pamset = {
-        "W",
-        "akapa",
-        "beto",
-        "cpi",
-        "ebbeta",
-        "fnso",
-        "foan",
-        "foas",
-        "lambda",
-        "ldtime",
-        "lm",
-        "mixed",
-        "ocean_efficacy",
-        "rlamdo",
-        "threstemp",
-    }
-
     @property
     def thermal_model_required_pamset(self):
         """
@@ -209,17 +191,18 @@ class UpwellingDiffusionModel(
         """
         Get the required parameter set for the Upwelling Diffusion Model.
 
-        Returns the set of parameter names that are required for proper
-        operation of the UDM thermal model. This method enables the
-        AbstractThermalModel interface compatibility and supports the
-        factory system's parameter validation.
+        Returns the dictionary of parameter names with their default values
+        that are required for proper operation of the UDM thermal model. 
+        This method enables the AbstractThermalModel interface compatibility 
+        and supports the factory system's parameter validation.
 
         Returns
         -------
-        set
-            Set of required parameter names as strings. These parameters
-            must be provided (or have defaults) for the model to function
-            correctly. The set includes physical parameters such as:
+        dict
+            Dictionary of required parameter names with default values.
+            These parameters must be provided (or have defaults) for the 
+            model to function correctly. The dictionary includes physical 
+            parameters such as:
 
             - Climate feedback parameters (lambda, rlamdo)
             - Ocean structure (mixed, lm, ldtime)
@@ -231,18 +214,18 @@ class UpwellingDiffusionModel(
         -----
         This class method is required by the AbstractThermalModel interface
         and enables parameter validation in the factory system. The returned
-        parameter names correspond to the `thermal_model_required_pamset`
-        class attribute.
+        parameter dictionary corresponds to the `thermal_model_required_pamset`
+        property.
 
         Examples
         --------
         >>> required_params = UpwellingDiffusionModel.get_thermal_model_required_pamset()
         >>> print(f"UDM requires {len(required_params)} parameters")
-        >>> print(sorted(required_params))
+        >>> print(sorted(required_params.keys()))
 
         See Also
         --------
-        thermal_model_required_pamset : Class attribute containing the same information
+        thermal_model_required_pamset : Property containing the same information
         AbstractThermalModel.get_thermal_model_required_pamset : Parent method
         """
         # Create a temporary instance to access the property
@@ -603,9 +586,9 @@ class UpwellingDiffusionModel(
             Northern hemisphere radiative forcing (W/m²)
         forc_sh : float
             Southern hemisphere radiative forcing (W/m²)
-        fn_volc : array-like
+        fn_volc : array
             Northern hemisphere volcanic forcing perturbation (W/m²)
-        fs_volc : array-like
+        fs_volc : array
             Southern hemisphere volcanic forcing perturbation (W/m²)
 
         Returns
