@@ -126,6 +126,48 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             Density in ocean layers
     """
 
+    @property
+    def thermal_model_required_pamset(self):
+        """
+        Required parameter set for upwelling diffusion model
+
+        Returns
+        -------
+        dict
+            Dictionary of required parameters with default values
+        """
+        return {
+            "rlamdo": 15.0,
+            "akapa": 0.66,
+            "cpi": 0.21,
+            "W": 2.2,
+            "beto": 6.9,
+            "threstemp": 7.0,
+            "lambda": 0.61,
+            "mixed": 107.0,
+            "foan": 0.61,
+            "foas": 0.81,
+            "ebbeta": 0.0,
+            "fnso": 0.7531,
+            "lm": 40,
+            "ldtime": 12,
+            "ocean_efficacy": 1.0,
+        }
+
+    @classmethod
+    def get_thermal_model_required_pamset(cls):
+        """
+        Get the required parameter set for the thermal model
+
+        Returns
+        -------
+        dict
+            Dictionary of required parameters with default values
+        """
+        # Create a temporary instance to access the property
+        temp_instance = cls.__new__(cls)
+        return temp_instance.thermal_model_required_pamset
+
     def __init__(self, params=None):
         """
         Intialise
