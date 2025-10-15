@@ -50,7 +50,6 @@ def _band(a_array, b_array, c_array, d_array):
 
 def check_pamset(pamset):
     """
-    Check that parameterset has necessary values for run
 
     Check that parameterset has necessary values for run
     Otherwise set to default values which are defined here
@@ -141,16 +140,31 @@ class UpwellingDiffusionModel(
 
     Attributes
     ----------
-    thermal_model_required_pamset : set
-        Set of required parameter names for this thermal model
+    thermal_model_required_pamset : dict
+        Dictionary of required parameter names with default values
     pamset : dict
-        Current parameter set used by the model
-    lm : int
-        Number of ocean layers
+        Current parameter set used by the model, including derived parameters
+        such as rakapa, rlamda, dt, c1, fnx, fsx
     dz : np.ndarray
-        Layer thicknesses (m)
-    tn, ts : np.ndarray
-        Northern and Southern hemisphere ocean temperatures by layer (K)
+        Layer thicknesses (m) for each ocean layer. First element is mixed
+        layer depth, remaining are standard 100m layers
+    tn : np.ndarray
+        Northern hemisphere ocean temperatures by layer (K)
+    ts : np.ndarray
+        Southern hemisphere ocean temperatures by layer (K)
+    varrying : dict
+        Dictionary containing time-varying calculation parameters including
+        matrix coefficients (acoeffn, bcoeffn, ccoeffn, acoeffs, bcoeffs, ccoeffs)
+        and derived thermal terms (dtrm1n, dtrm2n, etc.)
+    prev_values : dict
+        Dictionary of values to preserve between yearly calculations.
+        Contains 'fn', 'fs' (hemisphere forcings), and 'dtemp' (global temperature)
+    dtempprev : float
+        Previous global temperature change (K), used for continuity
+    gamn : float
+        Northern hemisphere thermal response coefficient
+    gams : float
+        Southern hemisphere thermal response coefficient
 
     See Also
     --------
