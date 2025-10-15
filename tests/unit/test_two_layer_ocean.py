@@ -6,10 +6,10 @@ import numpy as np
 import pytest
 
 from ciceroscm.constants import (
-    RHO_SEAWATER,
-    WATER_HEAT_CAPACITY,
-    SECONDS_PER_DAY,
     DAYS_PER_YEAR,
+    RHO_SEAWATER,
+    SECONDS_PER_DAY,
+    WATER_HEAT_CAPACITY,
 )
 from ciceroscm.thermal_model.two_layer_ocean import TwoLayerOceanModel
 
