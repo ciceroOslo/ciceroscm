@@ -192,16 +192,16 @@ class UpwellingDiffusionModel(
         Get the required parameter set for the Upwelling Diffusion Model.
 
         Returns the dictionary of parameter names with their default values
-        that are required for proper operation of the UDM thermal model. 
-        This method enables the AbstractThermalModel interface compatibility 
+        that are required for proper operation of the UDM thermal model.
+        This method enables the AbstractThermalModel interface compatibility
         and supports the factory system's parameter validation.
 
         Returns
         -------
         dict
             Dictionary of required parameter names with default values.
-            These parameters must be provided (or have defaults) for the 
-            model to function correctly. The dictionary includes physical 
+            These parameters must be provided (or have defaults) for the
+            model to function correctly. The dictionary includes physical
             parameters such as:
 
             - Climate feedback parameters (lambda, rlamdo)
