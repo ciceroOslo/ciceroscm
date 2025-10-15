@@ -88,13 +88,7 @@ def check_pamset(pamset):
     pamset["rakapa"] = 1.0e-4 * pamset["akapa"]
     pamset["rlamda"] = 1.0 / pamset["lambda"]
     pamset["dt"] = 1 / pamset["ldtime"] * SECONDS_PER_DAY * DAYS_PER_YEAR
-    pamset["c1"] = (
-        RHO_OHC
-        * CP_UDM
-        * CONV_FAC_UDM
-        * DZ
-        * SECONDS_PER_DAY
-    )
+    pamset["c1"] = RHO_OHC * CP_UDM * CONV_FAC_UDM * DZ * SECONDS_PER_DAY
     pamset["fnx"] = (
         pamset["rlamda"] + pamset["foan"] * pamset["rlamdo"] + pamset["ebbeta"]
     )
@@ -307,13 +301,7 @@ class UpwellingDiffusionModel(
         self.pamset["rakapa"] = 1.0e-4 * self.pamset["akapa"]
         self.pamset["rlamda"] = 1.0 / self.pamset["lambda"]
         self.pamset["dt"] = 1 / self.pamset["ldtime"] * SECONDS_PER_DAY * DAYS_PER_YEAR
-        self.pamset["c1"] = (
-            RHO_OHC
-            * CP_UDM
-            * CONV_FAC_UDM
-            * DZ
-            * SECONDS_PER_DAY
-        )
+        self.pamset["c1"] = RHO_OHC * CP_UDM * CONV_FAC_UDM * DZ * SECONDS_PER_DAY
         self.pamset["fnx"] = (
             self.pamset["rlamda"]
             + self.pamset["foan"] * self.pamset["rlamdo"]
@@ -441,7 +429,9 @@ class UpwellingDiffusionModel(
 
         # Northern hemisphere:
         if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
-            wcfac = self.pamset["W"] / (SECONDS_PER_DAY * DAYS_PER_YEAR) * self.pamset["dt"]
+            wcfac = (
+                self.pamset["W"] / (SECONDS_PER_DAY * DAYS_PER_YEAR) * self.pamset["dt"]
+            )
         else:
             wcfac = (
                 self.pamset["W"]
@@ -485,7 +475,9 @@ class UpwellingDiffusionModel(
 
         # Southern hemisphere:
         if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
-            wcfac = self.pamset["W"] / (SECONDS_PER_DAY * DAYS_PER_YEAR) * self.pamset["dt"]
+            wcfac = (
+                self.pamset["W"] / (SECONDS_PER_DAY * DAYS_PER_YEAR) * self.pamset["dt"]
+            )
         else:
             wcfac = (
                 self.pamset["W"]
