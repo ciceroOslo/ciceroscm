@@ -4,7 +4,7 @@ Physical and mathematical constants used throughout CICERO-SCM
 This module contains fundamental physical constants, conversion factors,
 and commonly used values across the climate model components.
 
-Constants are organized by category and include detailed documentation
+Constants are organized by category and include documentation
 about their usage and derivation where applicable.
 """
 
