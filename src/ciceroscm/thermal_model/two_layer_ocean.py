@@ -6,10 +6,10 @@ import numpy as np
 
 from ..constants import (
     DAY_YEAR,
+    OCEAN_AREA,
     SEC_DAY,
     WATER_DENSITY,
     WATER_HEAT_CAPACITY,
-    OCEAN_AREA,
 )
 from .abstract_thermal_model import AbstractThermalModel
 
@@ -115,7 +115,9 @@ class TwoLayerOceanModel(
 
         # Slow layer temperature change
         dtemp_slow = (
-            self.pamset["k"] * (self.temp_fast - self.temp_slow) / self.pamset["c_slow"]
+            self.pamset["k"]
+            * (self.temp_fast - self.temp_slow)
+            / self.pamset["c_slow"]
         )
 
         # Update temperatures
@@ -142,10 +144,12 @@ class TwoLayerOceanModel(
         # Combined temperature following upwelling diffusion model pattern:
         # Total = ocean_fraction * ocean_temp + (1 - ocean_fraction) * air_temp
         tempn = (
-            self.pamset["foan"] * tempn_sea + (1.0 - self.pamset["foan"]) * tempn_air
+            self.pamset["foan"] * tempn_sea
+            + (1.0 - self.pamset["foan"]) * tempn_air
         )
         temps = (
-            self.pamset["foas"] * temps_sea + (1.0 - self.pamset["foas"]) * temps_air
+            self.pamset["foas"] * temps_sea
+            + (1.0 - self.pamset["foas"]) * temps_air
         )
 
         # Calculate hemisphere-specific radiative imbalances
@@ -214,7 +218,8 @@ class TwoLayerOceanModel(
             # model pattern
             "dtempnh": tempn,  # Northern hemisphere total temperature
             "dtempsh": temps,  # Southern hemisphere total temperature
-            "dtemp_air": (tempn_air + temps_air) / 2.0,  # Global air temperature
+            "dtemp_air": (tempn_air + temps_air)
+            / 2.0,  # Global air temperature
             "dtempnh_air": tempn_air,  # Northern hemisphere air temperature
             "dtempsh_air": temps_air,  # Southern hemisphere air temperature
             "dtemp_sea": (tempn_sea + temps_sea)
