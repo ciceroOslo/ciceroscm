@@ -5,10 +5,10 @@
 import numpy as np
 
 from ..constants import (
-    DAY_YEAR,
+    DAYS_PER_YEAR,
     OCEAN_AREA,
-    SEC_DAY,
-    WATER_DENSITY,
+    RHO_SEAWATER,
+    SECONDS_PER_DAY,
     WATER_HEAT_CAPACITY,
 )
 from .abstract_thermal_model import AbstractThermalModel
@@ -56,15 +56,15 @@ class TwoLayerOceanModel(
         # specific_heat(J/kg/K) / time_conversion
         self.pamset["c_fast"] = (
             self.pamset["mixed"]
-            * WATER_DENSITY
+            * RHO_SEAWATER
             * WATER_HEAT_CAPACITY
-            / (SEC_DAY * DAY_YEAR)
+            / (SECONDS_PER_DAY * DAYS_PER_YEAR)
         )
         self.pamset["c_slow"] = (
             self.pamset["deep"]
-            * WATER_DENSITY
+            * RHO_SEAWATER
             * WATER_HEAT_CAPACITY
-            / (SEC_DAY * DAY_YEAR)
+            / (SECONDS_PER_DAY * DAYS_PER_YEAR)
         )
 
         # Initialize temperatures for fast and slow layers
@@ -170,14 +170,14 @@ class TwoLayerOceanModel(
         ohc_mixed = (
             self.temp_fast
             * self.pamset["c_fast"]
-            * (SEC_DAY * DAY_YEAR)
+            * (SECONDS_PER_DAY * DAYS_PER_YEAR)
             * OCEAN_AREA
             / 1e22
         )  # Convert to 10^22 J
         ohc_deep = (
             self.temp_slow
             * self.pamset["c_slow"]
-            * (SEC_DAY * DAY_YEAR)
+            * (SECONDS_PER_DAY * DAYS_PER_YEAR)
             * OCEAN_AREA
             / 1e22
         )  # Convert to 10^22 J

@@ -5,7 +5,7 @@ Tests for TwoLayerOceanModel thermal model
 import numpy as np
 import pytest
 
-from ciceroscm.constants import WATER_DENSITY, WATER_HEAT_CAPACITY
+from ciceroscm.constants import RHO_SEAWATER, WATER_HEAT_CAPACITY, SECONDS_PER_DAY, DAYS_PER_YEAR
 from ciceroscm.thermal_model.two_layer_ocean import TwoLayerOceanModel
 
 
@@ -23,8 +23,8 @@ class TestTwoLayerOceanModel:
 
         # Check that c_fast and c_slow are calculated correctly from mixed/deep
         # Default mixed = 50m, deep = 1200m
-        expected_c_fast = 50 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
-        expected_c_slow = 1200 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
+        expected_c_fast = 50 * RHO_SEAWATER * WATER_HEAT_CAPACITY / (SECONDS_PER_DAY * DAYS_PER_YEAR)
+        expected_c_slow = 1200 * RHO_SEAWATER * WATER_HEAT_CAPACITY / (SECONDS_PER_DAY * DAYS_PER_YEAR)
 
         assert model.pamset["c_fast"] == pytest.approx(expected_c_fast, rel=1e-10)
         assert model.pamset["c_slow"] == pytest.approx(expected_c_slow, rel=1e-10)
@@ -51,8 +51,8 @@ class TestTwoLayerOceanModel:
         assert model.pamset["efficacy"] == 1.2
 
         # Check that c_fast and c_slow are calculated from custom mixed/deep
-        expected_c_fast = 100 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
-        expected_c_slow = 800 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
+        expected_c_fast = 100 * RHO_SEAWATER * WATER_HEAT_CAPACITY / (SECONDS_PER_DAY * DAYS_PER_YEAR)
+        expected_c_slow = 800 * RHO_SEAWATER * WATER_HEAT_CAPACITY / (SECONDS_PER_DAY * DAYS_PER_YEAR)
 
         assert model.pamset["c_fast"] == pytest.approx(expected_c_fast, rel=1e-10)
         assert model.pamset["c_slow"] == pytest.approx(expected_c_slow, rel=1e-10)
@@ -74,10 +74,10 @@ class TestTwoLayerOceanModel:
         # Check defaults are used for unspecified parameters
         assert model.pamset["efficacy"] == 1
         expected_c_fast = (
-            50 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
+            50 * RHO_SEAWATER * WATER_HEAT_CAPACITY / (SECONDS_PER_DAY * DAYS_PER_YEAR)
         )  # from default mixed=50
         expected_c_slow = (
-            1200 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
+            1200 * RHO_SEAWATER * WATER_HEAT_CAPACITY / (SECONDS_PER_DAY * DAYS_PER_YEAR)
         )  # from default deep=1200
         assert model.pamset["c_fast"] == pytest.approx(expected_c_fast, rel=1e-10)
         assert model.pamset["c_slow"] == pytest.approx(expected_c_slow, rel=1e-10)

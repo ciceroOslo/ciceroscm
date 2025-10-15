@@ -9,16 +9,16 @@ from scipy.linalg import solve_banded
 
 from .._utils import cut_and_check_pamset
 from ..constants import (
-    DAY_YEAR,
-    DEPTH_700M_LAYER_INDEX,
-    HEMISPHERE_OCEAN_AREA,
-    OCEAN_LAYER_THICKNESS,
-    SEAWATER_DENSITY_OHC,
-    SEAWATER_DENSITY_UDM,
-    SEAWATER_HEAT_CAPACITY_UDM,
-    SEC_DAY,
-    UDM_CONVERSION_FACTOR,
-    UDM_OHC_CONSTANT,
+    C_OHC,
+    CONV_FAC_UDM,
+    CP_UDM,
+    DAYS_PER_YEAR,
+    DZ,
+    INDEX_700M,
+    OCEAN_AREA_HEMISPHERE,
+    RHO_OHC,
+    RHO_SEAWATER,
+    SECONDS_PER_DAY,
 )
 from .abstract_thermal_model import AbstractThermalModel
 
@@ -87,13 +87,13 @@ def check_pamset(pamset):
     pamset = cut_and_check_pamset(required, pamset, cut_warnings=True)
     pamset["rakapa"] = 1.0e-4 * pamset["akapa"]
     pamset["rlamda"] = 1.0 / pamset["lambda"]
-    pamset["dt"] = 1 / pamset["ldtime"] * SEC_DAY * DAY_YEAR
+    pamset["dt"] = 1 / pamset["ldtime"] * SECONDS_PER_DAY * DAYS_PER_YEAR
     pamset["c1"] = (
-        SEAWATER_DENSITY_OHC
-        * SEAWATER_HEAT_CAPACITY_UDM
-        * UDM_CONVERSION_FACTOR
-        * OCEAN_LAYER_THICKNESS
-        * SEC_DAY
+        RHO_OHC
+        * CP_UDM
+        * CONV_FAC_UDM
+        * DZ
+        * SECONDS_PER_DAY
     )
     pamset["fnx"] = (
         pamset["rlamda"] + pamset["foan"] * pamset["rlamdo"] + pamset["ebbeta"]
@@ -306,13 +306,13 @@ class UpwellingDiffusionModel(
         # Add derived parameters that check_pamset used to calculate
         self.pamset["rakapa"] = 1.0e-4 * self.pamset["akapa"]
         self.pamset["rlamda"] = 1.0 / self.pamset["lambda"]
-        self.pamset["dt"] = 1 / self.pamset["ldtime"] * SEC_DAY * DAY_YEAR
+        self.pamset["dt"] = 1 / self.pamset["ldtime"] * SECONDS_PER_DAY * DAYS_PER_YEAR
         self.pamset["c1"] = (
-            SEAWATER_DENSITY_OHC
-            * SEAWATER_HEAT_CAPACITY_UDM
-            * UDM_CONVERSION_FACTOR
-            * OCEAN_LAYER_THICKNESS
-            * SEC_DAY
+            RHO_OHC
+            * CP_UDM
+            * CONV_FAC_UDM
+            * DZ
+            * SECONDS_PER_DAY
         )
         self.pamset["fnx"] = (
             self.pamset["rlamda"]
@@ -326,7 +326,7 @@ class UpwellingDiffusionModel(
         )
 
         # Setting up dz height difference between ocean layers
-        self.dz = np.ones(self.pamset["lm"]) * OCEAN_LAYER_THICKNESS
+        self.dz = np.ones(self.pamset["lm"]) * DZ
         self.dz[0] = self.pamset["mixed"]
         self.varrying = {}
         self.setup_ebud()
@@ -441,11 +441,11 @@ class UpwellingDiffusionModel(
 
         # Northern hemisphere:
         if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
-            wcfac = self.pamset["W"] / (SEC_DAY * DAY_YEAR) * self.pamset["dt"]
+            wcfac = self.pamset["W"] / (SECONDS_PER_DAY * DAYS_PER_YEAR) * self.pamset["dt"]
         else:
             wcfac = (
                 self.pamset["W"]
-                / (SEC_DAY * DAY_YEAR)
+                / (SECONDS_PER_DAY * DAYS_PER_YEAR)
                 * (1 - 0.3 * temp_1n / self.pamset["threstemp"])
                 * self.pamset["dt"]
             )
@@ -485,11 +485,11 @@ class UpwellingDiffusionModel(
 
         # Southern hemisphere:
         if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
-            wcfac = self.pamset["W"] / (SEC_DAY * DAY_YEAR) * self.pamset["dt"]
+            wcfac = self.pamset["W"] / (SECONDS_PER_DAY * DAYS_PER_YEAR) * self.pamset["dt"]
         else:
             wcfac = (
                 self.pamset["W"]
-                / (SEC_DAY * DAY_YEAR)
+                / (SECONDS_PER_DAY * DAYS_PER_YEAR)
                 * (1 - 0.3 * temp_1s / self.pamset["threstemp"])
                 * self.pamset["dt"]
             )
@@ -864,7 +864,7 @@ class UpwellingDiffusionModel(
 
         # 3. Calculate the annual average heat uptake N (in W/m^2) by summing the
         #    heat content change of the DEEP OCEAN layers and dividing by the seconds in a year.
-        year_in_seconds = DAY_YEAR * SEC_DAY
+        year_in_seconds = DAYS_PER_YEAR * SECONDS_PER_DAY
         ann_heat_uptake = np.sum(delta_heat_content_profile[1:]) / year_in_seconds
 
         # 4. Calculate the TRUE Top-of-Atmosphere Radiative Imbalance (RIB).
@@ -889,18 +889,16 @@ class UpwellingDiffusionModel(
             with keys OHC700 and OHCTOT
         """
         havtemp = (
-            SEAWATER_DENSITY_UDM
-            * UDM_OHC_CONSTANT
-            * HEMISPHERE_OCEAN_AREA
+            RHO_SEAWATER
+            * C_OHC
+            * OCEAN_AREA_HEMISPHERE
             * self.dz
             * (self.tn * self.pamset["foan"] + self.ts * self.pamset["foas"])
         )
 
         # Finding the max layer down to 700m
-        max_layer = int(DEPTH_700M_LAYER_INDEX - self.dz[0] // OCEAN_LAYER_THICKNESS)
-        frac = (1 + self.dz[0] // OCEAN_LAYER_THICKNESS) - self.dz[
-            0
-        ] / OCEAN_LAYER_THICKNESS
+        max_layer = int(INDEX_700M - self.dz[0] // DZ)
+        frac = (1 + self.dz[0] // DZ) - self.dz[0] / DZ
 
         return {
             "OHC700": np.sum(havtemp[:max_layer]) + frac * havtemp[max_layer],
