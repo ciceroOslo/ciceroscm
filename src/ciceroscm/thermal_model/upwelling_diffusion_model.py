@@ -8,10 +8,19 @@ import numpy as np
 from scipy.linalg import solve_banded
 
 from .._utils import cut_and_check_pamset
+from ..constants import (
+    SEC_DAY,
+    DAY_YEAR,
+    SEAWATER_DENSITY_UDM,
+    SEAWATER_DENSITY_OHC,
+    SEAWATER_HEAT_CAPACITY_UDM,
+    UDM_CONVERSION_FACTOR,
+    UDM_OHC_CONSTANT,
+    HEMISPHERE_OCEAN_AREA,
+    OCEAN_LAYER_THICKNESS,
+    DEPTH_700M_LAYER_INDEX,
+)
 from .abstract_thermal_model import AbstractThermalModel
-
-SEC_DAY = 86400
-DAY_YEAR = 365.0
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,10 +89,13 @@ def check_pamset(pamset):
     pamset["rakapa"] = 1.0e-4 * pamset["akapa"]
     pamset["rlamda"] = 1.0 / pamset["lambda"]
     pamset["dt"] = 1 / pamset["ldtime"] * SEC_DAY * DAY_YEAR
-    rho = 1.03
-    htcpty = 0.955
-    cnvrt = 0.485
-    pamset["c1"] = rho * htcpty * cnvrt * 100.0 * SEC_DAY
+    pamset["c1"] = (
+        SEAWATER_DENSITY_OHC 
+        * SEAWATER_HEAT_CAPACITY_UDM 
+        * UDM_CONVERSION_FACTOR 
+        * OCEAN_LAYER_THICKNESS 
+        * SEC_DAY
+    )
     pamset["fnx"] = (
         pamset["rlamda"] + pamset["foan"] * pamset["rlamdo"] + pamset["ebbeta"]
     )
@@ -298,10 +310,13 @@ class UpwellingDiffusionModel(
         self.pamset["rakapa"] = 1.0e-4 * self.pamset["akapa"]
         self.pamset["rlamda"] = 1.0 / self.pamset["lambda"]
         self.pamset["dt"] = 1 / self.pamset["ldtime"] * SEC_DAY * DAY_YEAR
-        rho = 1.03
-        htcpty = 0.955
-        cnvrt = 0.485
-        self.pamset["c1"] = rho * htcpty * cnvrt * 100.0 * SEC_DAY
+        self.pamset["c1"] = (
+            SEAWATER_DENSITY_OHC 
+            * SEAWATER_HEAT_CAPACITY_UDM 
+            * UDM_CONVERSION_FACTOR 
+            * OCEAN_LAYER_THICKNESS 
+            * SEC_DAY
+        )
         self.pamset["fnx"] = (
             self.pamset["rlamda"]
             + self.pamset["foan"] * self.pamset["rlamdo"]
@@ -314,7 +329,7 @@ class UpwellingDiffusionModel(
         )
 
         # Setting up dz height difference between ocean layers
-        self.dz = np.ones(self.pamset["lm"]) * 100.0
+        self.dz = np.ones(self.pamset["lm"]) * OCEAN_LAYER_THICKNESS
         self.dz[0] = self.pamset["mixed"]
         self.varrying = {}
         self.setup_ebud()
@@ -876,21 +891,17 @@ class UpwellingDiffusionModel(
             Containing the ocean heat content to 700 m and total
             with keys OHC700 and OHCTOT
         """
-        area_hemisphere = 2.55e14
-
-        rho = 1030.0
-        constant = 3.997e-19
         havtemp = (
-            rho
-            * constant
-            * area_hemisphere
+            SEAWATER_DENSITY_UDM
+            * UDM_OHC_CONSTANT
+            * HEMISPHERE_OCEAN_AREA
             * self.dz
             * (self.tn * self.pamset["foan"] + self.ts * self.pamset["foas"])
         )
 
         # Finding the max layer down to 700m
-        max_layer = int(7 - self.dz[0] // 100.0)
-        frac = (1 + self.dz[0] // 100.0) - self.dz[0] / 100.0
+        max_layer = int(DEPTH_700M_LAYER_INDEX - self.dz[0] // OCEAN_LAYER_THICKNESS)
+        frac = (1 + self.dz[0] // OCEAN_LAYER_THICKNESS) - self.dz[0] / OCEAN_LAYER_THICKNESS
 
         return {
             "OHC700": np.sum(havtemp[:max_layer]) + frac * havtemp[max_layer],
