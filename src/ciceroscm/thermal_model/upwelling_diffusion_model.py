@@ -93,39 +93,76 @@ def check_pamset(pamset):
     return pamset
 
 
-class UpwellingDiffusionModel(AbstractThermalModel):  # pylint: disable=too-many-instance-attributes
+class UpwellingDiffusionModel(
+    AbstractThermalModel
+):  # pylint: disable=too-few-public-methods
     """
-    Class to handle energy budget upwelling and downwelling
+    Upwelling Diffusion Model for ocean thermal dynamics.
 
+    A 40-layer ocean thermal model that simulates heat diffusion 
+    into the ocean from the surface using upwelling and diffusion processes.
+    This model provides vertical ocean temperature structure and 
+    accounts for hemisphere-specific ocean dynamics.
+
+    The model inherits from AbstractThermalModel, enabling integration
+    with the thermal model factory system and interchangeability
+    with other thermal models.
+
+    Parameters
+    ----------
+    pamset : dict, optional
+        Parameter set containing model configuration. If None, default
+        parameters are used. Key parameters include:
+        
+        - lambda : float
+            Climate feedback parameter (W/m²/K)
+        - mixed : float  
+            Mixed layer depth (m)
+        - akapa : float
+            Thermal diffusion coefficient
+        - foan, foas : float
+            Northern/Southern hemisphere ocean fractions
+        - lm : int
+            Number of ocean layers (default 40)
+        - ldtime : int
+            Number of time steps per year
+            
     Attributes
     ----------
+    thermal_model_required_pamset : set
+        Set of required parameter names for this thermal model
     pamset : dict
-             Dictionary of parameter values
+        Current parameter set used by the model
+    lm : int
+        Number of ocean layers
     dz : np.ndarray
-         Array of depth of ocean layers
-    varrying : dict
-               Dictionary of coefficient, temperature values
-               etc which varry over time, but do not need to
-               be stored apart from current value
-    tn : np.ndarray
-         Temperature change in the ocean layers of the
-         Northern hemisphere
-    ts : np.ndarray
-         Temperature change in the ocean layers of the
-         Southern hemisphere
-    prev_values : dict
-                  Dictionary with values from pervious time step
-                  needed in calculations, typically previous
-                  temperature change etc
-    dtempprev : float
-                Temperature change in previous time step
-    press : np.ndarray
-            Pressure in ocean layers
-    tempunp : np.ndarray
-              Temperature in ocean layers
-    dens0 : np.ndarray
-            Density in ocean layers
+        Layer thicknesses (m)
+    tn, ts : np.ndarray
+        Northern and Southern hemisphere ocean temperatures by layer (K)
+        
+    See Also
+    --------
+    AbstractThermalModel : Base class for thermal models
+    TwoLayerOceanModel : Alternative simplified thermal model
     """
+
+    thermal_model_required_pamset = {
+        "W",
+        "akapa", 
+        "beto",
+        "cpi",
+        "ebbeta",
+        "fnso",
+        "foan",
+        "foas",
+        "lambda",
+        "ldtime",
+        "lm",
+        "mixed",
+        "ocean_efficacy",
+        "rlamdo",
+        "threstemp",
+    }
 
     @property
     def thermal_model_required_pamset(self):
@@ -158,12 +195,43 @@ class UpwellingDiffusionModel(AbstractThermalModel):  # pylint: disable=too-many
     @classmethod
     def get_thermal_model_required_pamset(cls):
         """
-        Get the required parameter set for the thermal model
+        Get the required parameter set for the Upwelling Diffusion Model.
+
+        Returns the set of parameter names that are required for proper 
+        operation of the UDM thermal model. This method enables the 
+        AbstractThermalModel interface compatibility and supports the
+        factory system's parameter validation.
 
         Returns
         -------
-        dict
-            Dictionary of required parameters with default values
+        set
+            Set of required parameter names as strings. These parameters
+            must be provided (or have defaults) for the model to function
+            correctly. The set includes physical parameters such as:
+            
+            - Climate feedback parameters (lambda, rlamdo)
+            - Ocean structure (mixed, lm, ldtime)  
+            - Thermal properties (akapa, W, cpi)
+            - Ocean fractions (foan, foas)
+            - Other physics constants (beto, ebbeta, fnso, etc.)
+
+        Notes
+        -----
+        This class method is required by the AbstractThermalModel interface
+        and enables parameter validation in the factory system. The returned
+        parameter names correspond to the `thermal_model_required_pamset`
+        class attribute.
+
+        Examples
+        --------
+        >>> required_params = UpwellingDiffusionModel.get_thermal_model_required_pamset()
+        >>> print(f"UDM requires {len(required_params)} parameters")
+        >>> print(sorted(required_params))
+        
+        See Also
+        --------
+        thermal_model_required_pamset : Class attribute containing the same information
+        AbstractThermalModel.get_thermal_model_required_pamset : Parent method
         """
         # Create a temporary instance to access the property
         temp_instance = cls.__new__(cls)
@@ -171,19 +239,61 @@ class UpwellingDiffusionModel(AbstractThermalModel):  # pylint: disable=too-many
 
     def __init__(self, pamset=None):
         """
-        Intialise
+        Initialize the Upwelling Diffusion Model.
 
-        Setting up heights first, then starting up empty dict and
-        arrays , and some starting values
+        Sets up the ocean layer structure, validates parameters, and calculates
+        derived parameters needed for the thermal dynamics simulation. The model
+        can be initialized with custom parameters or will use defaults if none
+        are provided.
+
+        This constructor maintains backward compatibility with the original UDM
+        interface while adding AbstractThermalModel inheritance and validation.
 
         Parameters
         ----------
-        pamset : dict
-              Physical parameters to define the instance
+        pamset : dict, optional
+            Dictionary of physical parameters to configure the model instance.
+            If None, default parameter values are used. Required parameters
+            are validated through the parent AbstractThermalModel class.
+            
+            Key parameters include:
+            - lambda : Climate feedback parameter (W/m²/K)
+            - mixed : Mixed layer depth (m)
+            - akapa : Thermal diffusion coefficient
+            - foan, foas : Ocean fractions for N/S hemispheres
+            - lm : Number of ocean layers (default 40)
+            - ldtime : Time steps per year
+            
+        Notes
+        -----
+        The constructor automatically calculates several derived parameters:
+        - rakapa : Scaled thermal diffusion (1e-4 * akapa)
+        - rlamda : Inverse climate feedback (1/lambda)
+        - dt : Time step in seconds
+        - c1 : Heat capacity conversion factor
+        - fnx, fsx : Hemisphere-specific thermal response factors
+        
+        The ocean layer structure is set up with variable thickness layers,
+        starting with the mixed layer depth and continuing with 100m layers
+        down to the deep ocean.
+
+        Examples
+        --------
+        >>> # Initialize with default parameters
+        >>> udm = UpwellingDiffusionModel()
+        
+        >>> # Initialize with custom parameters
+        >>> params = {'lambda': 0.6, 'mixed': 120.0, 'akapa': 0.8}
+        >>> udm = UpwellingDiffusionModel(params)
+        
+        >>> # Use through factory system
+        >>> from ciceroscm.component_factory_functions import create_thermal_model
+        >>> thermal_class = create_thermal_model('default')
+        >>> udm = thermal_class(params)
         """
         # Call parent constructor which handles parameter validation
         super().__init__(pamset)
-        
+
         # Add derived parameters that check_pamset used to calculate
         self.pamset["rakapa"] = 1.0e-4 * self.pamset["akapa"]
         self.pamset["rlamda"] = 1.0 / self.pamset["lambda"]
@@ -193,10 +303,14 @@ class UpwellingDiffusionModel(AbstractThermalModel):  # pylint: disable=too-many
         cnvrt = 0.485
         self.pamset["c1"] = rho * htcpty * cnvrt * 100.0 * SEC_DAY
         self.pamset["fnx"] = (
-            self.pamset["rlamda"] + self.pamset["foan"] * self.pamset["rlamdo"] + self.pamset["ebbeta"]
+            self.pamset["rlamda"]
+            + self.pamset["foan"] * self.pamset["rlamdo"]
+            + self.pamset["ebbeta"]
         )
         self.pamset["fsx"] = (
-            self.pamset["rlamda"] + self.pamset["foas"] * self.pamset["rlamdo"] + self.pamset["ebbeta"]
+            self.pamset["rlamda"]
+            + self.pamset["foas"] * self.pamset["rlamdo"]
+            + self.pamset["ebbeta"]
         )
 
         # Setting up dz height difference between ocean layers
@@ -456,37 +570,78 @@ class UpwellingDiffusionModel(AbstractThermalModel):  # pylint: disable=too-many
         self, forc_nh, forc_sh, fn_volc, fs_volc
     ):  # pylint: disable=too-many-locals, too-many-statements
         """
-        Do energy budget calculation for single year
+        Perform energy budget calculation for a single year.
+
+        This is the main computational method of the Upwelling Diffusion Model.
+        It calculates the thermal response of the ocean-atmosphere system to
+        radiative forcing, including temperature changes, radiative imbalances,
+        and ocean heat content changes for both hemispheres.
+
+        The method implements the core physics of upwelling and diffusion in
+        the ocean, accounting for hemisphere-specific forcing and volcanic
+        perturbations. It returns comprehensive diagnostics including surface
+        and air temperatures, ocean heat content, and radiative imbalances.
 
         Parameters
         ----------
         forc_nh : float
-               Northern hemispheric forcing
-        forc_sh : float
-               Southern hemispheric forcing
-        fn_volc : float
-               Northern hemispheric volcanic forcing
-        fs_volc : float
-               Northern hemispheric volcanic forcing
+            Northern hemisphere radiative forcing (W/m²)
+        forc_sh : float  
+            Southern hemisphere radiative forcing (W/m²)
+        fn_volc : array-like
+            Northern hemisphere volcanic forcing perturbation (W/m²)
+        fs_volc : array-like
+            Southern hemisphere volcanic forcing perturbation (W/m²)
 
         Returns
         -------
         dict
-            Containing all results including
-            Global temperature change dtemp,
-            Northern hemisphere temperature change dtempnh,
-            Southern hemisphere temperature change dtempsh,
-            Global air temperature change dtemp_air,
-            Northern hemisphere air temperature change dtempnh_air,
-            Southern hemisphere temperature change dtempsh_air,
-            Global sea temperature change dtemp_sea,
-            Northern hemisphere sea temperature change dtempnh_sea,
-            Southern hemisphere sea temperature change dtempsh_sea,
-            Northern hemisphere radiative imbalance RIBN,
-            Southern hemisphere radiative imbalance RIBS,
-            Global radiative imbalance RIB,
-            Ocean heat content change down to 700 m OHC700,
-            Ocean heat content change total OHCTOT
+            Dictionary containing comprehensive thermal model outputs:
+            
+            Temperature Changes:
+            - 'dtemp' : Global mean temperature change (K)
+            - 'dtempnh' : Northern hemisphere temperature change (K)
+            - 'dtempsh' : Southern hemisphere temperature change (K)
+            - 'dtemp_air' : Global air temperature change (K)
+            - 'dtempnh_air' : Northern hemisphere air temperature (K)
+            - 'dtempsh_air' : Southern hemisphere air temperature (K)
+            - 'dtemp_sea' : Global sea surface temperature change (K)
+            - 'dtempnh_sea' : Northern hemisphere sea temperature (K)
+            - 'dtempsh_sea' : Southern hemisphere sea temperature (K)
+            
+            Radiative Imbalances:
+            - 'RIB' : Global radiative imbalance (W/m²)
+            - 'RIBN' : Northern hemisphere radiative imbalance (W/m²)
+            - 'RIBS' : Southern hemisphere radiative imbalance (W/m²)
+            
+            Ocean Heat Content (in 10²² J units):
+            - 'OHCTOT' : Total ocean heat content change
+            - 'OHC700' : Ocean heat content change down to 700m depth
+
+        Notes
+        -----
+        The energy budget calculation involves:
+        1. Processing hemisphere-specific and volcanic forcing
+        2. Solving the ocean thermal diffusion equation using finite differences
+        3. Calculating air and sea surface temperature responses
+        4. Computing radiative imbalances and ocean heat content changes
+        5. Combining hemisphere results into global averages
+
+        The method maintains internal state (ocean temperatures by layer) that
+        evolves between calls, making it suitable for time-series simulations.
+
+        Examples
+        --------
+        >>> udm = UpwellingDiffusionModel({'lambda': 0.6})
+        >>> # Apply 1 W/m² forcing uniformly
+        >>> result = udm.energy_budget(1.0, 1.0, [0.0], [0.0])
+        >>> print(f"Temperature change: {result['dtemp']:.3f} K")
+        >>> print(f"Ocean heat content: {result['OHCTOT']:.3f} x10²² J")
+        
+        See Also
+        --------
+        _get_ocean_heat_content : Calculate ocean heat content diagnostics
+        AbstractThermalModel.energy_budget : Parent interface method
         """
         # --- At the start of the year, store the initial temperature profiles ---
         tn_start = self.tn.copy()
