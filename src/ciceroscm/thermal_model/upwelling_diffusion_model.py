@@ -8,6 +8,7 @@ import numpy as np
 from scipy.linalg import solve_banded
 
 from .._utils import cut_and_check_pamset
+from .abstract_thermal_model import AbstractThermalModel
 
 SEC_DAY = 86400
 DAY_YEAR = 365.0
@@ -92,7 +93,7 @@ def check_pamset(pamset):
     return pamset
 
 
-class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
+class UpwellingDiffusionModel(AbstractThermalModel):  # pylint: disable=too-many-instance-attributes
     """
     Class to handle energy budget upwelling and downwelling
 
@@ -168,7 +169,7 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         temp_instance = cls.__new__(cls)
         return temp_instance.thermal_model_required_pamset
 
-    def __init__(self, params=None):
+    def __init__(self, pamset=None):
         """
         Intialise
 
@@ -177,10 +178,26 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
         Parameters
         ----------
-        params : dict
+        pamset : dict
               Physical parameters to define the instance
         """
-        self.pamset = check_pamset(params)
+        # Call parent constructor which handles parameter validation
+        super().__init__(pamset)
+        
+        # Add derived parameters that check_pamset used to calculate
+        self.pamset["rakapa"] = 1.0e-4 * self.pamset["akapa"]
+        self.pamset["rlamda"] = 1.0 / self.pamset["lambda"]
+        self.pamset["dt"] = 1 / self.pamset["ldtime"] * SEC_DAY * DAY_YEAR
+        rho = 1.03
+        htcpty = 0.955
+        cnvrt = 0.485
+        self.pamset["c1"] = rho * htcpty * cnvrt * 100.0 * SEC_DAY
+        self.pamset["fnx"] = (
+            self.pamset["rlamda"] + self.pamset["foan"] * self.pamset["rlamdo"] + self.pamset["ebbeta"]
+        )
+        self.pamset["fsx"] = (
+            self.pamset["rlamda"] + self.pamset["foas"] * self.pamset["rlamdo"] + self.pamset["ebbeta"]
+        )
 
         # Setting up dz height difference between ocean layers
         self.dz = np.ones(self.pamset["lm"]) * 100.0
