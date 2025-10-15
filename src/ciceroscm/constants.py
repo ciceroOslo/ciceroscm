@@ -18,7 +18,9 @@ WATER_HEAT_CAPACITY = 4181  # J/kg/K - Specific heat capacity of seawater
 
 # Ocean model specific constants (UDM)
 SEAWATER_DENSITY_UDM = 1030.0  # kg/m^3 - Seawater density used in UDM OHC calculations
-SEAWATER_DENSITY_OHC = 1.03  # g/cm^3 - Density for UDM heat capacity calculations (legacy value)
+SEAWATER_DENSITY_OHC = (
+    1.03  # g/cm^3 - Density for UDM heat capacity calculations (legacy value)
+)
 SEAWATER_HEAT_CAPACITY_UDM = 0.955  # Dimensionless heat capacity factor for UDM
 UDM_CONVERSION_FACTOR = 0.485  # Dimensionless conversion factor for UDM heat capacity
 UDM_OHC_CONSTANT = 3.997e-19  # Conversion constant for ocean heat content calculations (units: see UDM docs)

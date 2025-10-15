@@ -90,10 +90,10 @@ def check_pamset(pamset):
     pamset["rlamda"] = 1.0 / pamset["lambda"]
     pamset["dt"] = 1 / pamset["ldtime"] * SEC_DAY * DAY_YEAR
     pamset["c1"] = (
-        SEAWATER_DENSITY_OHC 
-        * SEAWATER_HEAT_CAPACITY_UDM 
-        * UDM_CONVERSION_FACTOR 
-        * OCEAN_LAYER_THICKNESS 
+        SEAWATER_DENSITY_OHC
+        * SEAWATER_HEAT_CAPACITY_UDM
+        * UDM_CONVERSION_FACTOR
+        * OCEAN_LAYER_THICKNESS
         * SEC_DAY
     )
     pamset["fnx"] = (
@@ -311,10 +311,10 @@ class UpwellingDiffusionModel(
         self.pamset["rlamda"] = 1.0 / self.pamset["lambda"]
         self.pamset["dt"] = 1 / self.pamset["ldtime"] * SEC_DAY * DAY_YEAR
         self.pamset["c1"] = (
-            SEAWATER_DENSITY_OHC 
-            * SEAWATER_HEAT_CAPACITY_UDM 
-            * UDM_CONVERSION_FACTOR 
-            * OCEAN_LAYER_THICKNESS 
+            SEAWATER_DENSITY_OHC
+            * SEAWATER_HEAT_CAPACITY_UDM
+            * UDM_CONVERSION_FACTOR
+            * OCEAN_LAYER_THICKNESS
             * SEC_DAY
         )
         self.pamset["fnx"] = (
@@ -901,7 +901,9 @@ class UpwellingDiffusionModel(
 
         # Finding the max layer down to 700m
         max_layer = int(DEPTH_700M_LAYER_INDEX - self.dz[0] // OCEAN_LAYER_THICKNESS)
-        frac = (1 + self.dz[0] // OCEAN_LAYER_THICKNESS) - self.dz[0] / OCEAN_LAYER_THICKNESS
+        frac = (1 + self.dz[0] // OCEAN_LAYER_THICKNESS) - self.dz[
+            0
+        ] / OCEAN_LAYER_THICKNESS
 
         return {
             "OHC700": np.sum(havtemp[:max_layer]) + frac * havtemp[max_layer],
