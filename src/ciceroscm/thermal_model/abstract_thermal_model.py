@@ -44,8 +44,8 @@ class AbstractThermalModel(ABC):
             pamset = {}
 
         self.pamset = cut_and_check_pamset(
-            pamset,
             self.get_thermal_model_required_pamset(),
+            pamset,
             cut_warnings=True,
         )
 
