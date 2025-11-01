@@ -129,7 +129,6 @@ class CICEROSCM:
             # cfg = check_inputfiles(cfg)
             pamset_emiconc = {}
 
-            pamset_emiconc["thermal_model"] = self.cfg["thermal_model"]
             pamset_emiconc["carbon_cycle_model"] = self.cfg["carbon_cycle_model"]
             pamset_emiconc["emstart"] = self.cfg["emstart"]
             pamset_emiconc["nystart"] = self.cfg["nystart"]
@@ -153,7 +152,6 @@ class CICEROSCM:
 
         # Add support for sending filename in cfg
         self.rf_luc = input_handler.get_data("rf_luc")
-        self.thermal = create_thermal_model(self.cfg["thermal_model"])
         self.initialise_output_arrays()
 
     def initialise_output_arrays(self):
@@ -265,11 +263,11 @@ class CICEROSCM:
             Whether to output plots automatically
         """
         self.initialise_output_arrays()
-        # Setting up UDM
+        # Setting up thermal model with parameters
         # udm = UpwellingDiffusionModel(pamset_udm)
 
-        # udm = create_thermal_model(self.cfg["thermal_model"], pamset_udm)
-        udm = self.thermal(pamset_udm)
+        thermal_model_class = create_thermal_model(self.cfg["thermal_model"])
+        udm = thermal_model_class(pamset_udm)
         values = None
         if not self.cfg["rf_run"]:
             self.ce_handler.reset_with_new_pams(pamset_emiconc, pamset_carbon)

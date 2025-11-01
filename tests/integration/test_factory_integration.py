@@ -74,7 +74,7 @@ def test_ciceroscm_with_box_carbon_cycle_model(test_data_dir):
 
 def test_ciceroscm_with_default_thermal_model(test_data_dir):
     """
-    Test that CICEROSCM uses the default CarbonCycleModel when configured.
+    Test that CICEROSCM uses the default thermal model when configured.
     """
     cscm = CICEROSCM(
         {
@@ -90,7 +90,13 @@ def test_ciceroscm_with_default_thermal_model(test_data_dir):
             "thermal_model": "default",  # Specify the default model
         },  # lambda it, idtm: 0.5 + 0.5 * np.exp(-it / idtm / 100.0),
     )
-    assert isinstance(cscm.thermal(), UpwellingDiffusionModel)
+    # Verify the thermal model configuration is stored correctly
+    assert cscm.cfg["thermal_model"] == "default"
+    
+    # Verify the thermal model is created correctly during run
+    from ciceroscm.component_factory_functions import create_thermal_model
+    thermal_model_class = create_thermal_model(cscm.cfg["thermal_model"])
+    assert thermal_model_class == UpwellingDiffusionModel
 
 
 def test_ciceroscm_with_twolayer_thermal_model(test_data_dir):
@@ -108,6 +114,14 @@ def test_ciceroscm_with_twolayer_thermal_model(test_data_dir):
             "thermal_model": "twolayer",  # Specify the box model
         },
     )
-    assert isinstance(cscm.thermal(), TwoLayerOceanModel)
+    # Verify the thermal model configuration is stored correctly
+    assert cscm.cfg["thermal_model"] == "twolayer"
+    
+    # Verify the thermal model is created correctly during factory call
+    from ciceroscm.component_factory_functions import create_thermal_model
+    thermal_model_class = create_thermal_model(cscm.cfg["thermal_model"])
+    assert thermal_model_class == TwoLayerOceanModel
+    
+    # Run the model to ensure it works with the two-layer thermal model
     cscm._run({"results_as_dict": True})
     assert len(cscm.results["RIB_glob"]) == 351
