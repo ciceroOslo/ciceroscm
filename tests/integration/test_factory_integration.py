@@ -92,9 +92,10 @@ def test_ciceroscm_with_default_thermal_model(test_data_dir):
     )
     # Verify the thermal model configuration is stored correctly
     assert cscm.cfg["thermal_model"] == "default"
-    
+
     # Verify the thermal model is created correctly during run
     from ciceroscm.component_factory_functions import create_thermal_model
+
     thermal_model_class = create_thermal_model(cscm.cfg["thermal_model"])
     assert thermal_model_class == UpwellingDiffusionModel
 
@@ -116,12 +117,13 @@ def test_ciceroscm_with_twolayer_thermal_model(test_data_dir):
     )
     # Verify the thermal model configuration is stored correctly
     assert cscm.cfg["thermal_model"] == "twolayer"
-    
+
     # Verify the thermal model is created correctly during factory call
     from ciceroscm.component_factory_functions import create_thermal_model
+
     thermal_model_class = create_thermal_model(cscm.cfg["thermal_model"])
     assert thermal_model_class == TwoLayerOceanModel
-    
+
     # Run the model to ensure it works with the two-layer thermal model
     cscm._run({"results_as_dict": True})
     assert len(cscm.results["RIB_glob"]) == 351
