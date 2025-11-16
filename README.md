@@ -1,7 +1,7 @@
 # ciceroscm
 Python version of the CICERO-SCM simple climate model/emulator
 
-## Running
+## Running 
 To run the model, copy <code>run_full_forcing.py</code> or <code>run_scm.py</code>
 for a forcing, or full emissions run from the <code>scripts</code> directory. The forcing run currently
 supports only files with single total forcing series supplemented
