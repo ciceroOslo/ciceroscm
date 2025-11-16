@@ -131,10 +131,10 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
         scenariodata: dict
               Dictionary of scenariodata to initialise a ciceroscm with
               In addition to nystart and nyend, the scenariodata must contain
-              "udir" a path to an utilities directory containing a gaspam file
-              "scenname": A scenario name
+              the data needed for a CICEROSCM instance including
+              either "gaspam_file"  a path to a gaspam file or "gaspam_data"
+              and "scenname": A scenario name
         """
-        self.udir = scenariodata["udir"]
         nystart = scenariodata["nystart"]
         nyend = scenariodata["nyend"]
         if "gaspam_file" in scenariodata:
@@ -174,15 +174,17 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
 
         Returns
         -------
-             :obj:`ScmRun`
-             :obj:`ScmRun` instance with all requested output variables
+            pd.DataFrame
+            A pd.DataFrame instance with all requested output variables
+            over the run timeseries
         """
         runs = []
         for pamset in cfgs:
             self.cscm._run(  # pylint: disable=protected-access
                 {"results_as_dict": True, "carbon_cycle_outputs": carbon_cycle_outputs},
-                pamset_udm=pamset["pamset_udm"],
-                pamset_emiconc=pamset["pamset_emiconc"],
+                pamset_udm=pamset.get("pamset_udm", None),
+                pamset_emiconc=pamset.get("pamset_emiconc", None),
+                pamset_carbon=pamset.get("pamset_carbon", None),
             )
             for variable in output_variables:
                 (
@@ -194,6 +196,8 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
                 )
                 if isinstance(years, pd.DataFrame) and years.empty:  # pragma: no cover
                     continue  # pragma: no cover
+                # TODO: change CICERO-SCM-PY to include version number and/or
+                # thermal model and carbon cycle used from the cscm instance
                 data = [
                     "CICERO-SCM-PY",
                     self.model,

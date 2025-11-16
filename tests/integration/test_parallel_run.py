@@ -114,23 +114,12 @@ def test_ciceroscm_run_parallel_many_scenarios(test_data_dir):
     )
     cfgs = [
         {
-            "pamset_udm": {
-                "rlamdo": 15.1,
-                "akapa": 0.657,
-                "cpi": 0.208,
-                "W": 2.2,
-                "beto": 6.9,
-                "lambda": 0.606,
-                "mixed": 107.0,
-            },
-            "pamset_emiconc": {
-                "qbmb": 0.0,
-                "qo3": 0.5,
-                "qdirso2": -0.3701,
-                "qindso2": -0.4163,
-                "qbc": 0.163,
-                "qoc": -0.084,
-                "qh2o_ch4": 0.171,
+            "pamset_carbon": {
+                "npp0": 60,
+                "solubility_sens": 0,
+                "ml_t_half": 10,
+                "t_half": 10,
+                "t_threshold": 10,
             },
             "Index": "13555_old_NR_rounded",
         }
@@ -215,6 +204,13 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
                 "qoc": -0.084,
                 "qh2o_ch4": 0.171,
             },
+            "pamset_carbon": {
+                "npp0": 60,
+                "solubility_sens": 0,
+                "ml_t_half": 10,
+                "t_half": 10,
+                "t_threshold": 10,
+            },
             "Index": "13555_old_NR_rounded",
         },
         {
@@ -234,6 +230,13 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
                 "qindso2": -0.96609,
                 "qbc": 0.1566,
                 "qoc": -0.0806,
+            },
+            "pamset_carbon": {
+                "npp0": 60,
+                "solubility_sens": 0,
+                "ml_t_half": 10,
+                "t_half": 10,
+                "t_threshold": 10,
             },
             "Index": "13555_old_NR_improved",
         },
@@ -255,6 +258,13 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
                 "qbc": 0.162692563111132,
                 "qoc": -0.08377713183167902,
             },
+            "pamset_carbon": {
+                "npp0": 60,
+                "solubility_sens": 0,
+                "ml_t_half": 10,
+                "t_half": 10,
+                "t_threshold": 10,
+            },
             "Index": "13555_old_NR",
         },
         {
@@ -274,6 +284,13 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
                 "qindso2": -0.3622885009449893,
                 "qbc": 0.1415852070009452,
                 "qoc": -0.07290808089507649,
+            },
+            "pamset_carbon": {
+                "npp0": 60,
+                "solubility_sens": 0,
+                "ml_t_half": 10,
+                "t_half": 10,
+                "t_threshold": 10,
             },
             "Index": "10496_old_NR",
         },
@@ -295,6 +312,13 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
                 "qbc": 0.1415852070009452,
                 "qoc": -0.07290808089507649,
             },
+            "pamset_carbon": {
+                "npp0": 60,
+                "solubility_sens": 0,
+                "ml_t_half": 10,
+                "t_half": 10,
+                "t_threshold": 10,
+            },
             "Index": "10974_old_NR",
         },
         {
@@ -315,6 +339,13 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
                 "qbc": 0.17719249872571508,
                 "qoc": -0.09124374858602939,
             },
+            "pamset_carbon": {
+                "npp0": 60,
+                "solubility_sens": 0,
+                "ml_t_half": 10,
+                "t_half": 10,
+                "t_threshold": 10,
+            },
             "Index": "Unknown_old_NR",
         },
         {
@@ -334,6 +365,13 @@ def test_ciceroscm_run_parallel_many_cfgs(test_data_dir):
                 "qindso2": -0.9929404692583796,
                 "qbc": 0.3880489761967636,
                 "qoc": -0.1998224726091362,
+            },
+            "pamset_carbon": {
+                "npp0": 60,
+                "solubility_sens": 0,
+                "ml_t_half": 10,
+                "t_half": 10,
+                "t_threshold": 10,
             },
             "Index": "28925_old_NR",
         },
@@ -417,6 +455,13 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
                 "qoc": -0.084,
                 "qh2o_ch4": 0.171,
             },
+            "pamset_carbon": {
+                "npp0": 60,
+                "solubility_sens": 0,
+                "ml_t_half": 10,
+                "t_half": 10,
+                "t_threshold": 10,
+            },
             "Index": "10496_old_NR_rounded",
         }
     ]
@@ -436,3 +481,105 @@ def test_ciceroscm_run_parallel_many_forcing(test_data_dir):
         'variable=="Surface Air Temperature Change" & scenario=="forc_data_zero_forcing" & run_id=="10496_old_NR_rounded"'
     )
     assert len(test_length.values[0]) == 358
+
+
+def test_parallel_conc_run(test_data_dir):
+    scenarios = [
+        {
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "nyend": 2100,
+            "conc_run": True,
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
+            "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
+            "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
+            "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+            "sunvolc": 1,
+            "scenname": "ssp245conc",
+        }
+    ]
+
+    cfgs = [
+        {
+            "pamset_emiconc": {
+                "qh2o_ch4": 0.171,
+                "qbmb": 0.03,
+                "qo3": 0.4,
+                "qdirso2": -0.457 / 57,
+                "qindso2": -0.514 / 57,
+                "qbc": 0.200 / 7,
+                "qoc": -0.103 / 16,
+            },
+            "pamset_udm": {
+                "rlamdo": 16.0,
+                "akapa": 0.634,
+                "cpi": 0.4,
+                "W": 4.0,
+                "beto": 3.5,
+                "lambda": 0.540,
+                "mixed": 60.0,
+            },
+            "Index": "test_test",
+        },
+        {
+            "pamset_emiconc": {
+                "qh2o_ch4": 0.171,
+                "qbmb": 0.03,
+                "qo3": 0.4,
+                "qdirso2": -0.457 / 57,
+                "qindso2": -0.514 / 57,
+                "qbc": 0.200 / 7,
+                "qoc": -0.103 / 16,
+            },
+            "pamset_udm": {
+                "rlamdo": 16.0,
+                "akapa": 0.634,
+                "cpi": 0.4,
+                "W": 4.0,
+                "beto": 3.5,
+                "lambda": 0.540,
+                "mixed": 60.0,
+                "ocean_efficacy": 1.2,
+            },
+            "pamset_carbon": {"mixed_carbon": 120},
+            "Index": "test_test_oceff",
+        },
+    ]
+
+    output_vars = [
+        "Surface Air Temperature Change",
+        "Effective Radiative Forcing",
+        "Emissions|CO2",
+        "Heat Content|Ocean",
+        "Atmospheric Concentrations|CO2",
+        "Effective Radiative Forcing|CO2",
+        "Effective Radiative Forcing|N2O",
+        "Effective Radiative Forcing|CH4",
+        "Effective Radiative Forcing|Aerosols",
+        "Effective Radiative Forcing|F-Gases",
+        "Biosphere carbon flux",
+        "Airborne fraction CO2",
+        "Ocean carbon flux",
+    ]
+
+    results = run_ciceroscm_parallel(scenarios, cfgs, output_vars)
+    print(results.columns)
+    assert set(results["variable"].unique()) == set(output_vars)
+    print(results["run_id"].unique())
+    back_em1 = (
+        results.loc[
+            (results["variable"] == "Emissions|CO2")
+            & (results["run_id"] == "test_test")
+        ]
+        .iloc[:, 7:]
+        .to_numpy(float)
+    )
+    print(back_em1)
+    back_em2 = (
+        results.loc[
+            (results["variable"] == "Emissions|CO2")
+            & (results["run_id"] == "test_test_oceff")
+        ]
+        .iloc[:, 7:]
+        .to_numpy(float)
+    )
+    assert not np.allclose(back_em1, back_em2)

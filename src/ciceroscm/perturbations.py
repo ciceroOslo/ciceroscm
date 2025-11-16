@@ -197,9 +197,32 @@ class ForcingPerturbation:
         for row in perturb_here.itertuples(index=True, name="Pandas"):
             value = row.forcing
             tracer = row.component
+            if tracer not in forc.keys():
+                continue
             totforc = totforc + value
             forc_nh, forc_sh = calculate_hemispheric_forcing(
                 tracer, value, forc_nh, forc_sh
             )
             forc[tracer][yr - self.year0] = forc[tracer][yr - self.year0] + value
         return totforc, forc_nh, forc_sh, forc
+
+    def add_forcing_pert_for_vanilla(self, precalc_erf):
+        """
+        Add forcing perturbations to vanilla gases erf DataFrame
+
+        Parameters
+        ----------
+        precalc_erf : pd.DataFrame
+            Dataframe of erf values for all vanilla gases
+
+        """
+        precalc_pert_gases = set(precalc_erf.columns).intersection(self.compounds)
+        if precalc_pert_gases is None:
+            return
+        for gas in precalc_pert_gases:
+            perturb_here = self.perturb_raw[self.perturb_raw.component == gas]
+            precalc_erf.loc[perturb_here.year.values, gas] = (
+                precalc_erf.loc[perturb_here.year.values, gas].values
+                + perturb_here.forcing.values
+            )
+        return

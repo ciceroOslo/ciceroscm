@@ -2,19 +2,74 @@
 Module to handle carbon cycle from CO2 emissions to concentrations
 """
 
+from functools import partial
+
 import numpy as np
 import pandas as pd
 
-from .._utils import cut_and_check_pamset
+from .._utils import cut_and_check_pamset, update_pam_if_numeric
 from ..pub_utils import _check_array_consistency
 from .common_carbon_cycle_functions import (
     GE_COEFF,
     OCEAN_AREA,
     PPM_CO2_TO_PG_C,
     PPMKG_TO_UMOL_PER_VOL,
+    PREINDUSTRIAL_CO2_CONC,
     calculate_airborne_fraction,
 )
-from .rfuns import rb_function, rb_function2, rs_function2, rs_function_array
+from .rfuns import (
+    _process_flat_carbon_parameters,
+    rb_function,
+    rb_function2,
+    rs_function2,
+    rs_function_array,
+)
+
+
+def sigmoid_gen(eval_point, sigmoid_center, sigmoid_width):
+    """
+    Generalised sigmoid function
+
+    Parameters
+    ----------
+    eval_point : float
+        The value at which to evaluate the sigmoid function
+    sigmoid_center : float
+        The center of the sigmoid function, where it is 1
+    sigmoid_width : float
+        The width of the sigmoid function
+
+    Returns
+    -------
+        float
+        sigmoid function value at eval_point
+    """
+    sigmoid = 1 / (1 + np.exp(-((eval_point - sigmoid_center) / sigmoid_width)))
+    return sigmoid
+
+
+def threshold_gen(eval_point, threshold_half, threshold_width):
+    """
+    Generalised threshold damping function
+
+    Parameters
+    ----------
+    eval_point : float
+        The value at which to evaluate the sigmoid function
+    threshold_half : float
+        The value for which the dampening of the threshold = 0.5
+    threshold_width : float
+        The width of the threshold
+
+    Returns
+    -------
+        float
+        threshold function value at eval_point
+    """
+    threshold = 1 - 1 / (
+        1 + np.exp(-((eval_point - threshold_half) / threshold_width))
+    )  # Threshold function
+    return threshold
 
 
 def take_out_missing(pamset):
@@ -43,28 +98,20 @@ def take_out_missing(pamset):
     return pamset
 
 
-def linear_fnpp_from_temp(fnpp_temp_coeff=0, dtemp=0):
-    """
-    Linear temperature dependence function for fnpp
-
-    Parameters
-    ----------
-    fnpp_temp_coeff : float
-        Coefficient of linear growth / decline of
-        fnpp with temperature change
-    dtemp : float
-        Degrees of temperature since start of run
-
-    Returns
-    -------
-    float
-        fnpp at given temperature for assumed linear
-        relationship
-    """
-    return 60 + fnpp_temp_coeff * dtemp
-
-
-linear_fnpp_from_temp_vec = np.vectorize(linear_fnpp_from_temp)
+CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
+    "beta_f": 0.287,
+    "mixed_carbon": 75.0,
+    "ml_w_sigmoid": 3.0,
+    "ml_fracmax": 0.5,
+    "ml_t_half": 0.5,
+    "npp0": 60,
+    "t_half": 0.5,
+    "w_sigmoid": 7,
+    "t_threshold": 4,
+    "w_threshold": 7,
+    "solubility_sens": 0.02,
+    "solubility_limit": 0.5,
+}
 
 
 class CarbonCycleModel:
@@ -72,7 +119,7 @@ class CarbonCycleModel:
     Class to handle carbon cycle calculations
     """
 
-    def __init__(self, pamset):
+    def __init__(self, pamset_emiconc, pamset_carbon=None):
         """
         Initialise Carbon cycle model
 
@@ -85,23 +132,27 @@ class CarbonCycleModel:
                 "idtm": 24,
                 "nystart": 1750,
                 "nyend": 2100,
-                "beta_f": 0.287,
-                "mixed_carbon": 75.0,
-                "fnpp_temp_coeff": 0,
             },
-            pamset,
-            used={"rs_function": "missing", "rb_function": "missing"},
+            pamset_emiconc,
         )
-        self.pamset = take_out_missing(pamset.copy())
+        if pamset_carbon is None:
+            pamset_carbon = CARBON_CYCLE_MODEL_REQUIRED_PAMSET
+        else:
+            # Process flat carbon cycle parameters first
+            pamset_carbon = _process_flat_carbon_parameters(pamset_carbon)
+            pamset_carbon = cut_and_check_pamset(
+                CARBON_CYCLE_MODEL_REQUIRED_PAMSET,
+                pamset_carbon,
+                used={"rs_function": "missing", "rb_function": "missing"},
+            )
+
+        pamset_carbon = take_out_missing(pamset_carbon.copy())
+        self.pamset = {**pamset, **pamset_carbon}
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
-        self.reset_co2_hold(
-            beta_f=pamset["beta_f"],
-            mixed_carbon=pamset["mixed_carbon"],
-            fnpp_temp_coeff=pamset["fnpp_temp_coeff"],
-        )
+        self.reset_co2_hold(pamset_carbon)
         self.precalc_r_functions()
 
-    def reset_co2_hold(self, beta_f=0.287, mixed_carbon=75.0, fnpp_temp_coeff=0):
+    def reset_co2_hold(self, pamset_carbon=None):
         """
         Reset values of CO2_hold for new run
 
@@ -111,19 +162,38 @@ class CarbonCycleModel:
         """
         self.co2_hold = {
             "yCO2": 0.0,
-            "xCO2": 278.0,
+            "xCO2": PREINDUSTRIAL_CO2_CONC,
             "sCO2": np.zeros(self.pamset["idtm"] * self.pamset["years_tot"]),
             "emCO2_prev": 0.0,
             "dfnpp": np.zeros(self.pamset["idtm"] * self.pamset["years_tot"]),
             "ss1": 0.0,
             "sums": 0.0,
         }
-        self.pamset["beta_f"] = beta_f
-        self.pamset["mixed_carbon"] = mixed_carbon
-        self.pamset["fnpp_temp_coeff"] = fnpp_temp_coeff
+        if pamset_carbon is not None:
+            # Process flat carbon cycle parameters first
+            pamset_carbon = _process_flat_carbon_parameters(pamset_carbon)
+            # Check if we need to recompute r_functions
+            needs_rfunction_recompute = (
+                "rs_function" in pamset_carbon or "rb_function" in pamset_carbon
+            )
+
+            self.pamset = update_pam_if_numeric(
+                self.pamset,
+                pamset_new=pamset_carbon,
+                can_change=CARBON_CYCLE_MODEL_REQUIRED_PAMSET.keys(),
+            )
+            # Update with non-numeric parameters (like function dictionaries)
+            for key in ["rs_function", "rb_function"]:
+                if key in pamset_carbon:
+                    self.pamset[key] = pamset_carbon[key]
+            self.fnpp_from_temp_vec = np.vectorize(self.fnpp_from_temp)
+
+            # Recompute r_functions if we updated any function parameters
+            if needs_rfunction_recompute:
+                self.precalc_r_functions()
 
     def _set_co2_hold(
-        self, xco2=278.0, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
+        self, xco2=PREINDUSTRIAL_CO2_CONC, yco2=0.0, emco2_prev=0.0, ss1=0.0, sums=0
     ):  # pylint: disable=too-many-positional-arguments, too-many-arguments
         """
         Reset the CO2 hold scalar values,
@@ -134,7 +204,8 @@ class CarbonCycleModel:
         Parameters
         ----------
         xco2 : float
-            CO2 concentration to set, default is 278.0 which is the start value
+            CO2 concentration to set, default is PREINDUSTRIAL_CO2_CONC
+            which is 278.0 andthe start value
         yco2 : float
             yco2 value, default is 0.0 which is the start value
         emco2_prev : float
@@ -217,6 +288,135 @@ class CarbonCycleModel:
                 idtm=self.pamset["idtm"],
             )
 
+    def fnpp_from_temp(self, dtemp=0):
+        """
+        Temperature dependence function for fnpp
+
+        Parameters
+        ----------
+        dtemp : float
+            Degrees of temperature since start of run
+
+        Returns
+        -------
+        float
+            fnpp at given temperature for assumed linear
+            relationship
+        """
+        sigmoid = partial(
+            sigmoid_gen,
+            sigmoid_center=self.pamset["t_half"],
+            sigmoid_width=self.pamset["w_sigmoid"],
+        )
+        threshold = partial(
+            threshold_gen,
+            threshold_half=self.pamset["t_threshold"],
+            threshold_width=self.pamset["w_threshold"],
+        )
+        # Threshold function
+        baseline = self.pamset["npp0"] / (sigmoid(0) * threshold(0))
+
+        return baseline * sigmoid(dtemp) * threshold(dtemp)
+
+    def solubility_temp_feedback(self, dtemp=0.0):
+        """
+        Exponential scaling of CO2 solubility with temperature, with upper limit.
+
+        The parameters used are solubility_sens, the fractional decrease in solubility
+        per degree C (default 0.02) and solubility_limit, the maximum allowed gain
+        (e.g. 0.5 for 50% increase)
+
+        Parameters
+        ----------
+        dtemp : float
+            Degrees of temperature since start of run
+
+
+        Returns
+        -------
+        float
+            Solubility scaling factor (max 1 + solubility_limit)
+        """
+        scale = np.exp(-self.pamset["solubility_sens"] * dtemp)
+        scale = np.clip(scale, 0, 1 + self.pamset["solubility_limit"])
+        # Limit the gain to 1 + solubility_limit (e.g. 1.5)
+        return scale
+
+    def mixed_layer_temp_feedback(self, dtemp=0):
+        """
+        Calculate mixed layer depth change with temperature using new parameters.
+
+        Parameters
+        ----------
+        dtemp : float
+            Degrees of temperature since start of run
+
+        Returns
+        -------
+        float
+            Mixed layer depth change factor
+        """
+        sigmoid = partial(
+            sigmoid_gen,
+            sigmoid_center=self.pamset["ml_t_half"],
+            sigmoid_width=self.pamset["ml_w_sigmoid"],
+        )
+        mixed_layer_temp = 1 - self.pamset["ml_fracmax"] * sigmoid(dtemp)
+        baseline = 1 - self.pamset["ml_fracmax"] * sigmoid(0)
+        return self.pamset["mixed_carbon"] * mixed_layer_temp / baseline
+
+    def _calculate_partial_pressure_mixed_layer(self, it, dtemp=0):
+        """
+        Calculate ocean mixed layer partial pressure
+
+        Parameters
+        ----------
+        it : int
+            Subyearly timestep at which to calculate
+        dtemp : float
+            Temperature change at timestep
+
+        Returns
+        -------
+            float
+            Mixed ocean layer partial pressure
+        """
+        dt = 1 / self.pamset["idtm"]
+        if it > 0:
+            # Pulse response integrate carbon content in the mixed layer
+            # Carbon decays into deep layer according to pulse response function
+            sumz = np.dot(
+                self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
+            )
+        else:
+            sumz = 0.0
+
+        # Inorganic carbon content in the mixed layer:
+        z_co2 = (
+            PPMKG_TO_UMOL_PER_VOL
+            * GE_COEFF
+            * dt
+            / self.mixed_layer_temp_feedback(dtemp)
+            * (sumz + 0.5 * self.co2_hold["sCO2"][it])
+        )
+        # Partial pressure in ocean mixed layer,
+        # in principle this only holds in 17.7-18.2 temperature range
+        # but up to 1320 ppm
+        # and this particular formulation is the solution at T = 18.2
+        # The original description paper also has a different formulation
+        # with a wider valid temperature range, but only up to 200 ppm
+        # which is not used
+        # This might be a natural place to look for/substitute with a
+        # different / more general / temperature dependent formulation
+        # which would be in line with the model philosophy and structure
+        return self.solubility_temp_feedback(dtemp) * (
+            1.3021 * z_co2
+            + 3.7929e-3 * (z_co2**2)
+            + 9.1193e-6 * (z_co2**3)
+            + 1.488e-8 * (z_co2**4)
+            + 1.2425e-10 * (z_co2**5)
+        )
+
     def co2em2conc(
         self, yr, em_co2_common, dtemp=0.0
     ):  # pylint: disable=too-many-locals
@@ -247,9 +447,7 @@ class CarbonCycleModel:
 
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
-        fnpp = linear_fnpp_from_temp(
-            fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"], dtemp=dtemp
-        )
+        fnpp = self.fnpp_from_temp(dtemp=dtemp)
         # Monthloop:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
@@ -259,7 +457,9 @@ class CarbonCycleModel:
             if it > 0:
                 # Net primary production in timestep
                 self.co2_hold["dfnpp"][it] = (
-                    fnpp * self.pamset["beta_f"] * np.log(self.co2_hold["xCO2"] / 278.0)
+                    fnpp
+                    * self.pamset["beta_f"]
+                    * np.log(self.co2_hold["xCO2"] / PREINDUSTRIAL_CO2_CONC)
                 )
                 # Decay from previous primary production
                 sumf = float(
@@ -295,23 +495,6 @@ class CarbonCycleModel:
                 self.co2_hold["sums"] + self.co2_hold["ss1"] + ss2
             )
             self.co2_hold["emCO2_prev"] = em_co2
-            if it > 0:
-                # Pulse response integrate carbon content in the mixed layer
-                # Carbon decays into deep layer according to pulse response function
-                sumz = np.dot(
-                    self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
-                )
-            else:
-                sumz = 0.0
-
-            # Inorganic carbon content in the mixed layer:
-            z_co2 = (
-                PPMKG_TO_UMOL_PER_VOL
-                * GE_COEFF
-                * dt
-                / self.pamset["mixed_carbon"]
-                * (sumz + 0.5 * self.co2_hold["sCO2"][it])
-            )
             # Partial pressure in ocean mixed layer,
             # in principle this only holds in 17.7-18.2 temperature range
             # but up to 1320 ppm
@@ -322,24 +505,24 @@ class CarbonCycleModel:
             # This might be a natural place to look for/substitute with a
             # different / more general / temperature dependent formulation
             # which would be in line with the model philosophy and structure
-            self.co2_hold["yCO2"] = (
-                1.3021 * z_co2
-                + 3.7929e-3 * (z_co2**2)
-                + 9.1193e-6 * (z_co2**3)
-                + 1.488e-8 * (z_co2**4)
-                + 1.2425e-10 * (z_co2**5)
-            )
+            yco2_prev = self.co2_hold["yCO2"]
+            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(it)
             # Partial pressure in the atmosphere, this comes from
             # solving the transfer equation between atmosphere and
             # ocean  to get the resulting atmosphere partial pressure
+            # We use the midpoint partial pressure here as this ensures
+            # best (but not perfect) closure of the carbon cycle
             self.co2_hold["xCO2"] = (
-                self.co2_hold["sCO2"][it] + self.co2_hold["yCO2"] + 278.0
+                self.co2_hold["sCO2"][it]
+                + 0.5 * self.co2_hold["yCO2"]
+                + 0.5 * yco2_prev
+                + PREINDUSTRIAL_CO2_CONC
             )
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
         return self.co2_hold["xCO2"]
 
     def _get_ffer_timeseries(
-        self, conc_run=False, co2_conc_series=None, dtemp_timeseries=None
+        self, conc_run=False, co2_conc_series=None, dtemp_series=None
     ):
         """
         Get the biospheric fertilisation (ffer) time series
@@ -365,20 +548,20 @@ class CarbonCycleModel:
         """
         dt = 1.0 / self.pamset["idtm"]
         if conc_run and co2_conc_series is not None:
-            if dtemp_timeseries is None:
-                dtemp_timeseries = np.zeros(len(co2_conc_series))
+            if dtemp_series is None:
+                dtemp_series = np.zeros(len(co2_conc_series))
             timesteps = len(co2_conc_series) * self.pamset["idtm"]
             fnpp = np.repeat(
-                linear_fnpp_from_temp_vec(
-                    fnpp_temp_coeff=self.pamset["fnpp_temp_coeff"],
-                    dtemp=dtemp_timeseries,
+                self.fnpp_from_temp_vec(
+                    dtemp=dtemp_series,
                 ),
                 self.pamset["idtm"],
             )
             dfnpp = (
                 np.repeat(
                     [
-                        self.pamset["beta_f"] * np.log(co2_conc / 278.0)
+                        self.pamset["beta_f"]
+                        * np.log(co2_conc / PREINDUSTRIAL_CO2_CONC)
                         for co2_conc in co2_conc_series
                     ],
                     self.pamset["idtm"],
@@ -401,7 +584,9 @@ class CarbonCycleModel:
         ffer = dfnpp - dt * sumf
         return ffer
 
-    def get_biosphere_carbon_flux(self, conc_run=False, co2_conc_series=None):
+    def get_biosphere_carbon_flux(
+        self, conc_run=False, co2_conc_series=None, dtemp_series=None
+    ):
         """
         Get the carbon flux to the biosphere as timeseries over years
 
@@ -418,13 +603,16 @@ class CarbonCycleModel:
             calculations are needed or co2_conc_series need to be used for calculations)
         co2_conc_series : np.ndarray
             Time series of concentrations to calculate ffer from
+        dtemp_series : np.ndarray
+            Timeseries of temperature change, should be included for calculation of
+            outputs if temperature feedbacks are on
 
         Returns
         -------
         np.ndarray
             Timeseries of the yearly carbon flux to the biosphere
         """
-        ffer = self._get_ffer_timeseries(conc_run, co2_conc_series)
+        ffer = self._get_ffer_timeseries(conc_run, co2_conc_series, dtemp_series)
         biosphere_carbon_flux = (
             np.array(
                 [
@@ -443,7 +631,9 @@ class CarbonCycleModel:
 
         return biosphere_carbon_flux
 
-    def get_ocean_carbon_flux(self, conc_run=False, co2_conc_series=None):
+    def get_ocean_carbon_flux(
+        self, conc_run=False, co2_conc_series=None, dtemp_series=None
+    ):
         """
         Get yearly timeseries of ocean carbon flux
 
@@ -459,8 +649,9 @@ class CarbonCycleModel:
             Timeseries of the added carbon content to the yearly
             ocean carbon flux (Pg / C /yr)
         """
+        # TODO: Don't redo this if back-calculation is already done...
         if conc_run and co2_conc_series is not None:
-            self.back_calculate_emissions(co2_conc_series)
+            self.back_calculate_emissions(co2_conc_series, dtemp_series=dtemp_series)
         ocean_carbon_flux = (
             np.array(
                 [
@@ -481,7 +672,7 @@ class CarbonCycleModel:
         )
         return ocean_carbon_flux
 
-    def back_calculate_emissions(self, co2_conc_series, dtemp_timeseries=None):
+    def back_calculate_emissions(self, co2_conc_series, dtemp_series=None):
         """
         Back calculate emissions from conc_run
 
@@ -493,7 +684,7 @@ class CarbonCycleModel:
         co2_conc_series : np.ndarray
             Timeseries of co2 concentrations for which to back
             calculate emissions
-        dtemp_timeseries : np.ndarray
+        dtemp_series : np.ndarray
             Timeseries of temperature change for which to back calculate emissions
             It should be the same length as the concentration timeseries
             If no value is sent, a timeseries of zeros will be used
@@ -504,14 +695,15 @@ class CarbonCycleModel:
             Timeseries of estimated emissions to match the concentration and
             temperature timeseries sent
         """
-        prev_co2_conc = 278.0
+        prev_co2_conc = PREINDUSTRIAL_CO2_CONC
         em_series = np.zeros(len(co2_conc_series))
-        if dtemp_timeseries is None:
-            dtemp_timeseries = np.zeros(len(co2_conc_series))
+        if dtemp_series is None:
+            dtemp_series = np.zeros(len(co2_conc_series))
+
         ffer = self._get_ffer_timeseries(
             conc_run=True,
             co2_conc_series=co2_conc_series,
-            dtemp_timeseries=dtemp_timeseries,
+            dtemp_series=dtemp_series,
         )
         for i, co2_conc in enumerate(co2_conc_series):
             ffer_here = ffer[i * self.pamset["idtm"]]
@@ -520,7 +712,7 @@ class CarbonCycleModel:
                 prev_co2_conc,
                 yrix=i,
                 ffer=ffer_here,
-                dtemp=dtemp_timeseries[i],
+                dtemp=dtemp_series[i],
             )
             prev_co2_conc = co2_conc
         return em_series
@@ -572,7 +764,7 @@ class CarbonCycleModel:
         """
         if ffer is None:
             ffer = self._get_ffer_timeseries(
-                [co2_conc_zero, co2_conc_now], dtemp_timeseries=[0, dtemp]
+                [co2_conc_zero, co2_conc_now], dtemp_series=[0, dtemp]
             )[yrix * self.pamset["idtm"]]
         co2_change = co2_conc_now - co2_conc_zero
         min_guess = np.min(
@@ -598,8 +790,6 @@ class CarbonCycleModel:
             self.pamset["nystart"] + yrix, guess, dtemp=dtemp
         )
         iteration = 0
-        if yrix % 50 == 0:
-            print(f"yr: {yrix} has minguess: {min_guess}, maxguess: {max_guess}")
         while (
             iteration < maxit
             and np.abs(co2_conc_now - estimated_conc) / co2_conc_now > rtol
@@ -616,13 +806,11 @@ class CarbonCycleModel:
                 self.pamset["nystart"] + yrix, guess, dtemp=dtemp
             )
             iteration = iteration + 1
-        if yrix % 50 == 0:
-            print(
-                f"End guess: {guess} {co2_conc_now} and {co2_conc_zero}  and estimated conc {estimated_conc}"
-            )
         return guess
 
-    def get_carbon_cycle_output(self, years, conc_run=False, conc_series=None):
+    def get_carbon_cycle_output(
+        self, years, conc_run=False, conc_series=None, dtemp_series=None
+    ):
         """
         Make and return a dataframe with carbon cycle data
 
@@ -635,6 +823,9 @@ class CarbonCycleModel:
         conc_series : np.array
             Numpy array of concentrations, must be included for a concentrations
             driven run to back calculate emissions
+        dtemp_series : np.ndarray
+            Timeseries of temperature change, should be included for calculation of
+            outputs if temperature feedbacks are on
 
         Returns
         -------
@@ -643,14 +834,21 @@ class CarbonCycleModel:
         """
         if conc_run and conc_series is None:
             return None
+        if dtemp_series is None:
+            dtemp_series = np.zeros(self.pamset["years_tot"])
         if conc_run:
-            em_series = self.back_calculate_emissions(conc_series)
+            em_series = self.back_calculate_emissions(conc_series, dtemp_series)
         df_carbon = pd.DataFrame(
             data={
                 "Biosphere carbon flux": self.get_biosphere_carbon_flux(
-                    conc_run=conc_run
+                    conc_run=conc_run,
+                    co2_conc_series=conc_series,
+                    dtemp_series=dtemp_series,
                 ),
                 "Ocean carbon flux": self.get_ocean_carbon_flux(),
+                "Mixed layer depth": self.mixed_layer_temp_feedback(dtemp_series),
+                "CO2 solubility": self.solubility_temp_feedback(dtemp_series),
+                "Net Primary Production": self.fnpp_from_temp_vec(dtemp_series),
             },
             index=years,
         )
@@ -658,7 +856,8 @@ class CarbonCycleModel:
         if not conc_run:
             return df_carbon
         df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
-            em_series, conc_series  # pylint: disable=possibly-used-before-assignment
+            em_series,  # pylint: disable=possibly-used-before-assignment
+            conc_series,
         )
         df_carbon["Emissions"] = em_series
         return df_carbon

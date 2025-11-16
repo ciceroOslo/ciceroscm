@@ -36,6 +36,9 @@ openscm_to_cscm_dict = {
     "Effective Radiative Forcing|CO2": "CO2",
     "Effective Radiative Forcing|CH4": "CH4",
     "Effective Radiative Forcing|N2O": "N2O",
+    "Effective Radiative Forcing|Stratospheric Water Vapor": "STRAT_H2O",
+    "Effective Radiative Forcing|Stratospheric Ozone": "STRAT_O3",
+    "Effective Radiative Forcing|Tropospheric Ozone": "TROP_O3",
     "Emissions|CO2": "CO2",
     "Emissions|CH4": "CH4",
     "Emissions|N2O": "N2O",
@@ -132,7 +135,15 @@ def get_data_from_em(results, variable):
     """
     df_temp = results["emissions"]
     years = df_temp.Year[:]
-    timeseries = df_temp[variable].to_numpy()  # pylint:disable=unsubscriptable-object
+    # If concentrations run, CO2 emissions should be taken from carbon cycle back calculation
+    if "Emissions" in results["carbon cycle"].keys() and variable == "CO2":
+        timeseries = results["carbon cycle"][
+            "Emissions"
+        ].to_numpy()  # pylint:disable=unsubscriptable-object
+    else:
+        timeseries = df_temp[
+            variable
+        ].to_numpy()  # pylint:disable=unsubscriptable-object
     return years, timeseries
 
 

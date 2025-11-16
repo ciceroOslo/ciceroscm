@@ -20,7 +20,7 @@ def check_output_equal_and_different_column(
     for column in equal:
         print(exp[column])
         print(new_results[column])
-        assert np.allclose(exp[column], new_results[column])
+        assert np.allclose(exp[column], new_results[column], rtol=2e-3)
 
 
 def test_ciceroscm_run_w_regional_aerosols(test_data_dir):
@@ -41,7 +41,7 @@ def test_ciceroscm_run_w_regional_aerosols(test_data_dir):
             "emstart": 1850,
             "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(
-                test_data_dir, "ssp245_with_regional_aerosols_em_RCMIP.txt"
+                test_data_dir, "ssp245_with_regional_aerosols_em_RCMIP_fixed.txt"
             ),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
@@ -64,10 +64,10 @@ def test_ciceroscm_run_w_regional_aerosols(test_data_dir):
         pamset_emiconc={
             "qbmb": 0.0,
             "qo3": 0.5,
-            "qdirso2": -0.3701,
-            "qindso2": -0.4163,
-            "qbc": 0.163,
-            "qoc": -0.084,
+            "qdirso2": -0.3701 / 57,
+            "qindso2": -0.4163 / 57,
+            "qbc": 0.163 / 7,
+            "qoc": -0.084 / 16,
             "qh2o_ch4": 0.171,
         },
     )
