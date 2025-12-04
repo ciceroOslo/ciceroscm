@@ -17,17 +17,23 @@ The changes listed in this file are categorised as follows:
 [Unreleased]
 
 ### Changed
+- Simplified Tropospheric Ozone forcing calculation, using the same calculation throughout both before and after emstart 
+    (previous implementation relied on fossil fuel CO2 concentration likely for historical reasons of missing data).
 
 ### Added
 
 - Option to chunk configuration distributions to allow for millions of member runs without killing memory
 - Option to output ozone and stratospheric water vapour effective radiative forcing in parallel run
+- _config_distro can now write distribution files with full setup metadata, and Distroconfig can read in files with or with out shared metadata.
 
 ### Fixed
 
 - Skip precaclulation of empty concentrations matrix if emstart >= nyend
 - Carbon cycle output functioninng for concentrations runs
 - Parallel concentrations run pass back-calculated emissions series when prompted for Emissions|CO2
+
+### Removed
+- Removed old calibrator code, as calibration is now done in a separate repository.
 
 [Version 1.5.0]
 ---------------------------
