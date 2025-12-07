@@ -38,7 +38,7 @@ def calculate_airborne_fraction(em_timeseries, conc_timeseries):
     np.ndarray
         Airborne fraction calculated from the em_timeseries and conc_timeseries
     """
-    if any(np.cumsum(em_timeseries) ==0):
+    if any(np.cumsum(em_timeseries) == 0):
         return np.ones_like(em_timeseries) * np.nan
     airborne_fraction = (
         (conc_timeseries - PREINDUSTRIAL_CO2_CONC)
