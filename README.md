@@ -117,6 +117,7 @@ config.make_config_lists(
 ) 
 ```
 Both legacy (list-only) and new (metadata-inclusive) formats are supported for full backward compatibility.
+
 ## Parallelisation tools
 The module also has a submodule of parallelisation tools. This includes:
 * The cscmparwrapper, which is a parallelisation wrapper, that you can use for parallel runs of both full runs and forcing specific runs, and parallelise over either multiple scenarios, or multiple configurations or a list of both configurations and scenarios. The wrapper will divide the runs by scenarios initially, but if more parallel workers are available, it will also divide the configuration sets. The scenariodata and the configuration sets both are sents at lists of dictionaries of keyword arguments required for runs
@@ -138,6 +139,7 @@ The scripts folder contains various example scripts that can be used to see how 
 The notebooks folder provides simple working examples to run the model within a Jupyter environment, and plot example output.  Installation instructions for installing Jupyterlab can be found at https://jupyter.org/install
 <code>CSCM_example_textinput.ipynb</code> runs a simple emissions run with ssp245 data from 1900 to 2050, using input data text files stored in the <code>tests/test-data</code> folder
 <code>CSCM_example_directinput.ipynb</code> illustrates an interactive case, where ssp data is read into the environment and passed directly to the model
+<code>CSCM_example_regional_aerosols.py</code> is a python-script that can be paired using jupytext to become a notebook for demonstrating regional aerosol functionality.
 
 ### prescripts
 Inside the scripts folder is a folder called prescripts. It contains scripts that show how to prepare perturbation files for a run and two example datafiles. And includes scripts to prepare natural emissions files.
