@@ -71,6 +71,10 @@ df_gas =read_components(test_data_dir + '/gases_vupdate_2022_AR6.txt')
 reg_aerosol_RF_file = os.path.join(test_data_dir, "HTAP_reg_aerosol_RF.txt")
 reg_aerosol_df = pd.read_csv(reg_aerosol_RF_file, sep="\t", index_col=0)
 reg_aerosol_df.rename(columns={"sulfate": "SO2"}, inplace=True)
+# Change sign of all values in the dataframe
+reg_aerosol_df *= -1
+#reg_aerosol_df.values = - reg_aerosol_df.values  # Convert from W/m2 to W/m2 per Tg
+#sys.exit(4)
 df_gas_updated = make_regional_aerosol_gaspamdata(df_gas, reg_aerosol_df)
 
 df_gas_updated.tail()
@@ -96,6 +100,9 @@ df_ssp2_conc.head()
 emi_input =read_inputfile(test_data_dir + '/ssp245_with_regional_aerosols_em_RCMIP.txt')
 emi_input.rename(columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}, inplace=True)
 emi_input.head()
+emi_input_vanilla =read_inputfile(test_data_dir + '/ssp245_em_RCMIP.txt')
+emi_input_vanilla.rename(columns={"CO2": "CO2_FF", "CO2.1": "CO2_AFOLU"}, inplace=True)
+emi_input_vanilla.head()
 
 # %% [markdown]
 # # Set up model run with defined input variables
@@ -105,12 +112,26 @@ emi_input.head()
 scen = 'test'
 cscm_dir=CICEROSCM({
             "gaspam_data": df_gas_updated,
-            "emstart": 1751,  
+            "emstart": 1850,  
             "conc_run":False,
             "nystart": 1750,
             "nyend": 2100,
             "concentrations_data": df_ssp2_conc,
             "emissions_data": emi_input,
+            "nat_ch4_data": df_nat_ch4,
+            "nat_n2o_data": df_nat_n2o,
+            "idtm":24,
+        })
+
+scen = 'test'
+cscm_dir_vanilla=CICEROSCM({
+            "gaspam_data": df_gas,
+            "emstart": 1850,  
+            "conc_run":False,
+            "nystart": 1750,
+            "nyend": 2100,
+            "concentrations_data": df_ssp2_conc,
+            "emissions_data": emi_input_vanilla,
             "nat_ch4_data": df_nat_ch4,
             "nat_n2o_data": df_nat_n2o,
             "idtm":24,
@@ -152,65 +173,9 @@ cscm_dir=CICEROSCM({
 
 # %%
 # NBVAL_IGNORE_OUTPUT
-cscm_dir._run({
-            "results_as_dict":True,
-            "carbon_cycle_outputs":True
-        },
-    pamset_udm={"threstemp": 7.0, #scales vertical velocity as a function of mixed layer temperature
-                    "rlamdo":16.0,#air-sea heat exchange coefficient (wm^-2K^-1)
-                    "akapa":0.634, #vertical heat diffusivity
-                    "cpi":0.4, #temperature change ratio: polar to nonpolar region
-                    "W":4, #vertical velocity (m/yr)
-                    "beto":3.5, #ocean interhemispheric heat exchange coeff (Wm^-2K^-1)
-                    "lambda":0.54,
-                    "mixed":60.0,  #mixed layer depth
-                    "foan":0.61, #fraction of northern hemisphere covered by ocean
-                    "foas":0.81, #fraction of northern hemisphere covered by ocean
-                    "ebbeta":0.0,#atmospheric interhemispheric heat exchange 
-                    "fnso":0.7531, #ocean area ratio, northern to southern hemisphere
-                    "lm":40, #number of vertical layers
-                    "ldtime":12,
-                   },
-    pamset_emiconc={"qbmb": 0.0,
-                    "qo3": 0.5,
-                    "qdirso2": -0.00308,
-                    "qindso2": -0.97 / 57.052577209999995,
-                    "qbc": 0.0279,
-                    "qoc": -0.00433,
-                    "qh2o_ch4": 0.091915,
-                    "ref_yr": 2010
-                    },
-    pamset_carbon={
-                    "beta_f": 0.,
-                    "mixed_carbon": 75.0,
-                    "qnmvoc": 0.0,
-                    "qnh3": 0.0,
-                    "qnox": 0.0,
-                    "npp0": 60.0,
-                    "npp_t_half": 0.5,
-                    "npp_w_sigmoid": 4,
-                    "npp_t_threshold": 6,
-                    "npp_w_threshold": 4,
-                    "ml_w_sigmoid": 3.0,
-                    "ml_fracmax": 0.5,
-                    "ml_t_half": 0.5,
-                    'rb_coef0': 0.5,
-                    'rb_coef1': 0.25,
-                    'rb_coef2': 0.25,
-                    'rb_tim0': 2.5,
-                    'rb_tim1': 10.0,
-                    'rb_tim2': 60.0,
-                    'rs_coef0': 0.1,
-                    'rs_coef1': 0.6,
-                    'rs_coef2': 0.15,
-                    'rs_coef3': 0.15,
-                    'rs_tim0': .8,
-                    'rs_tim1': 7,
-                    'rs_tim2': 80,
-                    'beta_f': 1.0
-                }
-            )   
+cscm_dir._run({"results_as_dict":True})   
 
+cscm_dir_vanilla._run({"results_as_dict":True,})   
 
 
 # %% [markdown]
@@ -219,6 +184,7 @@ cscm_dir._run({
 # %%
 
 df_temp = to_df(cscm_dir)
+df_temp_vanilla = to_df(cscm_dir_vanilla)
 
 # %% [markdown]
 # # Plot output
@@ -227,28 +193,70 @@ df_temp = to_df(cscm_dir)
 # NBVAL_IGNORE_OUTPUT
 fig, axs = plt.subplots(nrows=2, ncols=4,figsize=(30,10))
 axs=axs.flatten()
-fig.suptitle('CICERO SCM simulation')
+fig.suptitle('CICERO SCM regional aerosols example run - SSP2-4.5 scenario', fontsize=16)
 
 df_temp['dT_glob'].plot(ylabel='(K)',ax=axs[0])
 df_temp['dT_NH'].plot(ylabel='(K)',ax=axs[0],linestyle=':')
 df_temp['dT_SH'].plot(ylabel='(K)',ax=axs[0],linestyle=':')
-axs[0].legend(['Global mean temperature','NH temperature','SH temperature'])
+df_temp_vanilla['dT_glob'].plot(ylabel='(K)',ax=axs[0],linestyle='--')
+axs[0].legend(['GMST','NH temperature','SH temperature', 'GMST_non_regional'])
+axs[0].set_title('Temperature')
 
 df_temp['forcing']['Total_forcing'].plot(ylabel='(ppm)',ax=axs[1])
-axs[1].legend([r'Total Forcing'])
+df_temp_vanilla['forcing']['Total_forcing'].plot(ylabel='(ppm)',ax=axs[1], linestyle='--')
+axs[1].legend([r'Total Forcing', r'Total Forcing_non_regional'])
+axs[1].set_title('Total Forcing')
 
 aerosols = ["SO2", "BC", "OC"]
 regions = ["ASIA", "LAM", "MAF", "REF", "OECD"]
 for aer_num, aerosol in enumerate(aerosols):
+    em_sum = pd.Series(0, index=df_temp.index)
+    forc_sum = pd.Series(0, index=df_temp.index)
     for region in regions:
         df_temp["emissions"][f"{aerosol}_{region}"].plot(
-            ylabel=f'(Tg {aerosol})'
-            ,ax=axs[2 + aer_num*2]
+            ylabel=f'(Tg {aerosol})',
+            ax=axs[2 + aer_num*2]
             )
         df_temp["forcing"][f"{aerosol}_{region}"].plot(
-            ylabel='(W m-2)'
-            ,ax=axs[3 + aer_num*2]
+            ylabel='(W m-2)',
+            ax=axs[3 + aer_num*2]
             )
-    axs[2 + aer_num*2].legend([f'{aerosol}_{region}' for region in regions])
-    axs[3 + aer_num*2].legend([f'{aerosol}_{region}' for region in regions])
+        em_sum += df_temp["emissions"][f"{aerosol}_{region}"]
+        forc_sum += df_temp["forcing"][f"{aerosol}_{region}"]
+    # Also plot the non-regional aerosol emissions and forcing
+    em_sum.plot(
+        ylabel=f'(Tg {aerosol})',
+        ax=axs[2 + aer_num*2],
+        linestyle='--'
+        )
+    forc_sum.plot(
+        ylabel=f'ERF {aerosol} (W m-2)',
+        ax=axs[3 + aer_num*2],
+        linestyle='--'
+        )
+    df_temp_vanilla["emissions"][aerosol].plot(
+        ylabel=f'(Tg {aerosol})',
+        ax=axs[2 + aer_num*2],
+        linestyle='--'
+        )
+    print(df_temp_vanilla["forcing"].keys())
+    if aerosol == "SO2":
+        df_temp_vanilla["forcing"]["SO4_DIR"].plot(
+            ylabel=f'ERF {aerosol} (W m-2)',
+            ax=axs[3 + aer_num*2],
+            linestyle='--'
+            )
+    else:
+        df_temp_vanilla["forcing"][aerosol].plot(
+            ylabel=f'ERF {aerosol}(W m-2)',
+            ax=axs[3 + aer_num*2],
+            linestyle='--'
+            )  
+    legend_em =  [f'{aerosol}_{region}' for region in regions]
+    legend_em.append(f"{aerosol}_total")
+    legend_em.append(f'{aerosol}_non_regional')            
+    axs[2 + aer_num*2].legend(legend_em)
+    axs[2 + aer_num*2].set_title(f'Emissions of {aerosol}')
+    axs[3 + aer_num*2].set_title(f'Forcing of {aerosol}')
+    axs[3 + aer_num*2].legend(legend_em)
 plt.show()
