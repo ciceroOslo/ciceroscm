@@ -7,10 +7,12 @@ import logging
 import numpy as np
 from scipy.linalg import solve_banded
 
-from .._utils import cut_and_check_pamset
-
-SEC_DAY = 86400
-DAY_YEAR = 365.0
+# TODO Go over and move additional constants to ciceroscm/constants.py
+from ..constants import (
+    DAY_YEAR,
+    SEC_DAY,
+)
+from .abstract_thermal_model import AbstractThermalModel
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,26 +58,6 @@ def check_pamset(pamset):
     dict
         Updated pamset with default values used where necessary
     """
-    if pamset is None:
-        pamset = {}
-    required = {
-        "rlamdo": 15.0,
-        "akapa": 0.66,
-        "cpi": 0.21,
-        "W": 2.2,
-        "beto": 6.9,
-        "threstemp": 7.0,
-        "lambda": 0.61,
-        "mixed": 107.0,
-        "foan": 0.61,
-        "foas": 0.81,
-        "ebbeta": 0.0,
-        "fnso": 0.7531,
-        "lm": 40,
-        "ldtime": 12,
-        "ocean_efficacy": 1.0,
-    }
-    pamset = cut_and_check_pamset(required, pamset, cut_warnings=True)
     pamset["rakapa"] = 1.0e-4 * pamset["akapa"]
     pamset["rlamda"] = 1.0 / pamset["lambda"]
     pamset["dt"] = 1 / pamset["ldtime"] * SEC_DAY * DAY_YEAR
@@ -92,7 +74,9 @@ def check_pamset(pamset):
     return pamset
 
 
-class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
+class UpwellingDiffusionModel(
+    AbstractThermalModel
+):  # pylint: disable=too-many-instance-attributes
     """
     Class to handle energy budget upwelling and downwelling
 
@@ -126,6 +110,24 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             Density in ocean layers
     """
 
+    thermal_model_required_pamset = {
+        "rlamdo": 15.0,
+        "akapa": 0.66,
+        "cpi": 0.21,
+        "W": 2.2,
+        "beto": 6.9,
+        "threstemp": 7.0,
+        "lambda": 0.61,  # Climate feedback parameter (W/m^2/K)
+        "mixed": 107.0,  # Mixed layer depth (m)
+        "foan": 0.61,  # Northern hemisphere ocean area fraction
+        "foas": 0.81,  # Southern hemisphere ocean area fraction
+        "ebbeta": 0.0,
+        "fnso": 0.7531,
+        "lm": 40,  # Number of ocean layers
+        "ldtime": 12,  # Number of time steps per year
+        "ocean_efficacy": 1.0,  # Efficacy of deep ocean heat uptake
+    }
+
     def __init__(self, params=None):
         """
         Intialise
@@ -138,7 +140,8 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         params : dict
               Physical parameters to define the instance
         """
-        self.pamset = check_pamset(params)
+        super().__init__(params)
+        self.pamset = check_pamset(self.pamset)
 
         # Setting up dz height difference between ocean layers
         self.dz = np.ones(self.pamset["lm"]) * 100.0
