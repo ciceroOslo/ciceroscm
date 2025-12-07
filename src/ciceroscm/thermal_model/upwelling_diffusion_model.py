@@ -128,6 +128,23 @@ class UpwellingDiffusionModel(
         "ocean_efficacy": 1.0,  # Efficacy of deep ocean heat uptake
     }
 
+    output_dict_default = {
+        "RIB_glob": "RIB",
+        "RIB_N": "RIBN",
+        "RIB_S": "RIBS",
+        "dT_glob": "dtemp",
+        "dT_NH": "dtempnh",
+        "dT_SH": "dtempsh",
+        "dT_glob_air": "dtemp_air",
+        "dT_NH_air": "dtempnh_air",
+        "dT_SH_air": "dtempsh_air",
+        "dT_glob_sea": "dtemp_sea",
+        "dT_NH_sea": "dtempnh_sea",
+        "dT_SHsea": "dtempsh_sea",
+        "OHC700": "OHC700",
+        "OHCTOT": "OHCTOT",
+    }
+
     def __init__(self, params=None):
         """
         Intialise

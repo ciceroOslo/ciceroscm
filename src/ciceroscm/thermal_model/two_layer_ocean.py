@@ -31,6 +31,27 @@ class TwoLayerOceanModel(
         "foas": 0.81,  # Southern hemisphere ocean area fraction
     }
 
+    output_dict_default = {
+        "RIB_glob": "RIB",
+        "RIB_N": "RIBN",
+        "RIB_S": "RIBS",
+        "dT_glob": "dtemp",
+        "dT_NH": "dtempnh",
+        "dT_SH": "dtempsh",
+        "dT_glob_air": "dtemp_air",
+        "dT_NH_air": "dtempnh_air",
+        "dT_SH_air": "dtempsh_air",
+        "dT_glob_sea": "dtemp_sea",
+        "dT_NH_sea": "dtempnh_sea",
+        "dT_SHsea": "dtempsh_sea",
+        "OHC700": "OHC700",
+        "OHCTOT": "OHCTOT",
+        "dT_fast": "dtemp_fast",
+        "dT_slow": "dtemp_slow",
+        "OHC_MIXED": "OHC_MIXED",
+        "OHC_DEEP": "OHC_DEEP",
+    }
+
     def __init__(self, pamset=None):
         """
         Initialize with parameters for multiple thermal timescales.

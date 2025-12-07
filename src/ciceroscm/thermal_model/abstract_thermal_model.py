@@ -30,6 +30,23 @@ class AbstractThermalModel(ABC):
         """
         return cls.thermal_model_required_pamset
 
+    @property
+    @abstractmethod
+    def output_dict_default(self):
+        """
+        Overwrite this to set a default output dictionary
+        structure for the thermal model
+        """
+
+    @classmethod
+    def get_output_dict_thermal(cls):
+        """
+        Get the class variable carbon_cycle_model_required_pamset
+        which should be a class variable. This setup is to
+        substitute for the lack of abstract class variables in python
+        """
+        return cls.output_dict_default
+
     def __init__(self, pamset=None):
         """
         Initialize the thermal model

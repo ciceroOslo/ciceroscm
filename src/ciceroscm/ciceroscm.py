@@ -17,22 +17,6 @@ from .pub_utils import get_first_key
 
 LOGGER = logging.getLogger(__name__)
 
-OUTPUTS_DICT_DEFAULT = {
-    "RIB_glob": "RIB",
-    "RIB_N": "RIBN",
-    "RIB_S": "RIBS",
-    "dT_glob": "dtemp",
-    "dT_NH": "dtempnh",
-    "dT_SH": "dtempsh",
-    "dT_glob_air": "dtemp_air",
-    "dT_NH_air": "dtempnh_air",
-    "dT_SH_air": "dtempsh_air",
-    "dT_glob_sea": "dtemp_sea",
-    "dT_NH_sea": "dtempnh_sea",
-    "dT_SHsea": "dtempsh_sea",
-    "OHC700": "OHC700",
-    "OHCTOT": "OHCTOT",
-}
 
 FORC_OUTPUT_LIST = [
     "Total_forcing",
@@ -121,6 +105,8 @@ class CICEROSCM:
         self.cfg["thermal_model"] = input_handler.thermal_model(self.cfg)
         self.cfg["carbon_cycle_model"] = input_handler.carbon_model(self.cfg)
 
+        self.thermal_model_class = create_thermal_model(self.cfg["thermal_model"])
+
         #        print("Thermal Model=" + self.cfg["thermal_model"])
 
         if self.cfg["rf_run"]:
@@ -161,7 +147,10 @@ class CICEROSCM:
         Dictionary for all results from upwelling diffusion
         model outputs is initialised with empty arrays
         """
-        output_variables = list(OUTPUTS_DICT_DEFAULT.keys()) + FORC_OUTPUT_LIST
+        output_variables = (
+            list(self.thermal_model_class.get_output_dict_thermal().keys())
+            + FORC_OUTPUT_LIST
+        )
         for output in output_variables:
             self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
 
@@ -218,7 +207,7 @@ class CICEROSCM:
         index : int
              Index equalling year number in the possible years
         """
-        for output, name in OUTPUTS_DICT_DEFAULT.items():
+        for output, name in self.thermal_model_class.get_output_dict_thermal().items():
             self.results[output][index] = values[name]
         self.results["Total_forcing"][index] = forc
         self.results["Solar_forcing"][index] = self.rf_volc_sun["sun"].iloc[index, 0]
@@ -266,8 +255,7 @@ class CICEROSCM:
         # Setting up thermal model with parameters
         # udm = UpwellingDiffusionModel(pamset_udm)
 
-        thermal_model_class = create_thermal_model(self.cfg["thermal_model"])
-        udm = thermal_model_class(pamset_udm)
+        udm = self.thermal_model_class(pamset_udm)
         values = None
         if not self.cfg["rf_run"]:
             self.ce_handler.reset_with_new_pams(pamset_emiconc, pamset_carbon)
@@ -303,7 +291,9 @@ class CICEROSCM:
                     self.ce_handler.add_results_to_dict(
                         cfg,
                         feedback_dict_series={
-                            key: self.results[get_first_key(OUTPUTS_DICT_DEFAULT, key)]
+                            key: self.results[
+                                get_first_key(udm.get_output_dict_thermal(), key)
+                            ]
                             for key in self.feedback_list
                         },
                     )
@@ -313,7 +303,9 @@ class CICEROSCM:
                 self.ce_handler.write_output_to_files(
                     cfg,
                     feedback_dict_series={
-                        key: self.results[get_first_key(OUTPUTS_DICT_DEFAULT, key)]
+                        key: self.results[
+                            get_first_key(udm.get_output_dict_thermal(), key)
+                        ]
                         for key in self.feedback_list
                     },
                     make_plot=make_plot,
