@@ -38,18 +38,16 @@ class TwoLayerOceanModel(
         "dT_glob": "dtemp",
         "dT_NH": "dtempnh",
         "dT_SH": "dtempsh",
+        "OHC_MIXED": "OHC_MIXED",
+        "OHC_DEEP": "OHC_DEEP",
         "dT_glob_air": "dtemp_air",
         "dT_NH_air": "dtempnh_air",
         "dT_SH_air": "dtempsh_air",
         "dT_glob_sea": "dtemp_sea",
-        "dT_NH_sea": "dtempnh_sea",
-        "dT_SHsea": "dtempsh_sea",
         "OHC700": "OHC700",
         "OHCTOT": "OHCTOT",
         "dT_fast": "dtemp_fast",
         "dT_slow": "dtemp_slow",
-        "OHC_MIXED": "OHC_MIXED",
-        "OHC_DEEP": "OHC_DEEP",
     }
 
     def __init__(self, pamset=None):
@@ -154,19 +152,15 @@ class TwoLayerOceanModel(
         tempn_air = forc_nh_air / self.pamset["lambda"]
         temps_air = forc_sh_air / self.pamset["lambda"]
 
-        # Ocean surface temperature is the fast layer temperature (mixed layer)
-        tempn_sea = self.temp_fast
-        temps_sea = (
-            self.temp_fast
-        )  # Two-layer model is globally averaged, so N=S for ocean
-
         # Combined temperature following upwelling diffusion model pattern:
         # Total = ocean_fraction * ocean_temp + (1 - ocean_fraction) * air_temp
         tempn = (
-            self.pamset["foan"] * tempn_sea + (1.0 - self.pamset["foan"]) * tempn_air
+            self.pamset["foan"] * self.temp_fast
+            + (1.0 - self.pamset["foan"]) * tempn_air
         )
         temps = (
-            self.pamset["foas"] * temps_sea + (1.0 - self.pamset["foas"]) * temps_air
+            self.pamset["foas"] * self.temp_fast
+            + (1.0 - self.pamset["foas"]) * temps_air
         )
 
         # Calculate hemisphere-specific radiative imbalances
@@ -238,12 +232,7 @@ class TwoLayerOceanModel(
             "dtemp_air": (tempn_air + temps_air) / 2.0,  # Global air temperature
             "dtempnh_air": tempn_air,  # Northern hemisphere air temperature
             "dtempsh_air": temps_air,  # Southern hemisphere air temperature
-            "dtemp_sea": (tempn_sea + temps_sea)
-            / 2.0,  # Global sea surface temperature
-            "dtempnh_sea": tempn_sea,  # Northern hemisphere sea surface
-            # temperature
-            "dtempsh_sea": temps_sea,  # Southern hemisphere sea surface
-            # temperature
+            "dtemp_sea": self.temp_fast,  # Global sea surface temperature
             "RIBN": ribn,  # Northern hemisphere radiative imbalance
             "RIBS": ribs,  # Southern hemisphere radiative imbalance
             "OHC700": ohc700,  # Ocean heat content down to 700m (10^22 J)

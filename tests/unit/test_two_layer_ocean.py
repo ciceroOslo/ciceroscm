@@ -214,8 +214,6 @@ class TestTwoLayerOceanModel:
             "dtempnh_air",
             "dtempsh_air",
             "dtemp_sea",
-            "dtempnh_sea",
-            "dtempsh_sea",
             "RIBN",
             "RIBS",
             "RIB",
@@ -239,8 +237,6 @@ class TestTwoLayerOceanModel:
         assert (
             result["OHC_DEEP"] == 0.0
         )  # Should be zero with zero forcing on slow layer initially
-        assert result["dtempnh"] != 0.0  # Should have meaningful value now
-        assert result["dtempsh"] != 0.0  # Should have meaningful value now
         assert result["dtemp_air"] != 0.0  # Should have meaningful value now
         assert result["dtemp_sea"] != 0.0  # Should have meaningful value now
         assert result["OHC700"] != 0.0  # Should have meaningful calculated value
@@ -251,12 +247,6 @@ class TestTwoLayerOceanModel:
         assert (
             result["dtemp_sea"] == result["dtemp_fast"]
         )  # Sea temp should equal fast layer
-        assert (
-            result["dtempnh_sea"] == result["dtemp_fast"]
-        )  # NH sea temp should equal fast layer
-        assert (
-            result["dtempsh_sea"] == result["dtemp_fast"]
-        )  # SH sea temp should equal fast layer
 
     def test_efficacy_effect(self):
         """Test that efficacy parameter affects the coupling correctly"""
@@ -461,19 +451,17 @@ class TestTwoLayerOceanModelEdgeCases:
         assert abs(result["dtempnh_air"] - expected_nh_air) < 1e-10
         assert abs(result["dtempsh_air"] - expected_sh_air) < 1e-10
 
-        # Sea temperatures should equal fast layer (globally averaged)
-        assert result["dtempnh_sea"] == result["dtemp_fast"]
-        assert result["dtempsh_sea"] == result["dtemp_fast"]
+        # Sea temperature should equal fast layer (globally averaged)
         assert result["dtemp_sea"] == result["dtemp_fast"]
 
         # Total temperatures should be weighted combinations
         foan = model.pamset["foan"]
         foas = model.pamset["foas"]
         expected_nh_total = (
-            foan * result["dtempnh_sea"] + (1.0 - foan) * result["dtempnh_air"]
+            foan * result["dtemp_sea"] + (1.0 - foan) * result["dtempnh_air"]
         )
         expected_sh_total = (
-            foas * result["dtempsh_sea"] + (1.0 - foas) * result["dtempsh_air"]
+            foas * result["dtemp_sea"] + (1.0 - foas) * result["dtempsh_air"]
         )
 
         assert abs(result["dtempnh"] - expected_nh_total) < 1e-10
