@@ -197,7 +197,7 @@ class CSCMREADER:
             "dT_glob_air",
             "dT_glob_sea",
             "RIB_glob",
-            "anomalous_radiation"
+            "anomalous_radiation",
         )
         self.ohc_list = "OHCTOT"
         self.indices = np.arange(nystart, nyend + 1)
