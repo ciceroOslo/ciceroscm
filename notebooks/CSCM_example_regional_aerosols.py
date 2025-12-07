@@ -112,7 +112,7 @@ emi_input_vanilla.head()
 scen = 'test'
 cscm_dir=CICEROSCM({
             "gaspam_data": df_gas_updated,
-            "emstart": 1850,  
+            "emstart": 1751,  
             "conc_run":False,
             "nystart": 1750,
             "nyend": 2100,
@@ -126,7 +126,7 @@ cscm_dir=CICEROSCM({
 scen = 'test'
 cscm_dir_vanilla=CICEROSCM({
             "gaspam_data": df_gas,
-            "emstart": 1850,  
+            "emstart": 1751,  
             "conc_run":False,
             "nystart": 1750,
             "nyend": 2100,
@@ -239,7 +239,6 @@ for aer_num, aerosol in enumerate(aerosols):
         ax=axs[2 + aer_num*2],
         linestyle='--'
         )
-    print(df_temp_vanilla["forcing"].keys())
     if aerosol == "SO2":
         df_temp_vanilla["forcing"]["SO4_DIR"].plot(
             ylabel=f'ERF {aerosol} (W m-2)',
