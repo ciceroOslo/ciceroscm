@@ -26,7 +26,7 @@ class TwoLayerOceanModel(
         "mixed": 50,  # Ocean mixed layer depth (m)
         "deep": 1200,  # Deep ocean layer depth (m)
         "k": 0.5,  # Coupling coefficient between layers (W/m^2/K)
-        "efficacy": 1,  # Efficacy of deep ocean heat uptake
+        "ocean_efficacy": 1,  # Efficacy of deep ocean heat uptake
         "foan": 0.61,  # Northern hemisphere ocean area fraction
         "foas": 0.81,  # Southern hemisphere ocean area fraction
     }
@@ -54,7 +54,7 @@ class TwoLayerOceanModel(
             - mixed: Mixed layer depth (m)
             - deep: Deep ocean layer depth (m)
             - k: Coupling coefficient between layers (W/m^2/K)
-            - efficacy: Efficacy of deep ocean heat uptake
+            - ocean_efficacy: Efficacy of deep ocean heat uptake
             - foan: Northern hemisphere ocean area fraction
             - foas: Southern hemisphere ocean area fraction
         """
@@ -120,7 +120,7 @@ class TwoLayerOceanModel(
             forc
             - self.temp_fast * self.pamset["lambda"]
             - self.pamset["k"]
-            * self.pamset["efficacy"]
+            * self.pamset["ocean_efficacy"]
             * (self.temp_fast - self.temp_slow)
         ) / self.pamset["c_fast"]
 
@@ -138,7 +138,7 @@ class TwoLayerOceanModel(
         rib_toa = (
             forc
             - self.pamset["lambda"] * self.temp_fast
-            - (self.pamset["efficacy"] - 1)
+            - (self.pamset["ocean_efficacy"] - 1)
             * self.pamset["k"]
             * (self.temp_fast - self.temp_slow)
         )

@@ -19,7 +19,7 @@ class TestTwoLayerOceanModel:
         # Check that all expected parameters are set to defaults
         assert model.pamset["lambda"] == 3.74 / 3
         assert model.pamset["k"] == 0.5
-        assert model.pamset["efficacy"] == 1
+        assert model.pamset["ocean_efficacy"] == 1
 
         # Check that c_fast and c_slow are calculated correctly from mixed/deep
         # Default mixed = 50m, deep = 1200m
@@ -40,7 +40,7 @@ class TestTwoLayerOceanModel:
             "mixed": 100,
             "deep": 800,
             "k": 0.8,
-            "efficacy": 1.2,
+            "ocean_efficacy": 1.2,
         }
 
         model = TwoLayerOceanModel(custom_params)
@@ -48,7 +48,7 @@ class TestTwoLayerOceanModel:
         # Check that custom parameters are set
         assert model.pamset["lambda"] == 1.5
         assert model.pamset["k"] == 0.8
-        assert model.pamset["efficacy"] == 1.2
+        assert model.pamset["ocean_efficacy"] == 1.2
 
         # Check that c_fast and c_slow are calculated from custom mixed/deep
         expected_c_fast = 100 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
@@ -72,7 +72,7 @@ class TestTwoLayerOceanModel:
         assert model.pamset["k"] == 0.3
 
         # Check defaults are used for unspecified parameters
-        assert model.pamset["efficacy"] == 1
+        assert model.pamset["ocean_efficacy"] == 1
         expected_c_fast = (
             50 * WATER_DENSITY * WATER_HEAT_CAPACITY / (86400 * 365.0)
         )  # from default mixed=50
@@ -187,11 +187,11 @@ class TestTwoLayerOceanModel:
         result = model.energy_budget(2.0, 2.0, [0.0], [0.0])
 
         # RIB should be calculated as:
-        # forc - lambda * temp_fast - (efficacy - 1) * k * (temp_fast - temp_slow)
+        # forc - lambda * temp_fast - (ocean_efficacy - 1) * k * (temp_fast - temp_slow)
         expected_rib = (
             2.0
             - model.pamset["lambda"] * model.temp_fast
-            - (model.pamset["efficacy"] - 1)
+            - (model.pamset["ocean_efficacy"] - 1)
             * model.pamset["k"]
             * (model.temp_fast - model.temp_slow)
         )
@@ -239,10 +239,10 @@ class TestTwoLayerOceanModel:
     def test_efficacy_effect(self):
         """Test that efficacy parameter affects the coupling correctly"""
         # Test with efficacy = 1 (default)
-        model1 = TwoLayerOceanModel({"efficacy": 1.0})
+        model1 = TwoLayerOceanModel({"ocean_efficacy": 1.0})
 
         # Test with efficacy = 0.5 (reduced deep ocean heat uptake)
-        model2 = TwoLayerOceanModel({"efficacy": 0.5})
+        model2 = TwoLayerOceanModel({"ocean_efficacy": 0.5})
 
         # Apply same forcing to both
         for _ in range(5):
@@ -277,7 +277,7 @@ class TestTwoLayerOceanModel:
         """Test that the required pamset is properly defined"""
         required_pamset = TwoLayerOceanModel.thermal_model_required_pamset
 
-        expected_keys = ["lambda", "mixed", "deep", "k", "efficacy"]
+        expected_keys = ["lambda", "mixed", "deep", "k", "ocean_efficacy"]
 
         for key in expected_keys:
             assert key in required_pamset, f"Missing required parameter: {key}"
