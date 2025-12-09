@@ -121,6 +121,12 @@ The alternative box carbon model takes the following parameters (defaults are in
 * ocean_solubility_base (0.02) - Base solubility of CO2 in the ocean (PgC/ppm).
 * ocean_solubility_temp_coeff (-0.01) - Temperature sensitivity of ocean CO2 solubility. 
 
+## Parallelisation tools
+The module also has a submodule of parallelisation tools. This includes:
+* The cscmparwrapper, which is a parallelisation wrapper, that you can use for parallel runs of both full runs and forcing specific runs, and parallelise over either multiple scenarios, or multiple configurations or a list of both configurations and scenarios. The wrapper will divide the runs by scenarios initially, but if more parallel workers are available, it will also divide the configuration sets. The scenariodata and the configuration sets both are sents at lists of dictionaries of keyword arguments required for runs
+* ConfigDistro, which is a class for creating configuration distributions. Given a prior in the form of a dictionary, where the keys are parameters to span the parameter space and the values are arrays with two values corresponding to two endpoints of the prior for this parameter, a list of variables not to be changed, but given set values (which may differ from model defaults), final a dictionary of options which can list the method to use (gaussian or latin for gaussion distributions aor latin hypercube, the latter is default) and whether to fit only forcing parameters. The class has functionality to create sample values from the prior distribution space, assuming either gaussian distributions where the prior values span the interval between mean - 1 standard deviation and mean plus 1 standard deviation, or a latin hypercube over the prior extent. It can produce lists of configurations that can be used to run in parallel.
+Theses lists can also be chunked in smaller subsets to ease memory requirements in running over them.
+* DistributionRun, a simple class to wrap running over a distribution from a ConfigDistro, or from reading data from a json file of configurations
 
 ## MetaData
 CICERO-SCM supports optional metadata in parameter configuration JSON files. When generating configuration files for parameter distributions, you can add a meta_info dictionary containing model version, settings, or other relevant information. The resulting JSON file will include both the list of configurations and the metadata, making it easier to track origin and context.  There is no enforced schema, and the metadata dictionary can be defined by the user.
@@ -141,12 +147,6 @@ config.make_config_lists(
 ) 
 ```
 Both legacy (list-only) and new (metadata-inclusive) formats are supported for full backward compatibility.
-## Parallelisation tools
-The module also has a submodule of parallelisation tools. This includes:
-* The cscmparwrapper, which is a parallelisation wrapper, that you can use for parallel runs of both full runs and forcing specific runs, and parallelise over either multiple scenarios, or multiple configurations or a list of both configurations and scenarios. The wrapper will divide the runs by scenarios initially, but if more parallel workers are available, it will also divide the configuration sets. The scenariodata and the configuration sets both are sents at lists of dictionaries of keyword arguments required for runs
-* ConfigDistro, which is a class for creating configuration distributions. Given a prior in the form of a dictionary, where the keys are parameters to span the parameter space and the values are arrays with two values corresponding to two endpoints of the prior for this parameter, a list of variables not to be changed, but given set values (which may differ from model defaults), final a dictionary of options which can list the method to use (gaussian or latin for gaussion distributions aor latin hypercube, the latter is default) and whether to fit only forcing parameters. The class has functionality to create sample values from the prior distribution space, assuming either gaussian distributions where the prior values span the interval between mean - 1 standard deviation and mean plus 1 standard deviation, or a latin hypercube over the prior extent. It can produce lists of configurations that can be used to run in parallel.
-Theses lists can also be chunked in smaller subsets to ease memory requirements in running over them.
-* DistributionRun, a simple class to wrap running over a distribution from a ConfigDistro, or from reading data from a json file of configurations
 
 ## Example scripts
 The scripts folder contains various example scripts that can be used to see how to set up various types of runs. The start of all of them adds the necessary parts for the file to run with the module. If you want to run from somewhere else you will need to edit the <code>sys.path.append</code> command so it points to where you've stored the src directory of this repository.
