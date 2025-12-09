@@ -208,14 +208,6 @@ class TestTwoLayerOceanModel:
             "dtemp",
             "dtemp_fast",
             "dtemp_slow",
-            "dtemp_air",
-            "dtempnh",
-            "dtempsh",
-            "dtempnh_air",
-            "dtempsh_air",
-            "dtemp_sea",
-            "RIBN",
-            "RIBS",
             "RIB",
             "OHC700",
             "OHCTOT",
@@ -237,11 +229,7 @@ class TestTwoLayerOceanModel:
         assert (
             result["OHC_DEEP"] == 0.0
         )  # Should be zero with zero forcing on slow layer initially
-        assert result["dtemp_air"] != 0.0  # Should have meaningful value now
-        assert result["dtemp_sea"] != 0.0  # Should have meaningful value now
         assert result["OHC700"] != 0.0  # Should have meaningful calculated value
-        assert result["RIBN"] != 0.0  # Should have meaningful hemisphere-specific RIB
-        assert result["RIBS"] != 0.0  # Should have meaningful hemisphere-specific RIB
 
         # Verify air/sea temperature relationships
         assert (
@@ -437,71 +425,3 @@ class TestTwoLayerOceanModelEdgeCases:
         # OHC700 should be all mixed + all deep (since 30 + 500 < 700)
         expected_ohc700 = result3["OHC_MIXED"] + result3["OHC_DEEP"]
         assert abs(result3["OHC700"] - expected_ohc700) < 1e-6
-
-    def test_air_sea_temperature_calculations(self):
-        """Test air/sea temperature calculations following upwelling diffusion pattern"""
-        model = TwoLayerOceanModel()
-
-        # Test with asymmetric forcing (NH vs SH)
-        result = model.energy_budget(3.0, 1.0, [0.0], [0.0])
-
-        # Air temperatures should be forcing / lambda
-        expected_nh_air = 3.0 / model.pamset["lambda"]
-        expected_sh_air = 1.0 / model.pamset["lambda"]
-        assert abs(result["dtempnh_air"] - expected_nh_air) < 1e-10
-        assert abs(result["dtempsh_air"] - expected_sh_air) < 1e-10
-
-        # Sea temperature should equal fast layer (globally averaged)
-        assert result["dtemp_sea"] == result["dtemp_fast"]
-
-        # Total temperatures should be weighted combinations
-        foan = model.pamset["foan"]
-        foas = model.pamset["foas"]
-        expected_nh_total = (
-            foan * result["dtemp_sea"] + (1.0 - foan) * result["dtempnh_air"]
-        )
-        expected_sh_total = (
-            foas * result["dtemp_sea"] + (1.0 - foas) * result["dtempsh_air"]
-        )
-
-        assert abs(result["dtempnh"] - expected_nh_total) < 1e-10
-        assert abs(result["dtempsh"] - expected_sh_total) < 1e-10
-
-        # Global averages should be consistent
-        expected_global_air = (result["dtempnh_air"] + result["dtempsh_air"]) / 2.0
-        expected_global_total = (result["dtempnh"] + result["dtempsh"]) / 2.0
-
-        assert abs(result["dtemp_air"] - expected_global_air) < 1e-10
-        assert abs(result["dtemp"] - expected_global_total) < 1e-10
-
-    def test_hemisphere_radiative_imbalance_calculations(self):
-        """Test RIBN and RIBS calculations"""
-        model = TwoLayerOceanModel()
-
-        # Test with asymmetric forcing and volcanic
-        forc_nh = 3.0
-        forc_sh = 1.0
-        fn_volc = [0.5]
-        fs_volc = [-0.2]
-
-        result = model.energy_budget(forc_nh, forc_sh, fn_volc, fs_volc)
-
-        # Total hemisphere forcing including volcanic
-        total_forc_nh = forc_nh + np.mean(fn_volc)
-        total_forc_sh = forc_sh + np.mean(fs_volc)
-
-        # RIBN/RIBS should follow: RIB = forcing - lambda * temperature
-        expected_ribn = total_forc_nh - model.pamset["lambda"] * result["dtempnh"]
-        expected_ribs = total_forc_sh - model.pamset["lambda"] * result["dtempsh"]
-
-        assert abs(result["RIBN"] - expected_ribn) < 1e-10
-        assert abs(result["RIBS"] - expected_ribs) < 1e-10
-
-        # Test symmetry: equal forcing should give same RIB
-        result_sym = model.energy_budget(2.0, 2.0, [0.0], [0.0])
-        # Note: RIBN and RIBS may differ due to different ocean fractions (foan vs foas)
-        # but they should both be meaningful values
-        assert isinstance(result_sym["RIBN"], (float, np.floating))
-        assert isinstance(result_sym["RIBS"], (float, np.floating))
-        assert result_sym["RIBN"] != 0.0
-        assert result_sym["RIBS"] != 0.0

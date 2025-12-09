@@ -8,10 +8,7 @@ import numpy as np
 from scipy.linalg import solve_banded
 
 # TODO Go over and move additional constants to ciceroscm/constants.py
-from ..constants import (
-    DAY_YEAR,
-    SEC_DAY,
-)
+from ..constants import DAY_YEAR, SEC_DAY, WATER_DENSITY, WATER_HEAT_CAPACITY
 from .abstract_thermal_model import AbstractThermalModel
 
 LOGGER = logging.getLogger(__name__)
@@ -647,7 +644,9 @@ class UpwellingDiffusionModel(
 
         # 2. Calculate the change in heat content per unit of ocean area for each layer (in J/m^2).
         #    We use a standard value for the volumetric heat capacity of seawater.
-        heat_capacity_volumetric = 4.184e6  # Joules per m^3 per Kelvin
+        heat_capacity_volumetric = (
+            WATER_HEAT_CAPACITY * WATER_DENSITY
+        )  # Joules per m^3 per Kelvin
 
         # Area-weight the temperature change, then multiply by heat capacity and layer thickness.
         delta_heat_content_profile = (

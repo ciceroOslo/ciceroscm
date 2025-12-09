@@ -14,7 +14,7 @@ DAY_YEAR = 365.0  # Days per year (simplified, no leap years)
 
 # Water properties (seawater)
 WATER_DENSITY = 1000  # kg/m^3 - Density of seawater
-WATER_HEAT_CAPACITY = 4181  # J/kg/K - Specific heat capacity of seawater
+WATER_HEAT_CAPACITY = 4184  # J/kg/K - Specific heat capacity of seawater
 
 # Earth surface areas
 OCEAN_AREA = 3.61e14  # m^2 - Global ocean surface area
