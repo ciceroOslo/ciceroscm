@@ -25,7 +25,7 @@ The changes listed in this file are categorised as follows:
 - Option to chunk configuration distributions to allow for millions of member runs without killing memory
 - Option to output ozone and stratospheric water vapour effective radiative forcing in parallel run
 - _config_distro can now write distribution files with full setup metadata, and Distroconfig can read in files with or with out shared metadata.
-- Option to run with regionally split aerool species, also including functionality to make gaspamfile that supports this from forcing txt file.
+- Option to run with regionally split aerosol species, also including functionality to make gaspamfile that supports this from forcing txt file.
 
 ### Fixed
 

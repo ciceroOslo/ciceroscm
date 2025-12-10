@@ -152,21 +152,25 @@ def make_regional_aerosol_gaspamdata(
     gases_data,
     reg_aerosol_rf_data,
     reg_mapping=None,
-    unit_conversion=1e9,
+    unit_conversion=1e9,  # Convert W/m² per Tg to W/m² per kg (1e9 kg = 1 Tg)
 ):
     """
     Make regional aerosol gaspamdata from existing gaspam and some regional data
+
+    Creates separate gas parameter entries for each aerosol-region combination
+    (e.g., SO2_ASIA, BC_OECD) using region-specific forcing efficacies.
 
     Parameters
     ----------
     gases_data : pd.DataFrame
         Original gaspamdata without regional aerosols
     reg_aerosol_rf_data : pd.DataFrame
-        Dataframe with regional forcing for aerosols
-    reg_mapping : dict
-        Mapping between regional data and expected input regional data
-    unit_conversion : float
-        Unit conversion factor
+        Dataframe with regional forcing for aerosols (rows=regions, cols=aerosols)
+    reg_mapping : dict, optional
+        Mapping between emission regions and forcing regions
+        Default maps ASIA→EAS, LAM→SAM, MAF→NAF, OECD→NAM, REF→RBU
+    unit_conversion : float, optional
+        Unit conversion factor from forcing data units to model units (default: 1e9)
 
     Returns
     -------
@@ -177,7 +181,7 @@ def make_regional_aerosol_gaspamdata(
         reg_mapping = REG_MAPPING_DEFAULT
     gases_new = gases_data.copy()
     for column in reg_aerosol_rf_data.columns:
-        row_start = gases_data.loc[column]
+        row_start = gases_data.loc[column].copy()
         for key, expression in reg_mapping.items():
             row_start["ALPHA"] = (
                 reg_aerosol_rf_data[column][expression] * unit_conversion
