@@ -68,6 +68,7 @@ def check_pamset(pamset):
     pamset["fsx"] = (
         pamset["rlamda"] + pamset["foas"] * pamset["rlamdo"] + pamset["ebbeta"]
     )
+    pamset["fnso"] = pamset["foan"] / pamset["foas"]
     return pamset
 
 
@@ -119,7 +120,6 @@ class UpwellingDiffusionModel(
         "foan": 0.61,  # Northern hemisphere ocean area fraction
         "foas": 0.81,  # Southern hemisphere ocean area fraction
         "ebbeta": 0.0,
-        "fnso": 0.7531,
         "lm": 40,  # Number of ocean layers
         "ldtime": 12,  # Number of time steps per year
         "ocean_efficacy": 1.0,  # Efficacy of deep ocean heat uptake

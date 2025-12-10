@@ -81,7 +81,6 @@ class TwoLayerOceanModel(
         # Initialize temperatures for fast and slow layers
         self.temp_fast = 0.0
         self.temp_slow = 0.0
-        self.dtemp = 0.0
 
     def energy_budget(
         self, forc_nh, forc_sh, fn_volc, fs_volc
@@ -143,7 +142,12 @@ class TwoLayerOceanModel(
             * self.pamset["k"]
             * (self.temp_fast - self.temp_slow)
         )
-        self.dtemp = forc / self.pamset["lambda"]
+        dtemp = (
+            forc
+            / self.pamset["lambda"]
+            * (1 - (self.pamset["foan"] + self.pamset["foas"]) / 2.0)
+            + self.temp_fast * (self.pamset["foan"] + self.pamset["foas"]) / 2
+        )  # Approximate global mean temperature change
 
         # Calculate ocean heat content (10^22 J)
         # OHC = temperature_change * heat_capacity_per_unit_area *
@@ -185,7 +189,7 @@ class TwoLayerOceanModel(
         # Return outputs: meaningful values for this model structure plus
         # compatibility placeholders for interface consistency
         return {
-            "dtemp": self.dtemp,  # Global mean temperature change
+            "dtemp": dtemp,  # Global mean temperature change
             "dtemp_fast": self.temp_fast,  # Fast layer temperature
             "dtemp_slow": self.temp_slow,  # Slow layer temperature
             "RIB": rib_toa,  # Radiative imbalance at top of atmosphere
