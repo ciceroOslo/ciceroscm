@@ -112,5 +112,19 @@ def test_make_regional_aerosol_gaspamdata(test_data_dir):
     reg_aerosol_RF_file = os.path.join(test_data_dir, "HTAP_reg_aerosol_RF.txt")
     reg_aerosol_df = pd.read_csv(reg_aerosol_RF_file, sep="\t", index_col=0)
     reg_aerosol_df.rename(columns={"sulfate": "SO2"}, inplace=True)
+    print(reg_aerosol_df.shape)
     df_gas_updated = pub_utils.make_regional_aerosol_gaspamdata(df_gas, reg_aerosol_df)
-    assert df_gas.shape[0] + 15 == df_gas_updated.shape[0]
+    aerosols = reg_aerosol_df.columns.tolist()
+    regions = pub_utils.REG_MAPPING_DEFAULT
+    assert (
+        df_gas.shape[0] + len(aerosols) * len(regions.keys()) == df_gas_updated.shape[0]
+    )
+    for region, reg_map in regions.items():
+        for aerosol in aerosols:
+            compound_name = f"{aerosol}_{region}"
+            assert compound_name in df_gas_updated.index
+            if compound_name in df_gas_updated.index:
+                assert (
+                    df_gas_updated.loc[compound_name, "ALPHA"]
+                    == reg_aerosol_df.loc[reg_map, aerosol] * 1e9
+                )
