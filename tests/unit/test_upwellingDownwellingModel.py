@@ -1,6 +1,6 @@
 import numpy as np
 
-from ciceroscm import upwelling_diffusion_model
+from ciceroscm.thermal_model import upwelling_diffusion_model
 
 
 # Rewrite test for class method

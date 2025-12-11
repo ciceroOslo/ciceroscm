@@ -19,6 +19,30 @@ REG_MAPPING_DEFAULT = {
 }
 
 
+def get_first_key(dct, value):
+    """
+    Return the first key in a dictionary that matches the given value.
+
+    Parameters
+    ----------
+    dct : dict
+        The dictionary to search.
+    value : any
+        The value to search for in the dictionary.
+
+    Returns
+    -------
+    key : any
+        The first key in the dictionary whose value matches the specified value.
+
+    Raises
+    ------
+    IndexError
+        If the value is not found in the dictionary.
+    """
+    return [key for key in dct if (dct[key] == value)][0]
+
+
 def _check_array_consistency(coeffs, timescales, for_rs=False):
     """
     Check array consistency for sets of coefficients and
