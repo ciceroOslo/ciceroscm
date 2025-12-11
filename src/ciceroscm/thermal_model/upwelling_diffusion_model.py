@@ -7,10 +7,9 @@ import logging
 import numpy as np
 from scipy.linalg import solve_banded
 
-from ._utils import cut_and_check_pamset
-
-SEC_DAY = 86400
-DAY_YEAR = 365.0
+# TODO Go over and move additional constants to ciceroscm/constants.py
+from ..constants import DAY_YEAR, SEC_DAY, WATER_DENSITY, WATER_HEAT_CAPACITY
+from .abstract_thermal_model import AbstractThermalModel
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,26 +55,6 @@ def check_pamset(pamset):
     dict
         Updated pamset with default values used where necessary
     """
-    if pamset is None:
-        pamset = {}
-    required = {
-        "rlamdo": 15.0,
-        "akapa": 0.66,
-        "cpi": 0.21,
-        "W": 2.2,
-        "beto": 6.9,
-        "threstemp": 7.0,
-        "lambda": 0.61,
-        "mixed": 107.0,
-        "foan": 0.61,
-        "foas": 0.81,
-        "ebbeta": 0.0,
-        "fnso": 0.7531,
-        "lm": 40,
-        "ldtime": 12,
-        "ocean_efficacy": 1.0,
-    }
-    pamset = cut_and_check_pamset(required, pamset, cut_warnings=True)
     pamset["rakapa"] = 1.0e-4 * pamset["akapa"]
     pamset["rlamda"] = 1.0 / pamset["lambda"]
     pamset["dt"] = 1 / pamset["ldtime"] * SEC_DAY * DAY_YEAR
@@ -89,10 +68,13 @@ def check_pamset(pamset):
     pamset["fsx"] = (
         pamset["rlamda"] + pamset["foas"] * pamset["rlamdo"] + pamset["ebbeta"]
     )
+    pamset["fnso"] = pamset["foan"] / pamset["foas"]
     return pamset
 
 
-class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
+class UpwellingDiffusionModel(
+    AbstractThermalModel
+):  # pylint: disable=too-many-instance-attributes
     """
     Class to handle energy budget upwelling and downwelling
 
@@ -126,7 +108,41 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
             Density in ocean layers
     """
 
-    def __init__(self, params):
+    thermal_model_required_pamset = {
+        "rlamdo": 15.0,
+        "akapa": 0.66,
+        "cpi": 0.21,
+        "W": 2.2,
+        "beto": 6.9,
+        "threstemp": 7.0,
+        "lambda": 0.61,  # Climate feedback parameter (W/m^2/K)
+        "mixed": 107.0,  # Mixed layer depth (m)
+        "foan": 0.61,  # Northern hemisphere ocean area fraction
+        "foas": 0.81,  # Southern hemisphere ocean area fraction
+        "ebbeta": 0.0,
+        "lm": 40,  # Number of ocean layers
+        "ldtime": 12,  # Number of time steps per year
+        "ocean_efficacy": 1.0,  # Efficacy of deep ocean heat uptake
+    }
+
+    output_dict_default = {
+        "RIB_glob": "RIB",
+        "RIB_N": "RIBN",
+        "RIB_S": "RIBS",
+        "dT_glob": "dtemp",
+        "dT_NH": "dtempnh",
+        "dT_SH": "dtempsh",
+        "dT_glob_air": "dtemp_air",
+        "dT_NH_air": "dtempnh_air",
+        "dT_SH_air": "dtempsh_air",
+        "dT_glob_sea": "dtemp_sea",
+        "dT_NH_sea": "dtempnh_sea",
+        "dT_SHsea": "dtempsh_sea",
+        "OHC700": "OHC700",
+        "OHCTOT": "OHCTOT",
+    }
+
+    def __init__(self, params=None):
         """
         Intialise
 
@@ -138,7 +154,8 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
         params : dict
               Physical parameters to define the instance
         """
-        self.pamset = check_pamset(params)
+        super().__init__(params)
+        self.pamset = check_pamset(self.pamset)
 
         # Setting up dz height difference between ocean layers
         self.dz = np.ones(self.pamset["lm"]) * 100.0
@@ -627,7 +644,9 @@ class UpwellingDiffusionModel:  # pylint: disable=too-many-instance-attributes
 
         # 2. Calculate the change in heat content per unit of ocean area for each layer (in J/m^2).
         #    We use a standard value for the volumetric heat capacity of seawater.
-        heat_capacity_volumetric = 4.184e6  # Joules per m^3 per Kelvin
+        heat_capacity_volumetric = (
+            WATER_HEAT_CAPACITY * WATER_DENSITY
+        )  # Joules per m^3 per Kelvin
 
         # Area-weight the temperature change, then multiply by heat capacity and layer thickness.
         delta_heat_content_profile = (

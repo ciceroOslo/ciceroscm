@@ -10,8 +10,8 @@ import pandas as pd
 
 # from ._utils import check_numeric_pamset
 from ._utils import cut_and_check_pamset
-from .carbon_cycle.carbon_cycle_mod import CarbonCycleModel
 from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
+from .component_factory_functions import create_carbon_cycle_model
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -191,10 +191,13 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
+        print("Carbon Model=" + pamset["carbon_cycle_model"])
         self.pamset = cut_and_check_pamset(
             {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
             pamset,
-            used={"rs_function": "missing", "rb_function": "missing"},
+            used={
+                "carbon_cycle_model": "default",
+            },
             cut_warnings=True,
         )
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
@@ -208,9 +211,15 @@ class ConcentrationsEmissionsHandler:
         self.pamset["cl_dict"], self.pamset["br_dict"] = make_cl_and_br_dictionaries(
             self.df_gas.index
         )
+        # Precalculating for vanilla gases
         self.precalc_dict = {}
         self._precalculate_vanilla_gases()
-        self.carbon_cycle = CarbonCycleModel(self.pamset, pamset_carbon)
+
+        # Setting up carbon cycle model
+        model_type = self.pamset["carbon_cycle_model"]  # Default to "default"
+        self.carbon_cycle = create_carbon_cycle_model(
+            model_type, self.pamset, pamset_carbon
+        )
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, pamset_carbon, preexisting=False)
 
@@ -634,7 +643,7 @@ class ConcentrationsEmissionsHandler:
         forc_sh = forc_sh + rf_sun
         return tot_forc, forc_nh, forc_sh
 
-    def emi2conc(self, yr, dtemp=0.0):
+    def emi2conc(self, yr, feedback_dict=None):
         """
         Calculate concentrations from emissions
 
@@ -648,8 +657,8 @@ class ConcentrationsEmissionsHandler:
         ----------
         yr : int
           Year for which to calculate
-        dtemp : float
-            temperature change from start of run at previous timestep
+        feedback_dict : dict
+            Dictionary containing feedback variables and their values
         """
         # Do per tracer emissions to concentrations, update concentrations df
         # NBNB! Remember to move calculation of  Trop_O3 concentration
@@ -670,7 +679,7 @@ class ConcentrationsEmissionsHandler:
                 self.emis["CO2_FF"][yr]
                 + self.emis["CO2_AFOLU"][yr]
                 + self.df_gas["NAT_EM"]["CO2"],
-                dtemp=dtemp,
+                feedback_dict=feedback_dict,
             )
             self.fill_one_row_conc(yr, avoid=["CO2"])
             return
@@ -687,7 +696,7 @@ class ConcentrationsEmissionsHandler:
                     self.emis["CO2_FF"][yr]
                     + self.emis["CO2_AFOLU"][yr]
                     + self.df_gas["NAT_EM"]["CO2"],
-                    dtemp=dtemp,
+                    feedback_dict=feedback_dict,
                 )
                 continue
             if yr < self.pamset["emstart"]:
@@ -796,7 +805,7 @@ class ConcentrationsEmissionsHandler:
         for value_dict in self.conc.values():
             value_dict[yr] = 0
 
-    def write_output_to_files(self, cfg, dtemp_series=None, make_plot=False):
+    def write_output_to_files(self, cfg, feedback_dict_series=None, make_plot=False):
         """
         Write results to files after run
 
@@ -811,11 +820,10 @@ class ConcentrationsEmissionsHandler:
         cfg : dict
            Configurations to define where to put output
            files and what prefix to have for file name
+        feedback_dict_series : dict
+            Dictionary containing feedback data for each key
         make_plot : bool
            Whether the output should be plottet or not
-        dtemp_series : np.ndarray
-            Yearly temperature to pass to carbon cycle, to get
-            temperature feedback adjusted outputs
         """
         if "output_folder" in cfg:
             # Make os independent?
@@ -823,31 +831,31 @@ class ConcentrationsEmissionsHandler:
         else:
             outdir = os.path.join(os.getcwd(), "output")
 
-        results_dict = self.add_results_to_dict(cfg, dtemp_series=dtemp_series)
+        results_dict = self.add_results_to_dict(
+            cfg, feedback_dict_series=feedback_dict_series
+        )
 
         if "output_prefix" in cfg:
             filename_start = cfg["output_prefix"]
         else:
             filename_start = "output"
-        results_dict["forcing"].to_csv(
-            os.path.join(outdir, f"{filename_start}_forc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
-        results_dict["concentrations"].to_csv(
-            os.path.join(outdir, f"{filename_start}_conc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
 
-        results_dict["emissions"].to_csv(
-            os.path.join(outdir, f"{filename_start}_em.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
+        longname_shortname_dict = {
+            "emissions": "em",
+            "concentrations": "conc",
+            "forcing": "forc",
+            "carbon cycle": "carbon",
+        }
+        for outtype, df in results_dict.items():
+
+            df.to_csv(
+                os.path.join(
+                    outdir, f"{filename_start}_{longname_shortname_dict[outtype]}.txt"
+                ),
+                sep="\t",
+                index=False,
+                float_format="%.5e",
+            )
 
         if make_plot:
             plot_output2("forc", results_dict["forcing"], outdir)
@@ -873,7 +881,7 @@ class ConcentrationsEmissionsHandler:
                 float_format="%.5e",
             )
 
-    def add_results_to_dict(self, cfg, dtemp_series=None):
+    def add_results_to_dict(self, cfg, feedback_dict_series=None):
         """
         Add results to results dictionary
 
@@ -884,9 +892,10 @@ class ConcentrationsEmissionsHandler:
             files and what prefix to have for file name
             At the moment this method only needs to know
             if it's supposed to include carbon cycle outputs
-        dtemp_series : np.ndarray
-            Yearly temperature to pass to carbon cycle, to get
-            temperature feedback adjusted outputs
+        feedback_dict_series : dict
+            Dictionary containing yearly feedback variables
+            for each key to get feedback adjusted carbon cycle
+            outputs
 
         Returns
         -------
@@ -899,6 +908,7 @@ class ConcentrationsEmissionsHandler:
         # Adding in precalculated values:
         df_forc = pd.concat([df_forc, self.precalc_dict["precalc_erf"]], axis=1)
         df_forc.drop(columns=["TOT_vanilla"], inplace=True)
+
         cols = df_forc.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df_forc = df_forc[cols]
@@ -921,6 +931,7 @@ class ConcentrationsEmissionsHandler:
         frame_order = self.df_gas.index.copy()
         frame_order = frame_order.drop(list(set(frame_order.to_list()) - set(cols)))
         frame_order = frame_order.insert(0, "Year")
+
         df_conc = df_conc[frame_order]
 
         results = {}
@@ -929,18 +940,21 @@ class ConcentrationsEmissionsHandler:
         results["forcing"] = df_forc
 
         if "carbon_cycle_outputs" in cfg:
-            results["carbon cycle"] = self.get_carbon_cycle_data(dtemp_series)
+            results["carbon cycle"] = self.get_carbon_cycle_data(
+                feedback_dict_series=feedback_dict_series
+            )
         return results
 
-    def get_carbon_cycle_data(self, dtemp_series=None):
+    def get_carbon_cycle_data(self, feedback_dict_series=None):
         """
         Get carbon cycle data and put in dataframe for output
 
         Parameters
         ----------
-        dtemp_series : np.ndarray
-            Yearly temperature to pass to carbon cycle, to get
-            temperature feedback adjusted outputs
+        feedback_dict_series : dict
+            Dictionary containing yearly feedback variables
+            for each key to get feedback adjusted carbon cycle
+            outputs
 
         Returns
         -------
@@ -950,13 +964,12 @@ class ConcentrationsEmissionsHandler:
             Biosphere carbon flux and ocean carbon flux
         """
         conc_series = np.array([v for k, v in self.conc["CO2"].items()])
-
         if self.pamset["conc_run"]:
             df_carbon = self.carbon_cycle.get_carbon_cycle_output(
                 self.years,
                 conc_series=conc_series,
                 conc_run=self.pamset["conc_run"],
-                dtemp_series=dtemp_series,
+                feedback_dict_series=feedback_dict_series,
             )
         else:
             em_series = (
@@ -964,7 +977,9 @@ class ConcentrationsEmissionsHandler:
                 + self.emis["CO2_AFOLU"][self.years].values
             )
             df_carbon = self.carbon_cycle.get_carbon_cycle_output(
-                self.years, dtemp_series=dtemp_series
+                self.years,
+                feedback_dict_series=feedback_dict_series,
+                conc_series=conc_series,
             )
             if df_carbon is None:
                 df_carbon = pd.DataFrame(
@@ -980,3 +995,14 @@ class ConcentrationsEmissionsHandler:
                     em_series, conc_series
                 )
         return df_carbon
+
+    def get_feedback_list(self):
+        """
+        Retrieve the list of feedback variable names from the carbon cycle.
+
+        Returns
+        -------
+        list
+            A list containing the feedback variable names that the carbon cycle model uses.
+        """
+        return self.carbon_cycle.get_feedback_list()

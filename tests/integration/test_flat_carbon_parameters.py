@@ -238,6 +238,7 @@ def test_variable_timescale_counts():
     }
 
     model_2comp = CarbonCycleModel(pamset_emiconc, pamset_2comp)
+    print(model_2comp.pamset)
     assert len(model_2comp.pamset["rb_function"]["coeffs"]) == 2
     assert len(model_2comp.pamset["rb_function"]["timescales"]) == 2
 
@@ -347,6 +348,7 @@ def test_flat_parameters_only_trigger_recomputation():
 
     # Verify parameter updates were applied
     assert "rb_function" in model.pamset
+    print(model.pamset["rb_function"])
     assert model.pamset["rb_function"]["coeffs"] == [0.8, 0.2]
     assert model.pamset["rb_function"]["timescales"] == [3.0, 15.0]
 
@@ -373,7 +375,7 @@ def test_non_function_parameters_dont_trigger_recomputation():
     # Update with only non-function parameters
     non_function_params = {
         "beta_f": 0.5,  # Changed from default
-        "npp0": 70,  # Changed from default
+        "mixed_carbon": 70,  # Changed from default
     }
 
     model.reset_co2_hold(non_function_params)
@@ -387,7 +389,7 @@ def test_non_function_parameters_dont_trigger_recomputation():
 
     # Verify parameter updates were applied
     assert model.pamset["beta_f"] == 0.5
-    assert model.pamset["npp0"] == 70
+    assert model.pamset["mixed_carbon"] == 70
 
     # Verify that neither function changed
     assert rb_functions_unchanged, "rb_function should not have changed"

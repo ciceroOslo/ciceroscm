@@ -20,6 +20,8 @@ When a new instance of the CICERO-SCM class is created the dictionary cfg needs 
 * nystart - the start year of the run
 * nyend - the end year of the run
 * emstart - the year to start the run with emissions
+* thermal_model - keyword to specify thermal model to use, `default` is original upwelling diffusion model, current version also includes a simple two-layer model which you can invoke with the keyword `twolayer`. If no keyword is sent the default model is used.
+* carbon_cycle - keyword to specify carbon model to use, `default` is original Joos-based model, current version also includes a simple box model which you can invoke with the keyword `box`.  If no keyword is sent the default model is used.
 * idtm - optional parameter to tune the number of subyearly steps in the concentrations_emissions_handler. Default is 24. Should probably not be the first parameter you want to start playing with.
 * sunvolc - an optional parameter to include solar and volcanic forcing. If included and equal to 1 a set of such forcing series will be included.
 * rf_sun_file - optional path to file with solar data, only read if sunvolc is 1. If sunvolc is 1 and this parameter is not set, a default file will be used.
@@ -36,9 +38,9 @@ When a new instance of the CICERO-SCM class is created the dictionary cfg needs 
 * rs_function - Dictionary to define a custom rs_function. Keys should be "coeffs" and "timescales" and values should be lists or np.ndarrays
 with the values for the coefficients and timescales for the rs_function. All values should be positive, and the coefficients should have one
 more value (constant term) than the timescales. In creating an rs_function from the values, the coefficients will be normalised to give a
-total value of 1 when the function is 0.
+total value of 1 when the function is 0. (Only used for default carbon cycle model).
 * rb_function - Dictionary to define a custom rb_function. Keys should be "coeffs" and "timescales" and values should be lists or np.ndarrays
-with the values for the coefficients and timescales for the rs_function. All values should be positive, and the coefficients and the timescales should have the same number of values. In creating an rb_function from the values, the coefficients will be normalised first to sum to 1 and then each coefficient is normalised by its corresponding timescale to give an asymptotic integrated value of idtm (number of yearly timesteps).
+with the values for the coefficients and timescales for the rs_function. All values should be positive, and the coefficients and the timescales should have the same number of values. In creating an rb_function from the values, the coefficients will be normalised first to sum to 1 and then each coefficient is normalised by its corresponding timescale to give an asymptotic integrated value of idtm (number of yearly timesteps). (Only used for default carbon cycle model).
 
 ## Options for run
 With a CICEROSCM instance in place, you are ready to start runs with various parameter configurations, using the input files as set by the instance configuration
@@ -57,8 +59,10 @@ Physical parameters to the model is divided in two parametersets each of which a
 If the parametersets are not provided, a default parameterset is used
 If one or more parameters are not provided as part of the parameterset, these parameters will be set to the default values. 
 The default parameter sets should produce fairly sensible temperature histories when fed with AR6 input data, however, there is nothing formally optimal about this particular set of parameters, and a thorough span of the best fit set of parameter combinations will be subject of later work.
+
 #### pamset_udm
-The upwelling diffusion model (which is needed for all runs) takes the following parameters.(Default value in paranthesis):
+
+The default upwelling diffusion model (a thermal model is needed for all runs) takes the following parameters.(Default value in paranthesis):
 * rlamdo (15.0) - Air-sea heat exchange parameter <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{W}}{\mathrm{m}^2\mathrm{K}}">, valid range 5-25
 * akapa (0.66) - Vertical heat diffusivity <img src="https://render.githubusercontent.com/render/math?math=\large \frac{\mathrm{cm}^2}{\mathrm{s}}">, valid range 0.06-0.8
 * cpi (0.21) - Polar parameter, temperature change ratio polar to nonpolar region, unitless, valid range 0.161-0.569
@@ -71,9 +75,17 @@ The upwelling diffusion model (which is needed for all runs) takes the following
 * foan (0.61) - Fraction of Northern hemisphere covered by ocean
 * foas (0.81) - Fraction of Southern hemisphere covered by ocean
 * ebbeta (0.0) - Atmospheric interhemispheric heat exchange (not currently used)
-* fnso (0.7531) - Ratio between ocean areas in Northern and Southern hemispheres
 * lm (40) - Number of vertical layers (below the mixed layer each layer is at each 100 m depth)
 * ldtime (12) - Number of subyearly timesteps
+
+The two-layer thermal model which can be used instead takes the following parameters (defaults in paranthesis)
+* lambda (3.74 / 3) - Equilibrium climate sensitivity divided by 2xCO2 radiative forcing.
+* mixed (50) - Mixed layer depth, m, valid range 25-125
+* deep (1200) - Deep ocean layer depth, m.
+* k (0.5) - Coupling constant between layers, W/m^2/K,
+* ocean_efficacy (1.0) - Ocean efficacy parameter, unitless, valid range 0-2
+* foan (0.61) - Fraction of Northern hemisphere covered by ocean
+* foas (0.81) - Fraction of Southern hemisphere covered by ocean
 
 #### pamset_emiconc
 The concentration and emission parameterset (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
@@ -91,12 +103,29 @@ The concentration and emission parameterset (which is needed for emission runs) 
 * just_one - this is an optional parameter which allows you to run with the forcing of a single component to the upwelling diffusion model. It should be set equal to the component you are interested in seeing the effects of.
 
 #### pamset_carbon
-The parameterset for the carbon cycle (which is needed for emission runs) takes the following parameters. (Default value in paranthesis):
+The parameterset for the default carbon cycle (a carbon cycle model is needed for emission runs) takes the following parameters. (Default value in paranthesis):
 * beta_f (0.287) -Fertilisation factor in Joos scheme carbon cycle
 * mixed_carbon (75.0) - Depth of mixed layer in Joos scheme carbon cycle
 * ml_fracmax (0.5), ml_t_half (0.5) and ml_w_sigmoid (3.0) describe temperature feedback for the ocean mixed layer. This is controlled by a sigmoid decrease in mixed layer depth. ml_fracmax gives the maximum fractional loss of mixed layer depth from temperature allowed, ml_t_half is the temperature of the sigmoid half-way point and ml_w_sigmoid is the width of the sigmoid (in K).
-* npp0 (60), t_half (0.5), w_sigmoid (7), t_threshold (4), w_threshold (7) describes the temperature feedback on the primary production on land. npp0 is the npp at temperature 0, from there the behaviour is controlled by a peak sigmoid inrease and a threshold damping decline, t_half is the temperature of the halfway point of the sigmoid, w_sigmoid is the width of the sigmoid, t_threshold is the point at which the threshold has dampened the effect to half of its maximum and threshold width is the width of the threshold (all in K).
+* t_half (0.5), w_sigmoid (7), t_threshold (4), w_threshold (7) describes the temperature feedback on the primary production on land. The temperature dependent land behaviour is controlled by a peak sigmoid inrease and a threshold damping decline, t_half is the temperature of the halfway point of the sigmoid, w_sigmoid is the width of the sigmoid, t_threshold is the point at which the threshold has dampened the effect to half of its maximum and threshold width is the width of the threshold (all in K).
 * solubility_sens (0.02) and solubility_limit (0.5) control temperature feedbacks on the ocean carbon solubility. solubility_sens describes an exponential scaling of solubility with temperature, while solubility_limit limits the amount of gain the scaling can have to (i.e. max scaling of 1 + solubility_limit).
+
+The alternative box carbon model takes the following parameters (defaults are in paranthesis):
+* beta_f (0.287) -Fertilisation factor in biosphere
+* land_temp_sensitivity (0.1), temperature sensitivity of land uptake
+* soil_respiration_rate (0.02), respiration rate of soil
+* ocean_mixed_layer_depth (25.0) - Ocean mixed layer depth, m, as seen by the carbon cycle 
+* ocean_exchange_rate (0.01) - Exchange rate between mixed and deep ocean layer
+* vegetation_to_soil_fraction (0.1) - Fraction of vegetation carbon transferred to soil per year.
+* ocean_solubility_base (0.02) - Base solubility of CO2 in the ocean (PgC/ppm).
+* ocean_solubility_temp_coeff (-0.01) - Temperature sensitivity of ocean CO2 solubility. 
+
+## Parallelisation tools
+The module also has a submodule of parallelisation tools. This includes:
+* The cscmparwrapper, which is a parallelisation wrapper, that you can use for parallel runs of both full runs and forcing specific runs, and parallelise over either multiple scenarios, or multiple configurations or a list of both configurations and scenarios. The wrapper will divide the runs by scenarios initially, but if more parallel workers are available, it will also divide the configuration sets. The scenariodata and the configuration sets both are sents at lists of dictionaries of keyword arguments required for runs
+* ConfigDistro, which is a class for creating configuration distributions. Given a prior in the form of a dictionary, where the keys are parameters to span the parameter space and the values are arrays with two values corresponding to two endpoints of the prior for this parameter, a list of variables not to be changed, but given set values (which may differ from model defaults), final a dictionary of options which can list the method to use (gaussian or latin for gaussion distributions aor latin hypercube, the latter is default) and whether to fit only forcing parameters. The class has functionality to create sample values from the prior distribution space, assuming either gaussian distributions where the prior values span the interval between mean - 1 standard deviation and mean plus 1 standard deviation, or a latin hypercube over the prior extent. It can produce lists of configurations that can be used to run in parallel.
+Theses lists can also be chunked in smaller subsets to ease memory requirements in running over them.
+* DistributionRun, a simple class to wrap running over a distribution from a ConfigDistro, or from reading data from a json file of configurations
 
 ## MetaData
 CICERO-SCM supports optional metadata in parameter configuration JSON files. When generating configuration files for parameter distributions, you can add a meta_info dictionary containing model version, settings, or other relevant information. The resulting JSON file will include both the list of configurations and the metadata, making it easier to track origin and context.  There is no enforced schema, and the metadata dictionary can be defined by the user.
@@ -117,12 +146,6 @@ config.make_config_lists(
 ) 
 ```
 Both legacy (list-only) and new (metadata-inclusive) formats are supported for full backward compatibility.
-## Parallelisation tools
-The module also has a submodule of parallelisation tools. This includes:
-* The cscmparwrapper, which is a parallelisation wrapper, that you can use for parallel runs of both full runs and forcing specific runs, and parallelise over either multiple scenarios, or multiple configurations or a list of both configurations and scenarios. The wrapper will divide the runs by scenarios initially, but if more parallel workers are available, it will also divide the configuration sets. The scenariodata and the configuration sets both are sents at lists of dictionaries of keyword arguments required for runs
-* ConfigDistro, which is a class for creating configuration distributions. Given a prior in the form of a dictionary, where the keys are parameters to span the parameter space and the values are arrays with two values corresponding to two endpoints of the prior for this parameter, a list of variables not to be changed, but given set values (which may differ from model defaults), final a dictionary of options which can list the method to use (gaussian or latin for gaussion distributions aor latin hypercube, the latter is default) and whether to fit only forcing parameters. The class has functionality to create sample values from the prior distribution space, assuming either gaussian distributions where the prior values span the interval between mean - 1 standard deviation and mean plus 1 standard deviation, or a latin hypercube over the prior extent. It can produce lists of configurations that can be used to run in parallel.
-Theses lists can also be chunked in smaller subsets to ease memory requirements in running over them.
-* DistributionRun, a simple class to wrap running over a distribution from a ConfigDistro, or from reading data from a json file of configurations
 
 ## Example scripts
 The scripts folder contains various example scripts that can be used to see how to set up various types of runs. The start of all of them adds the necessary parts for the file to run with the module. If you want to run from somewhere else you will need to edit the <code>sys.path.append</code> command so it points to where you've stored the src directory of this repository.
