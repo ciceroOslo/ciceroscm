@@ -2,6 +2,7 @@ import os
 import re
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from ciceroscm import input_handler, pub_utils
@@ -102,3 +103,27 @@ def test_make_cl_and_br_dictionaries(test_data_dir):
     assert chlor_dict != chlor_dict_old
     chlor_dict_old["H-1211"] = 1
     assert chlor_dict == chlor_dict_old
+
+
+def test_make_regional_aerosol_gaspamdata(test_data_dir):
+    df_gas = input_handler.read_components(
+        os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt")
+    )
+    reg_aerosol_RF_file = os.path.join(test_data_dir, "HTAP_reg_aerosol_RF.txt")
+    reg_aerosol_df = pd.read_csv(reg_aerosol_RF_file, sep="\t", index_col=0)
+    reg_aerosol_df.rename(columns={"sulfate": "SO2"}, inplace=True)
+    df_gas_updated = pub_utils.make_regional_aerosol_gaspamdata(df_gas, reg_aerosol_df)
+    aerosols = reg_aerosol_df.columns.tolist()
+    regions = pub_utils.REG_MAPPING_DEFAULT
+    assert (
+        df_gas.shape[0] + len(aerosols) * len(regions.keys()) == df_gas_updated.shape[0]
+    )
+    for region, reg_map in regions.items():
+        for aerosol in aerosols:
+            compound_name = f"{aerosol}_{region}"
+            assert compound_name in df_gas_updated.index
+            if compound_name in df_gas_updated.index:
+                assert (
+                    df_gas_updated.loc[compound_name, "ALPHA"]
+                    == reg_aerosol_df.loc[reg_map, aerosol] * 1e9
+                )

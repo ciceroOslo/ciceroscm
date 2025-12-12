@@ -252,6 +252,19 @@ class ConcentrationsEmissionsHandler:
             if index not in self.precalc_dict["precalc_erf"].columns:
                 self.precalc_dict["gases_list_spicy"].append(index)
 
+    def avoid_regional_double_counting(self):
+        """
+        Set global aerosol focing parameters to zero if regional forcing is used to avoid double counting
+        """
+        aerosols = {
+            "SO2": "qdirso2",
+            "BC": "qbc",
+            "OC": "qoc",
+        }
+        for aerosol, aerforc in aerosols.items():
+            if any(comp.startswith(f"{aerosol}_") for comp in self.df_gas.index):
+                self.pamset[aerforc] = 0.0
+
     def _precalculate_erf_vanilla_gases(self):
         """
         Precalculate erf for vanilla gases
@@ -353,7 +366,10 @@ class ConcentrationsEmissionsHandler:
         if preexisting:
             new_pamset = check_pamset(pamset)
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
-            self.carbon_cycle.reset_co2_hold(pamset_carbon)
+
+        self.avoid_regional_double_counting()
+        self.carbon_cycle.reset_co2_hold(pamset_carbon)
+
         years_tot = len(self.years)
         self.conc = {}
         self.forc = {}
@@ -526,6 +542,61 @@ class ConcentrationsEmissionsHandler:
         q = (value - value_0) / (30.0 - value_0) * (self.pamset["qo3"])
         return q
 
+    def calc_aerosol_forcing(self, yr, tracer):
+        """
+        Calculate aerosol forcing for single aerosol
+
+        Parameters
+        ----------
+        yr : int
+            Year for which to calculate
+        tracer : str
+            Name of aerosol component to calculate for
+
+        Returns
+        -------
+        float
+            Forcing from aerosol in question for year in question
+        """
+        ref_emission_species = {
+            "SO2": ["SO2", self.pamset["qdirso2"]],
+            "SO4_IND": ["SO2", self.pamset["qindso2"]],
+            "OC": ["OC", self.pamset["qoc"]],
+            "BC": ["BC", self.pamset["qbc"]],
+            "BMB_AEROS": ["BMB_AEROS_OC", self.pamset["qbmb"]],
+            "NMVOC": ["NMVOC", self.pamset["qnmvoc"]],
+            "NH3": ["NH3", self.pamset["qnh3"]],
+            "NOx": ["NOx", self.pamset["qnox"]],
+        }
+        # Natural emissions
+        # (after IPCC TPII on simple climate models, 1997)
+        # enat = 42.0 Not used, why is this here?
+        # Aerosol forcing used to be scaled to reference year
+        # No just total forcing change
+        # Only with emission to concentration factors differing
+        # These are held in dictionary
+
+        yr_0 = self.years[0]
+        q = 0
+        # Natural emissions
+        # (after IPCC TPII on simple climate models, 1997)
+        # enat = 42.0 Not used, why is this here?
+        # Emission in reference year
+        # SO2, SO4_IND, BC and OC are treated exactly the same
+        # Only with emission to concentration factors differing
+        # These are held in dictionary
+        if self.df_gas["ALPHA"][tracer] != 0:
+            q = (self.emis[tracer][yr] - self.emis[tracer][yr_0]) * self.df_gas[
+                "ALPHA"
+            ][tracer]
+        elif tracer in ref_emission_species:
+            em_change = (
+                self.emis[ref_emission_species[tracer][0]][yr]
+                - self.emis[ref_emission_species[tracer][0]][yr_0]
+            )
+            q = ref_emission_species[tracer][1] * em_change
+        return q
+
     def conc2forc(self, yr, rf_luc, rf_sun):  # pylint: disable=too-many-branches
         """
         Calculate forcing from concentrations
@@ -546,7 +617,7 @@ class ConcentrationsEmissionsHandler:
         Parameters
         ----------
         yr : int
-          Year fro which to calculate
+          Year for which to calculate
         rf_luc : float
               Land use change forcing
         rf_sun : float
@@ -559,16 +630,6 @@ class ConcentrationsEmissionsHandler:
             forcing for the year.
             In this way: tot_forc, forc_nh, forc_sh
         """
-        ref_emission_species = {
-            "SO2": ["SO2", self.pamset["qdirso2"]],
-            "SO4_IND": ["SO2", self.pamset["qindso2"]],
-            "OC": ["OC", self.pamset["qoc"]],
-            "BC": ["BC", self.pamset["qbc"]],
-            "BMB_AEROS": ["BMB_AEROS_OC", self.pamset["qbmb"]],
-            "NMVOC": ["NMVOC", self.pamset["qnmvoc"]],
-            "NH3": ["NH3", self.pamset["qnh3"]],
-            "NOx": ["NOx", self.pamset["qnox"]],
-        }
         # Intialising with the combined values from CO2, N2O and CH4
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
         yr_0 = self.years[0]
@@ -579,19 +640,24 @@ class ConcentrationsEmissionsHandler:
             q = 0
             if tracer == "LANDUSE":
                 q = rf_luc
-            elif tracer in ref_emission_species:
-                # Natural emissions
-                # (after IPCC TPII on simple climate models, 1997)
-                # enat = 42.0 Not used, why is this here?
-                # Aerosol forcing used to be scaled to reference year
-                # No just total forcing change
-                # Only with emission to concentration factors differing
-                # These are held in dictionary
-                em_change = (
-                    self.emis[ref_emission_species[tracer][0]][yr]
-                    - self.emis[ref_emission_species[tracer][0]][yr_0]
-                )
-                q = ref_emission_species[tracer][1] * em_change
+
+            elif tracer in ["NMVOC", "NH3", "NOx"] or tracer[:2] in [
+                "BC",
+                "OC",
+                "SO",
+                "BM",
+            ]:
+                q = self.calc_aerosol_forcing(yr, tracer)
+            elif (
+                tracer in self.df_gas.index
+                and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
+            ):
+                q = (
+                    (self.conc[tracer][yr] - self.conc[tracer][yr_0])
+                    * self.df_gas["ALPHA"][tracer]
+                    * self.df_gas["SARF_TO_ERF"][tracer]
+                )  # +forc_pert
+
             elif tracer == "TROP_O3":
                 q = (
                     self.tropospheric_ozone_forcing(yr)

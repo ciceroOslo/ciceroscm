@@ -27,6 +27,7 @@ The changes listed in this file are categorised as follows:
 - _config_distro can now write distribution files with full setup metadata, and Distroconfig can read in files with or with out shared metadata.
 -  New structural switch functionality to allow for different structural configurations to be run for both carbon cycle and thermal model.
 - A simplified box carbon model and a simplified two-layer ocean model as structural options.
+- Option to run with regionally split aerosol species, also including functionality to make gaspamfile that supports this from forcing txt file.
 
 ### Fixed
 
