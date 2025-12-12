@@ -14,7 +14,8 @@ The changes listed in this file are categorised as follows:
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
 
-[Unreleased]
+[Version 2.0.0]
+---------------------------
 
 ### Changed
 - Simplified Tropospheric Ozone forcing calculation, using the same calculation throughout both before and after emstart 
