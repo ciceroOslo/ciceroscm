@@ -14,7 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../", "src"))
 from ciceroscm import CICEROSCM
 
 data_dir = os.path.join(os.path.dirname(__file__), "../", "tests", "test-data")
-#os.getcwd() gets the path of where you are running from
+# os.getcwd() gets the path of where you are running from
 outdir = os.path.join(os.getcwd(), "output_test")
 
 # Starting profiler before starting run
@@ -40,7 +40,7 @@ pr.disable()
 
 # Sorting and printing profiler results
 s = io.StringIO()
-sortby = 'cumulative'
-ps = pstats.Stats(pr,stream=s).sort_stats(sortby)
+sortby = "cumulative"
+ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
 ps.print_stats()
 print(s.getvalue())

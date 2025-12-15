@@ -10,6 +10,38 @@ import numpy as np
 
 LOGGER = logging.getLogger(__name__)
 
+REG_MAPPING_DEFAULT = {
+    "ASIA": "EAS",
+    "LAM": "SAM",
+    "MAF": "NAF",
+    "OECD": "NAM",
+    "REF": "RBU",
+}
+
+
+def get_first_key(dct, value):
+    """
+    Return the first key in a dictionary that matches the given value.
+
+    Parameters
+    ----------
+    dct : dict
+        The dictionary to search.
+    value : any
+        The value to search for in the dictionary.
+
+    Returns
+    -------
+    key : any
+        The first key in the dictionary whose value matches the specified value.
+
+    Raises
+    ------
+    IndexError
+        If the value is not found in the dictionary.
+    """
+    return [key for key in dct if (dct[key] == value)][0]
+
 
 def _check_array_consistency(coeffs, timescales, for_rs=False):
     """
@@ -138,3 +170,45 @@ def make_cl_and_br_dictionaries(gases_index):
                 brom_dict[tracer] = 1
 
     return chlor_dict, brom_dict
+
+
+def make_regional_aerosol_gaspamdata(
+    gases_data,
+    reg_aerosol_rf_data,
+    reg_mapping=None,
+    unit_conversion=1e9,  # Convert W/m² per Tg to W/m² per kg (1e9 kg = 1 Tg)
+):
+    """
+    Make regional aerosol gaspamdata from existing gaspam and some regional data
+
+    Creates separate gas parameter entries for each aerosol-region combination
+    (e.g., SO2_ASIA, BC_OECD) using region-specific forcing efficacies.
+
+    Parameters
+    ----------
+    gases_data : pd.DataFrame
+        Original gaspamdata without regional aerosols
+    reg_aerosol_rf_data : pd.DataFrame
+        Dataframe with regional forcing for aerosols (rows=regions, cols=aerosols)
+    reg_mapping : dict, optional
+        Mapping between emission regions and forcing regions
+        Default maps ASIA→EAS, LAM→SAM, MAF→NAF, OECD→NAM, REF→RBU
+    unit_conversion : float, optional
+        Unit conversion factor from forcing data units to model units (default: 1e9)
+
+    Returns
+    -------
+    pd.DataFrame
+        New gaspam dataframe with extra entries for the added regional aerosols
+    """
+    if reg_mapping is None:
+        reg_mapping = REG_MAPPING_DEFAULT
+    gases_new = gases_data.copy()
+    for column in reg_aerosol_rf_data.columns:
+        row_start = gases_data.loc[column].copy()
+        for key, expression in reg_mapping.items():
+            row_start["ALPHA"] = (
+                reg_aerosol_rf_data[column][expression] * unit_conversion
+            )
+            gases_new.loc[f"{column}_{key}"] = row_start
+    return gases_new

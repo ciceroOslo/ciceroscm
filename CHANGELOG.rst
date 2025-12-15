@@ -14,7 +14,8 @@ The changes listed in this file are categorised as follows:
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
 
-[Unreleased]
+[Version 2.0.0]
+---------------------------
 
 ### Changed
 - Simplified Tropospheric Ozone forcing calculation, using the same calculation throughout both before and after emstart 
@@ -25,6 +26,9 @@ The changes listed in this file are categorised as follows:
 - Option to chunk configuration distributions to allow for millions of member runs without killing memory
 - Option to output ozone and stratospheric water vapour effective radiative forcing in parallel run
 - _config_distro can now write distribution files with full setup metadata, and Distroconfig can read in files with or with out shared metadata.
+-  New structural switch functionality to allow for different structural configurations to be run for both carbon cycle and thermal model.
+- A simplified box carbon model and a simplified two-layer ocean model as structural options.
+- Option to run with regionally split aerosol species, also including functionality to make gaspamfile that supports this from forcing txt file.
 
 ### Fixed
 
@@ -34,6 +38,7 @@ The changes listed in this file are categorised as follows:
 
 ### Removed
 - Removed old calibrator code, as calibration is now done in a separate repository.
+- fnso (fraction of Northern hemisphere ocean to Southern hemisphere ocean) parameter removed from upwelling diffusion model. This parameter should be derived from the ratio between foan and foas, and not be something that can be set separately.
 
 [Version 1.5.0]
 ---------------------------
