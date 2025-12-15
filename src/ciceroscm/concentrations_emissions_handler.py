@@ -539,6 +539,8 @@ class ConcentrationsEmissionsHandler:
         # Rewritten a bit, place to check for differences...
         value = self.conc[tracer][yr]
         value_0 = self.conc[tracer][yr_0]
+        if value_0 == 30.0:
+            return 0.0
         q = (value - value_0) / (30.0 - value_0) * (self.pamset["qo3"])
         return q
 

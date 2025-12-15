@@ -45,6 +45,7 @@ openscm_to_cscm_dict = {
     # Heat uptake
     "Heat Uptake": "RIB_glob",
     "Heat Content|Ocean": "OHCTOT",
+    "Anomalous Radiation": "anomalous_radiation",
     # concentrations
     "Atmospheric Concentrations|CO2": "CO2",
     "Atmospheric Concentrations|CH4": "CH4",
@@ -195,10 +196,8 @@ class CSCMREADER:
             "dT_glob",
             "dT_glob_air",
             "dT_glob_sea",
-            "dSL(m)",
-            "dSL_thermal(m)",
-            "dSL_ice(m)",
             "RIB_glob",
+            "anomalous_radiation",
         )
         self.ohc_list = "OHCTOT"
         self.indices = np.arange(nystart, nyend + 1)

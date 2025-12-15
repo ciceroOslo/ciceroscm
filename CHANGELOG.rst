@@ -14,6 +14,18 @@ The changes listed in this file are categorised as follows:
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
 
+[Unreleased]
+---------------------------
+### Added
+
+### Changed
+
+### Fixed
+- Ensure code can run when ozone is not changing, avoiding divide by zero.
+- Ensure calculation of airborne fraction gives nans when cumulative emissions are zero.
+
+### Removed
+
 [Version 2.0.0]
 ---------------------------
 
