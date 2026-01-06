@@ -188,7 +188,6 @@ class ConcentrationsEmissionsHandler:
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
         self.pamset = check_pamset(pamset)
-        print("Carbon Model=" + self.pamset["carbon_cycle_model"])
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
         self.conc_in = input_handler.get_data("concentrations")
         self.emis = input_handler.get_data("emissions")
@@ -333,7 +332,7 @@ class ConcentrationsEmissionsHandler:
         )
         self.precalc_dict["precalc_erf"]["STRAT_O3"] = q
 
-    def reset_with_new_pams(self, pamset, pamset_carbon, preexisting=True):
+    def reset_with_new_pams(self, pamset, pamset_carbon=None, preexisting=True):
         """
         Reset to run again with same emissions etc.
 

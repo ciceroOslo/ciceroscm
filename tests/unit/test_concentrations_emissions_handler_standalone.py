@@ -23,3 +23,6 @@ def test_ce_handler_init(test_data_dir):
         pamset={"lifetime_mode": "CONSTANT_12"},
     )
     assert ce_handler.pamset["carbon_cycle_model"] == "default"
+    ce_handler.reset_with_new_pams({"qo3": 0.4})
+    assert ce_handler.pamset["qo3"] == 0.4
+    assert ce_handler.pamset["qnh3"] == 0.0
