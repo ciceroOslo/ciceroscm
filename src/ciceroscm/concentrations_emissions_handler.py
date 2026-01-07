@@ -57,25 +57,21 @@ def check_pamset(pamset):
         "qnmvoc": 0.0,
         "qnh3": 0.0,
         "qnox": 0.0,
-        "ml_w_sigmoid": 3.0,
-        "ml_fracmax": 0.5,
-        "ml_t_half": 0.5,
-        "npp0": 60.0,
-        "npp_t_half": 0.5,
-        "npp_w_sigmoid": 7,
-        "npp_t_threshold": 4,
-        "npp_w_threshold": 7,
-        "solubility_sens": 0.02,
-        "solubility_limit": 0.5,
+        "idtm": 24,
+        "nystart": 1750,
+        "nyend": 2100,
+        "emstart": 1850,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
     if "lifetime_mode" not in pamset:
         pamset["lifetime_mode"] = "TAR"
-
+    if "carbon_cycle_model" not in pamset:
+        pamset["carbon_cycle_model"] = "default"
     used = {
         "lifetime_mode": "TAR",
         "just_one": "CO2",
+        "carbon_cycle_model": "default",
         "idtm": 24,
         "nystart": 1750,
         "nyend": 2100,
@@ -191,15 +187,7 @@ class ConcentrationsEmissionsHandler:
         self.forc = {}
         self.nat_emis_ch4 = input_handler.get_data("nat_ch4")
         self.nat_emis_n2o = input_handler.get_data("nat_n2o")
-        print("Carbon Model=" + pamset["carbon_cycle_model"])
-        self.pamset = cut_and_check_pamset(
-            {"idtm": 24, "nystart": 1750, "nyend": 2100, "emstart": 1850},
-            pamset,
-            used={
-                "carbon_cycle_model": "default",
-            },
-            cut_warnings=True,
-        )
+        self.pamset = check_pamset(pamset)
         self.years = np.arange(self.pamset["nystart"], self.pamset["nyend"] + 1)
         self.conc_in = input_handler.get_data("concentrations")
         self.emis = input_handler.get_data("emissions")
@@ -344,7 +332,7 @@ class ConcentrationsEmissionsHandler:
         )
         self.precalc_dict["precalc_erf"]["STRAT_O3"] = q
 
-    def reset_with_new_pams(self, pamset, pamset_carbon, preexisting=True):
+    def reset_with_new_pams(self, pamset, pamset_carbon=None, preexisting=True):
         """
         Reset to run again with same emissions etc.
 
