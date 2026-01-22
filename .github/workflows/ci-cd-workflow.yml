@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: ['3.12']
 
     steps:
     - name: Checkout repository
@@ -27,7 +27,6 @@ jobs:
       run: |
         pip install --upgrade pip wheel
         pip install -e .[dev]
-        pip install pandas==1.1.4
     - name: Formatting and linters
       run: |
         black --version
@@ -65,7 +64,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
 
-        python-version: [3.9, '3.10', '3.11']
+        python-version: ['3.12', '3.10', '3.11']
     env:
       MIN_COVERAGE: 90
 
@@ -88,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9, '3.10', '3.11']
+        python-version: ['3.12', '3.10', '3.11']
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -104,7 +103,7 @@ jobs:
       run: |
           pytest notebooks -r a --nbval-lax --sanitize-with tests/notebook-tests.cfg --no-cov
     - name: Test notebooks strictly
-      if: matrix.python-version == 3.8
+      if: matrix.python-version == '3.12'
       run: |
           pytest notebooks -r a --nbval --nbval-sanitize-with tests/notebook-tests.cfg --no-cov
 
@@ -115,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9, '3.10', '3.11']
+        python-version: ['3.12', '3.10', '3.11']
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -141,7 +140,7 @@ jobs:
   #  runs-on: ubuntu-latest
   #  strategy:
   #    matrix:
-  #      python-version: [3.9]
+  #      python-version: ['3.12']
 
   #  steps:
   #  - name: Checkout repository
@@ -171,7 +170,7 @@ jobs:
   #  runs-on: ubuntu-latest
   #  strategy:
   #    matrix:
-  #      python-version: [3.9]
+  #      python-version: ['3.12']
 
   #  steps:
   #  - uses: actions/download-artifact@v4

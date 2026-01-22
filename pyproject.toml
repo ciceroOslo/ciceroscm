@@ -12,7 +12,7 @@ authors = [
 ]
 description = "Python version of the CICERO-SCM simple climate model"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["cicero-scm", "cicero", "python", "repo", "simple", "climate", "model"]
 classifiers = [
         "Development Status :: 4 - Beta",
@@ -26,7 +26,6 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
     "click",
-    "openscm_units>=0.5.0",
     "python-dotenv",
     "tqdm",
     "matplotlib>=3.4",
@@ -36,7 +35,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-notebookss = [
+notebooks = [
     "ipywidgets",
     "notebook",
     "seaborn",
