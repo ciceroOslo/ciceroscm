@@ -27,7 +27,6 @@ jobs:
       run: |
         pip install --upgrade pip wheel
         pip install -e .[dev]
-        pip install pandas==1.1.4
     - name: Formatting and linters
       run: |
         black --version
