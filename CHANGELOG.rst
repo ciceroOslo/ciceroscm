@@ -14,6 +14,11 @@ The changes listed in this file are categorised as follows:
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
 
+[Unreleased]
+---------------------------
+### Added
+- Deployment workflow to publish package to PyPI on manual trigger
+
 [Version 2.0.1]
 ---------------------------
 ### Added
