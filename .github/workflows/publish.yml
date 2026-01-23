@@ -49,6 +49,3 @@ jobs:
           path: dist/
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          # Access the tag_name from the release event payload
-          version-tag: ${{ github.event.release.tag_name }}
