@@ -1,8 +1,8 @@
 name: Upload Python Package to PyPI when a Release is Created
 
-on: workflow_dispatch
-#  release:
-#    types: [created]
+on:
+  release:
+    types: [created] # Trigger when a release is published
 
 jobs:
   build:
@@ -49,3 +49,6 @@ jobs:
           path: dist/
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Access the tag_name from the release event payload
+          version-tag: ${{ github.event.release.tag_name }}
