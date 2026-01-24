@@ -69,7 +69,7 @@ black: $(VENV_DIR)  ## apply black formatter to source and tests
 isort: $(VENV_DIR)  ## format the code
 	@status=$$(git status --porcelain src tests); \
 	if test "x$${status}" = x; then \
-		$(VENV_DIR)/bin/isort src tests setup.py; \
+		$(VENV_DIR)/bin/isort src tests; \
 	else \
 		echo Not trying any formatting. Working directory is dirty ... >&2; \
 	fi;
