@@ -1,8 +1,8 @@
 name: Upload Python Package to PyPI when a Release is Created
 
-on: workflow_dispatch
-  # release:
-  #   types: [created] # Trigger when a release is published
+on:
+  release:
+    types: [created] # Trigger when a release is published
 
 jobs:
   build:
