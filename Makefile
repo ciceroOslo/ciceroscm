@@ -38,7 +38,7 @@ format-checks: $(VENV_DIR)  ## run all the checks
 	@echo "=== bandit ==="; $(VENV_DIR)/bin/bandit -c .bandit.yml -r src || echo "--- bandit failed ---" >&2; \
 		echo "\n\n=== black ==="; $(VENV_DIR)/bin/black --check src tests || echo "--- black failed ---" >&2; \
 		echo "\n\n=== ruff ==="; $(VENV_DIR)/bin/ruff check src tests || echo "--- ruff failed ---" >&2; \
-		echo "\n\n=== isort ==="; $(VENV_DIR)/bin/isort --check-only --quiet src tests setup.py || echo "--- isort failed ---" >&2; \
+		echo "\n\n=== isort ==="; $(VENV_DIR)/bin/isort --check-only --quiet src tests || echo "--- isort failed ---" >&2; \
 		echo "\n\n=== pydocstyle ==="; $(VENV_DIR)/bin/pydocstyle src || echo "--- pydocstyle failed ---" >&2; \
 		echo "\n\n=== pylint ==="; $(VENV_DIR)/bin/pylint src || echo "--- pylint failed ---" >&2; \
 		echo
