@@ -1,8 +1,8 @@
 name: Upload Python Package to PyPI when a Release is Created
 
-on:
-  release:
-    types: [created] # Trigger when a release is published
+on: workflow_dispatch
+  # release:
+  #   types: [created] # Trigger when a release is published
 
 jobs:
   build:
@@ -34,6 +34,7 @@ jobs:
   publish-to-pypi:
     name: >-
       Publish Python 🐍 distribution 📦 to PyPI
+    # if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
     needs: build
     runs-on: ubuntu-latest
     environment:
