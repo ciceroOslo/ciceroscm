@@ -161,7 +161,9 @@ carbon_cycle_outputs = {
 }
 
 
-def get_data_from_forc_common(df_temp, variable, v_dict, volc=0, sun=0):  # pylint:disable=too-many-branches
+def get_data_from_forc_common(
+    df_temp, variable, v_dict, volc=0, sun=0
+):  # pylint:disable=too-many-branches
     """
     Get or calculate forcing when dataframe with forcers
     variable and variable dictionary
@@ -277,7 +279,9 @@ class CSCMREADER:
         self.ohc_list = ["OHCTOT", "OHC700"]
         self.indices = np.arange(nystart, nyend + 1)
 
-    def get_variable_timeseries(self, results, variable, sfilewriter):  # pylint:disable=too-many-branches
+    def get_variable_timeseries(
+        self, results, variable, sfilewriter
+    ):  # pylint:disable=too-many-branches
         """
         Get variable timeseries
         Connecting up to correct data dictionary to get data

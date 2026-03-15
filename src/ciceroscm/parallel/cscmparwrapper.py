@@ -96,6 +96,13 @@ def run_ciceroscm_parallel(scendata, cfgs, output_vars, max_workers=4):
                 [cfgs[i : i + batch_size] for i in range(0, len(cfgs), batch_size)],
             )
         ]
+    if max_workers == 1:
+        LOGGER.info("Running in serial as max_workers is set to 1")
+        result = []
+        for run in runs:
+            result.append(_execute_run(**run))
+        return pd.concat(result)
+
     LOGGER.info("Running in parallel with up to %d workers", max_workers)
 
     with ProcessPoolExecutor(max_workers=max_workers) as pool:
