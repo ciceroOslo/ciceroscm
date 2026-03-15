@@ -10,41 +10,31 @@ openscm_to_cscm_dict = {
     "Surface Air Temperature Change": "dT_glob_air",
     # GMST
     "Surface Air Ocean Blended Temperature Change": "dT_glob",
+    "Surface Air Ocean Temperature Change": "dT_glob_sea",
     # ERFs
     "Effective Radiative Forcing": "Total_forcing+sunvolc",
     "Effective Radiative Forcing|Anthropogenic": "Total_forcing",
-    "Effective Radiative Forcing|Aerosols": "Aerosols",
-    "Effective Radiative Forcing|Aerosols|Direct Effect": "Aerosols|Direct Effect",
-    "Effective Radiative Forcing|Aerosols|Direct Effect|BC": "BC",
-    "Effective Radiative Forcing|Aerosols|Direct Effect|OC": "OC",
-    "Effective Radiative Forcing|Aerosols|Direct Effect|SOx": "SO2",
-    "Effective Radiative Forcing|Aerosols|Indirect Effect": "SO4_IND",
+    "Effective Radiative Forcing|Anthropogenic|Aerosol": "Aerosols",
+    "Effective Radiative Forcing|Anthropogenic|Aerosol|Aerosol-radiation Interactions": "Aerosols|Direct Effect",
+    "Effective Radiative Forcing|Anthropogenic|Aerosol|Aerosol-radiation Interactions|BC": "BC",
+    "Effective Radiative Forcing|Anthropogenic|Aerosol|Aerosol-radiation Interactions|OC": "OC",
+    "Effective Radiative Forcing|Anthropogenic|Aerosol|Aerosol-radiation Interactions|Sulfate": "SO4_DIR",
+    "Effective Radiative Forcing|Anthropogenic|Aerosol|Aerosol-cloud Interactions": "SO4_IND",
     "Effective Radiative Forcing|Greenhouse Gases": "GHG",
-    "Effective Radiative Forcing|F-Gases": "Fgas",
-    "Effective Radiative Forcing|HFC125": "HFC125",
-    "Effective Radiative Forcing|HFC134a": "HFC134a",
-    "Effective Radiative Forcing|HFC143a": "HFC143a",
-    "Effective Radiative Forcing|HFC227ea": "HFC227ea",
-    "Effective Radiative Forcing|HFC23": "HFC23",
-    "Effective Radiative Forcing|HFC245fa": "HFC245fa",
-    "Effective Radiative Forcing|HFC32": "HFC32",
-    "Effective Radiative Forcing|HFC4310mee": "HFC4310mee",
-    "Effective Radiative Forcing|CF4": "CF4",
-    "Effective Radiative Forcing|C6F14": "C6F14",
-    "Effective Radiative Forcing|C2F6": "C2F6",
-    "Effective Radiative Forcing|SF6": "SF6",
-    "Effective Radiative Forcing|CO2": "CO2",
-    "Effective Radiative Forcing|CH4": "CH4",
-    "Effective Radiative Forcing|N2O": "N2O",
-    "Effective Radiative Forcing|Stratospheric Water Vapor": "STRAT_H2O",
-    "Effective Radiative Forcing|Stratospheric Ozone": "STRAT_O3",
-    "Effective Radiative Forcing|Tropospheric Ozone": "TROP_O3",
+    "Effective Radiative Forcing|Anthropogenic|F-Gases": "Fgas",
+    "Effective Radiative Forcing|Anthropogenic|CO2": "CO2",
+    "Effective Radiative Forcing|Anthropogenic|CH4": "CH4",
+    "Effective Radiative Forcing|Anthropogenic|N2O": "N2O",
+    "Effective Radiative Forcing|Anthropogenic|Other|Stratospheric H2O": "STRAT_H2O",
+    "Effective Radiative Forcing|Anthropogenic|Ozone|Stratospheric Contribution": "STRAT_O3",
+    "Effective Radiative Forcing|Anthropogenic|Ozone|Tropospheric Contribution": "TROP_O3",
     "Emissions|CO2": "CO2",
     "Emissions|CH4": "CH4",
     "Emissions|N2O": "N2O",
     # Heat uptake
     "Heat Uptake": "RIB_glob",
     "Heat Content|Ocean": "OHCTOT",
+    "Heat Content|Ocean|0-700m": "OHC700",
     "Anomalous Radiation": "anomalous_radiation",
     # concentrations
     "Atmospheric Concentrations|CO2": "CO2",
@@ -53,6 +43,31 @@ openscm_to_cscm_dict = {
 }
 forc_sums = ["Aerosols", "Aerosols|Direct Effect"]
 fgas_list = [
+    "HFC125",
+    "HFC134a",
+    "HFC143a",
+    "HFC152a",
+    "HFC227ea",
+    "HFC236fa",
+    "HFC23",
+    "HFC245fa",
+    "HFC32",
+    "HFC365mfc",
+    "HFC4310mee",
+    "NF3",
+    "C2F6",
+    "C3F8",
+    "C4F10",
+    "C5F12",
+    "C6F14",
+    "C7F16",
+    "C8F18",
+    "cC4F8",
+    "CF4",
+    "SF6",
+    "SO2F2",
+]
+montreal_list = [
     "CFC-11",
     "CFC-12",
     "CFC-113",
@@ -61,37 +76,92 @@ fgas_list = [
     "CH3Br",
     "CCl4",
     "CH3CCl3",
-    "HCFC-22",
-    "HCFC-141b",
-    "HCFC-123",
-    "HCFC-142b",
+    "H-1202",
     "H-1211",
     "H-1301",
     "H-2402",
-    "HFC125",
-    "HFC134a",
-    "HFC143a",
-    "HFC227ea",
-    "HFC23",
-    "HFC245fa",
-    "HFC32",
-    "HFC4310mee",
-    "C2F6",
-    "C6F14",
-    "CF4",
-    "SF6",
+    "HCFC-123",
+    "HCFC-142b",
+    "HCFC-141b",
+    "HCFC-22",
+    "CHCl3",
+    "CH3Cl",
+    "CH2Cl2",
 ]
+
+
+def fgas_transform(fgas_name):
+    """
+    Reformat fgas names to match RCMIP output
+
+    Parameters
+    ----------
+    fgas_name : str
+        Name of fgas to reformat
+
+    Returns
+    -------
+    str
+        Reformatted fgas name
+    """
+    if fgas_name.startswith("HFC"):
+        return f"HFC|{fgas_name}"
+    if fgas_name.lower().startswith("c"):
+        return f"PFC|{fgas_name}"
+    return fgas_name
+
+
+def montreal_transform(montgas):
+    """
+    Reformat montreal gas names to match RCMIP output
+
+    Parameters
+    ----------
+    montgas : str
+        Name of montreal gas to reformat
+
+    Returns
+    -------
+    str
+        Reformatted fgas name
+    """
+    if montgas.startswith("CFC"):
+        return f"CFC|{montgas.replace('-', '')}"
+    if montgas.startswith("H-"):
+        return montgas.replace("H-", "Halon")
+    if montgas.startswith("HCFC-"):
+        return montgas.replace("HCFC-", "HCFC")
+    return montgas
+
+
+for fgas in fgas_list:
+    openscm_to_cscm_dict[
+        "Effective Radiative Forcing|Anthropogenic|F-Gases|" + fgas_transform(fgas)
+    ] = fgas
+    openscm_to_cscm_dict[
+        "Atmospheric Concentrations|F-Gases|" + fgas_transform(fgas)
+    ] = fgas
+
+for mont in montreal_list:
+    openscm_to_cscm_dict[
+        "Effective Radiative Forcing|Anthropogenic|Montreal Gases|"
+        + montreal_transform(mont)
+    ] = mont
+    openscm_to_cscm_dict[
+        "Atmospheric Concentrations|Montreal Gases|" + montreal_transform(mont)
+    ] = mont
+
 ghg_not_fgas = ["CO2", "CH4", "N2O", "TROP_O3", "STRAT_O3", "STRAT_H2O"]
-carbon_cycle_outputs = [
-    "Biosphere carbon flux",
-    "Ocean carbon flux",
-    "Airborne fraction CO2",
-    "Biosphere carbon pool",
-    "Ocean carbon pool",
-]
+carbon_cycle_outputs = {
+    "Carbon Flux|Land": "Biosphere carbon flux",
+    "Carbon Flux|Ocean": "Ocean carbon flux",
+    "Airborne fraction CO2": "Airborne fraction CO2",
+    "Carbon Pool|Land": "Biosphere carbon pool",
+    "Carbon Pool|Ocean": "Ocean carbon pool",
+}
 
 
-def get_data_from_forc_common(df_temp, variable, v_dict, volc=0, sun=0):
+def get_data_from_forc_common(df_temp, variable, v_dict, volc=0, sun=0):  # pylint:disable=too-many-branches
     """
     Get or calculate forcing when dataframe with forcers
     variable and variable dictionary
@@ -107,10 +177,15 @@ def get_data_from_forc_common(df_temp, variable, v_dict, volc=0, sun=0):
     elif variable in ("Fgas", "GHG"):
         timeseries = np.zeros(len(years))
         for comp in fgas_list:
-            timeseries = timeseries + df_temp[comp].to_numpy()
-        if variable == "GHG":
-            for comp in ghg_not_fgas:
+            if comp in df_temp.columns:
                 timeseries = timeseries + df_temp[comp].to_numpy()
+        if variable == "GHG":
+            for comp in montreal_list:
+                if comp in df_temp.columns:
+                    timeseries = timeseries + df_temp[comp].to_numpy()
+            for comp in ghg_not_fgas:
+                if comp in df_temp.columns:
+                    timeseries = timeseries + df_temp[comp].to_numpy()
     elif variable == "Total_forcing+sunvolc":
         timeseries = df_temp["Total_forcing"].to_numpy()
         timeseries = timeseries + volc
@@ -199,10 +274,10 @@ class CSCMREADER:
             "RIB_glob",
             "anomalous_radiation",
         )
-        self.ohc_list = "OHCTOT"
+        self.ohc_list = ["OHCTOT", "OHC700"]
         self.indices = np.arange(nystart, nyend + 1)
 
-    def get_variable_timeseries(self, results, variable, sfilewriter):
+    def get_variable_timeseries(self, results, variable, sfilewriter):  # pylint:disable=too-many-branches
         """
         Get variable timeseries
         Connecting up to correct data dictionary to get data
@@ -213,33 +288,41 @@ class CSCMREADER:
             "NoUnit",
         )
         if "Concentration" in variable:
-            years, timeseries = get_data_from_conc(
-                results, self.variable_dict[variable]
-            )
-            unit = sfilewriter.concunits[
-                sfilewriter.components.index(self.variable_dict[variable])
-            ]
+            if variable in self.variable_dict:
+                years, timeseries = get_data_from_conc(
+                    results, self.variable_dict[variable]
+                )
+                unit = sfilewriter.concunits[
+                    sfilewriter.components.index(self.variable_dict[variable])
+                ]
 
         elif "Emissions" in variable:
-            years, timeseries = get_data_from_em(results, self.variable_dict[variable])
-            unit = sfilewriter.units[
-                sfilewriter.components.index(self.variable_dict[variable])
-            ]
+            if variable in self.variable_dict:
+                years, timeseries = get_data_from_em(
+                    results, self.variable_dict[variable]
+                )
+                unit = sfilewriter.units[
+                    sfilewriter.components.index(self.variable_dict[variable])
+                ]
 
         elif "Forcing" in variable:
-            years, timeseries = self.get_data_from_forc(
-                results, self.variable_dict[variable]
-            )
-            unit = "W/m^2"
+            if variable in self.variable_dict:
+                years, timeseries = self.get_data_from_forc(
+                    results, self.variable_dict[variable]
+                )
+                unit = "W/m^2"
 
         elif variable in carbon_cycle_outputs:
             if "carbon cycle" in results.keys():
                 years = self.indices
                 timeseries, unit = get_carbon_cycle_outputs(
-                    results["carbon cycle"], variable
+                    results["carbon cycle"], carbon_cycle_outputs[variable]
                 )
 
-        elif self.variable_dict[variable] in self.temp_list:
+        elif (
+            variable in self.variable_dict
+            and self.variable_dict[variable] in self.temp_list
+        ):
             timeseries = get_data_from_temp_or_rib(
                 results, self.variable_dict[variable]
             )
@@ -249,7 +332,10 @@ class CSCMREADER:
             else:
                 unit = "K"
 
-        elif self.variable_dict[variable] in self.ohc_list:
+        elif (
+            variable in self.variable_dict
+            and self.variable_dict[variable] in self.ohc_list
+        ):
             timeseries = get_data_from_ohc(results, self.variable_dict[variable])
             years = self.indices
             unit = "ZJ"

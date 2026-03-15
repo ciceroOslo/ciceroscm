@@ -225,18 +225,18 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     cscm_reader = reformat_cscm_results.CSCMREADER(nystart, nyend)
     print(cscm.results.keys())
     test_variables = [
-        "Ocean carbon flux",
+        "Carbon Flux|Ocean",
         "Airborne fraction CO2",
-        "Biosphere carbon pool",
+        "Carbon Pool|Land",
         "Emissions|CH4",
         "Atmospheric Concentrations|CO2",
         "Heat Content|Ocean",
-        "Effective Radiative Forcing|Aerosols|Direct Effect",
+        "Effective Radiative Forcing|Anthropogenic|Aerosol|Aerosol-radiation Interactions",
         "Effective Radiative Forcing|Anthropogenic",
         "Effective Radiative Forcing",
-        "Effective Radiative Forcing|F-Gases",
+        "Effective Radiative Forcing|Anthropogenic|F-Gases",
         "Effective Radiative Forcing|Greenhouse Gases",
-        "Effective Radiative Forcing|C6F14",
+        "Effective Radiative Forcing|Anthropogenic|F-Gases|PFC|C6F14",
         "Surface Air Ocean Blended Temperature Change",
         "Heat Uptake",
     ]
@@ -261,12 +261,11 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
             cscm.results, variable, sfilewriter
         )
         print(variable)
-        print(format_output[0])
         assert np.all(format_output[0] == np.arange(nystart, nyend + 1))
         assert len(format_output[0]) == nyend - nystart + 1
         assert format_output[2] == unit_list[i]
     empty_result = cscm_reader.get_variable_timeseries(
-        {}, "Ocean carbon flux", sfilewriter
+        {}, "Carbon Flux|Ocean", sfilewriter
     )
     assert len(empty_result[0]) == 0
     assert len(empty_result[1]) == 0
