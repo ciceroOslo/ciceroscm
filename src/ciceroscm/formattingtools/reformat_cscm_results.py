@@ -158,6 +158,7 @@ carbon_cycle_outputs = {
     "Airborne fraction CO2": "Airborne fraction CO2",
     "Carbon Pool|Land": "Biosphere carbon pool",
     "Carbon Pool|Ocean": "Ocean carbon pool",
+    "Net Flux to Atmosphere|CO2": "Net flux to atmosphere",
 }
 
 
@@ -253,6 +254,9 @@ def get_carbon_cycle_outputs(results, variable):
     elif variable.endswith("pool"):
         timeseries = np.cumsum(results[variable.replace("pool", "flux")].values)
         unit = "Pg C"
+    elif variable == "Net flux to atmosphere":
+        timeseries = -results["Biosphere carbon flux"] - results["Ocean carbon flux"]
+        unit = "Pg C / yr"
     else:
         timeseries = results[variable]
         unit = "Unitless"
