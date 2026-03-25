@@ -137,6 +137,11 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
         self.reset_co2_hold(pamset_carbon)
         self.precalc_r_functions()
+        self.temp_feedbacks = {
+            "fnpp_from_temp": 60.0,
+            "solubility_temp_feedback": 1,
+            "mixed_layer_temp_feedback": self.pamset["mixed_carbon"],
+        }
 
     def reset_co2_hold(self, pamset_carbon=None):
         """
@@ -285,6 +290,30 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                 idtm=self.pamset["idtm"],
             )
 
+    def _update_temp_feedbacks(self, dtemp=0):
+        """
+        Update the temperature feedback related variables in the carbon cycle model
+
+        This is a helper function to update the temperature feedback related variables
+        in the carbon cycle model, this is useful to avoid having to call the individual
+        feedback functions multiple times and to keep all temperature feedback related
+        updates in one place. This should be called whenever a temperature change is sent
+        to the carbon cycle model, for example from the main cscm run loop or from the
+        back calculations.
+
+        Parameters
+        ----------
+        dtemp : float
+            Temperature change in degrees K, default is 0.0 which means no change from pre-industrial conditions
+        """
+        self.temp_feedbacks["fnpp_from_temp"] = self.fnpp_from_temp(dtemp)
+        self.temp_feedbacks["solubility_temp_feedback"] = self.solubility_temp_feedback(
+            dtemp
+        )
+        self.temp_feedbacks["mixed_layer_temp_feedback"] = (
+            self.mixed_layer_temp_feedback(dtemp)
+        )
+
     def fnpp_from_temp(self, dtemp=0):
         """
         Temperature dependence function for fnpp
@@ -362,7 +391,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         baseline = 1 - self.pamset["ml_fracmax"] * sigmoid(0)
         return self.pamset["mixed_carbon"] * mixed_layer_temp / baseline
 
-    def _calculate_partial_pressure_mixed_layer(self, it, dtemp=0):
+    def _calculate_partial_pressure_mixed_layer(self, it):
         """
         Calculate ocean mixed layer partial pressure
 
@@ -393,7 +422,8 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             PPMKG_TO_UMOL_PER_VOL
             * GE_COEFF
             * dt
-            / self.mixed_layer_temp_feedback(dtemp)
+            # / self.mixed_layer_temp_feedback(dtemp)
+            / self.temp_feedbacks["mixed_layer_temp_feedback"]
             * (sumz + 0.5 * self.co2_hold["sCO2"][it])
         )
         # Partial pressure in ocean mixed layer,
@@ -406,7 +436,8 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         # This might be a natural place to look for/substitute with a
         # different / more general / temperature dependent formulation
         # which would be in line with the model philosophy and structure
-        return self.solubility_temp_feedback(dtemp) * (
+        return self.temp_feedbacks["solubility_temp_feedback"] * (
+            # return self.solubility_temp_feedback(dtemp) * (
             1.3021 * z_co2
             + 3.7929e-3 * (z_co2**2)
             + 9.1193e-6 * (z_co2**3)
@@ -415,7 +446,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         )
 
     def co2em2conc(
-        self, yr, em_co2_common, feedback_dict=None
+        self, yr, em_co2_common, feedback_dict=None, update_temp_feedbacks=True
     ):  # pylint: disable=too-many-locals
         """
         Calculate co2 concentrations from emissions
@@ -444,15 +475,19 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             dtemp = 0.0
         else:
             dtemp = feedback_dict.get("dtemp", 0.0)
+
+        if update_temp_feedbacks:
+            self._update_temp_feedbacks(dtemp)
         # TIMESTEP (YR)
         dt = 1.0 / self.pamset["idtm"]
 
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
-        fnpp = self.fnpp_from_temp(dtemp=dtemp)
+        fnpp = self.fnpp_from_temp(dtemp)
         # Monthloop:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
+            # print(f"step = {it}, dtemp = {dtemp}, mixed_layer_feedback = {self.temp_feedbacks['mixed_layer_temp_feedback']}, solubility_feedback = {self.temp_feedbacks['solubility_temp_feedback']}, from direct {self.mixed_layer_temp_feedback(dtemp)}, from direct solubility {self.solubility_temp_feedback(dtemp)}")
             sumf = 0.0
 
             # Net emissions, including biogenic fertilization effects
@@ -508,9 +543,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             # different / more general / temperature dependent formulation
             # which would be in line with the model philosophy and structure
             yco2_prev = self.co2_hold["yCO2"]
-            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(
-                it, dtemp=dtemp
-            )
+            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(it)
             # Partial pressure in the atmosphere, this comes from
             # solving the transfer equation between atmosphere and
             # ocean  to get the resulting atmosphere partial pressure
@@ -636,7 +669,11 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         return biosphere_carbon_flux
 
     def get_ocean_carbon_flux(
-        self, conc_run=False, co2_conc_series=None, dtemp_series=None
+        self,
+        conc_run=False,
+        co2_conc_series=None,
+        dtemp_series=None,
+        redo_back_calculation=True,
     ):
         """
         Get yearly timeseries of ocean carbon flux
@@ -654,7 +691,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             ocean carbon flux (Pg / C /yr)
         """
         # TODO: Don't redo this if back-calculation is already done...
-        if conc_run and co2_conc_series is not None:
+        if conc_run and co2_conc_series is not None and redo_back_calculation:
             self.back_calculate_emissions(
                 co2_conc_series, feedback_dict_series={"dtemp": dtemp_series}
             )
@@ -765,6 +802,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                     conc_run=conc_run,
                     co2_conc_series=conc_series,
                     dtemp_series=feedback_dict_series.get("dtemp", None),
+                    redo_back_calculation=False,  # Don't redo back calculation if we already did it to get emissions
                 ),
                 "Mixed layer depth": self.mixed_layer_temp_feedback(
                     feedback_dict_series.get("dtemp", None)
