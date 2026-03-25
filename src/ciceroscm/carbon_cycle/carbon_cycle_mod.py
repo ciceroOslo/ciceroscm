@@ -508,7 +508,9 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             # different / more general / temperature dependent formulation
             # which would be in line with the model philosophy and structure
             yco2_prev = self.co2_hold["yCO2"]
-            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(it)
+            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(
+                it, dtemp=dtemp
+            )
             # Partial pressure in the atmosphere, this comes from
             # solving the transfer equation between atmosphere and
             # ocean  to get the resulting atmosphere partial pressure

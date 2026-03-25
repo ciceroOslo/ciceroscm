@@ -19,6 +19,9 @@ The changes listed in this file are categorised as follows:
 ### Added
 - Deployment workflow to publish package to PyPI on manual trigger
 
+### Fixed
+- Temperature feedbacks were not passed to partial_pressure calculation in carbon cycle, meaning that the carbon cycle was not responding to temperature changes, this is now fixed and the carbon cycle will respond to temperature changes through the temperature feedbacks to ocean solubility and mixed layer depth.
+
 [Version 2.0.1]
 ---------------------------
 ### Added
