@@ -99,7 +99,10 @@ def run_ciceroscm_parallel(scendata, cfgs, output_vars, max_workers=4):
     if max_workers == 1:
         LOGGER.info("Running in serial as max_workers is set to 1")
         result = []
-        for run in runs:
+        print(len(runs))
+        print(runs)
+        for i, run in enumerate(runs):
+            print(f"Running serial run {i+1} of {len(runs)}")
             result.append(_execute_run(**run))
         return pd.concat(result)
 
@@ -186,7 +189,7 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
             over the run timeseries
         """
         runs = []
-        for pamset in cfgs:
+        for j, pamset in enumerate(cfgs):
             self.cscm._run(  # pylint: disable=protected-access
                 {"results_as_dict": True, "carbon_cycle_outputs": carbon_cycle_outputs},
                 pamset_udm=pamset.get("pamset_udm", None),
