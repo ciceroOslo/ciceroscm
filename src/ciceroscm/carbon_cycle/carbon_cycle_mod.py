@@ -409,8 +409,10 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         if it > 0:
             # Pulse response integrate carbon content in the mixed layer
             # Carbon decays into deep layer according to pulse response function
-            sumz = np.dot(
-                self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
+            sumz = np.einsum(
+                "i,i->",
+                self.co2_hold["sCO2"][: it - 1],
+                np.flip(self.r_functions[0, 1:it]),
             )
         else:
             sumz = 0.0
@@ -496,11 +498,10 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                     * np.log(self.co2_hold["xCO2"] / PREINDUSTRIAL_CO2_CONC)
                 )
                 # Decay from previous primary production
-                sumf = float(
-                    np.dot(
-                        self.co2_hold["dfnpp"][1:it],
-                        np.flip(self.r_functions[1, : it - 1]),
-                    )
+                sumf = np.einsum(
+                    "i,i->",
+                    self.co2_hold["dfnpp"][1:it],
+                    np.flip(self.r_functions[1, : it - 1]),
                 )
             # Total biospheric sink:
             ffer = self.co2_hold["dfnpp"][it] - dt * sumf
@@ -606,15 +607,12 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             timesteps = self.pamset["idtm"] * self.pamset["years_tot"]
             dfnpp = self.co2_hold["dfnpp"]
         sumf = np.zeros(timesteps)
-        sumf[1:] = [
-            float(
-                np.dot(
-                    dfnpp[1:it],
-                    np.flip(self.r_functions[1, : it - 1]),
-                )
-            )
-            for it in range(1, timesteps)
-        ]
+        sumf[1:] = np.array(
+            [
+                np.einsum("i,i->", dfnpp[1:it], np.flip(self.r_functions[1, : it - 1]))
+                for it in range(1, timesteps)
+            ]
+        )
         ffer = dfnpp - dt * sumf
         return ffer
 

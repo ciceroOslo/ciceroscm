@@ -135,3 +135,5 @@ dmypy.json
 
 # Vscode
 .vscode/
+
+scripts/*.txt
