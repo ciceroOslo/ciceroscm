@@ -138,7 +138,6 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         self.reset_co2_hold(pamset_carbon)
         self.precalc_r_functions()
         self.temp_feedbacks = {
-            "fnpp_from_temp": 60.0,
             "solubility_temp_feedback": 1,
             "mixed_layer_temp_feedback": self.pamset["mixed_carbon"],
         }
@@ -306,7 +305,6 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         dtemp : float
             Temperature change in degrees K, default is 0.0 which means no change from pre-industrial conditions
         """
-        self.temp_feedbacks["fnpp_from_temp"] = self.fnpp_from_temp(dtemp)
         self.temp_feedbacks["solubility_temp_feedback"] = self.solubility_temp_feedback(
             dtemp
         )
@@ -446,7 +444,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         )
 
     def co2em2conc(
-        self, yr, em_co2_common, feedback_dict=None, update_temp_feedbacks=True
+        self, yr, em_co2_common, feedback_dict=None
     ):  # pylint: disable=too-many-locals
         """
         Calculate co2 concentrations from emissions
@@ -476,8 +474,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         else:
             dtemp = feedback_dict.get("dtemp", 0.0)
 
-        if update_temp_feedbacks:
-            self._update_temp_feedbacks(dtemp)
+        self._update_temp_feedbacks(dtemp)
         # TIMESTEP (YR)
         dt = 1.0 / self.pamset["idtm"]
 
