@@ -446,9 +446,8 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                 + 1.2425e-10 * (z_co2**5)
             )
         else:
-            pco2_ocean = (
-                _PCO2_AT_MAX
-                + _DPCO2_DZ_AT_MAX * _Z_CO2_MAX * np.log(z_co2 / _Z_CO2_MAX)
+            pco2_ocean = _PCO2_AT_MAX + _DPCO2_DZ_AT_MAX * _Z_CO2_MAX * np.log(
+                z_co2 / _Z_CO2_MAX
             )
         return self.solubility_temp_feedback(dtemp) * pco2_ocean
 
