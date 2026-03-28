@@ -8,8 +8,6 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-logger = logging.getLogger(__name__)
-
 from .._utils import update_pam_if_numeric
 from ..pub_utils import _check_array_consistency
 from .carbon_cycle_abstract import AbstractCarbonCycleModel
@@ -29,6 +27,8 @@ from .rfuns import (
     rs_function2,
     rs_function_array,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def sigmoid_gen(eval_point, sigmoid_center, sigmoid_width):
