@@ -2,10 +2,13 @@
 Module to handle carbon cycle from CO2 emissions to concentrations
 """
 
+import logging
 from functools import partial
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 from .._utils import update_pam_if_numeric
 from ..pub_utils import _check_array_consistency
@@ -86,7 +89,33 @@ CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
     "w_threshold": 7,
     "solubility_sens": 0.02,
     "solubility_limit": 0.5,
+    "ml_depth_min": 10.0,
 }
+
+# Maximum z_co2 (µmol/kg DIC perturbation) for which the Mehrbach polynomial
+# approximation of ocean pCO2 is valid (~1320 ppm at T=18.2°C).
+_Z_CO2_MAX = 293.5
+
+# Beyond _Z_CO2_MAX the Mehrbach polynomial diverges (z^5 dominated), so
+# we switch to a logarithmic extrapolation that is C1-continuous (value
+# and first derivative match at the boundary):
+#   pCO2 = P0 + dP/dz * z_max * ln(z / z_max)
+# The derivative decays as 1/z, keeping the air-sea exchange feedback
+# numerically stable at high DIC concentrations.
+_PCO2_AT_MAX = (
+    1.3021 * _Z_CO2_MAX
+    + 3.7929e-3 * _Z_CO2_MAX**2
+    + 9.1193e-6 * _Z_CO2_MAX**3
+    + 1.488e-8 * _Z_CO2_MAX**4
+    + 1.2425e-10 * _Z_CO2_MAX**5
+)
+_DPCO2_DZ_AT_MAX = (
+    1.3021
+    + 2 * 3.7929e-3 * _Z_CO2_MAX
+    + 3 * 9.1193e-6 * _Z_CO2_MAX**2
+    + 4 * 1.488e-8 * _Z_CO2_MAX**3
+    + 5 * 1.2425e-10 * _Z_CO2_MAX**4
+)
 
 
 class CarbonCycleModel(AbstractCarbonCycleModel):
@@ -122,6 +151,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             - w_threshold: Width of land uptake decay (K),
             - solubility_sen: Sensitivity of solubility of CO2 in the ocean to temperature.
             - solubility_limit: Limit to temperature solubility gain with temperature.
+            - ml_depth_min: Minimum allowed mixed layer depth in metres (default 10.0).
             - rs_function: User defined mixed layer to deep ocean impulse response function
             - rb_function: User defined land carbon impulse response decay function
         """
@@ -360,7 +390,8 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         )
         mixed_layer_temp = 1 - self.pamset["ml_fracmax"] * sigmoid(dtemp)
         baseline = 1 - self.pamset["ml_fracmax"] * sigmoid(0)
-        return self.pamset["mixed_carbon"] * mixed_layer_temp / baseline
+        depth = self.pamset["mixed_carbon"] * mixed_layer_temp / baseline
+        return np.maximum(depth, self.pamset["ml_depth_min"])
 
     def _calculate_partial_pressure_mixed_layer(self, it, dtemp=0):
         """
@@ -406,13 +437,20 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         # This might be a natural place to look for/substitute with a
         # different / more general / temperature dependent formulation
         # which would be in line with the model philosophy and structure
-        return self.solubility_temp_feedback(dtemp) * (
-            1.3021 * z_co2
-            + 3.7929e-3 * (z_co2**2)
-            + 9.1193e-6 * (z_co2**3)
-            + 1.488e-8 * (z_co2**4)
-            + 1.2425e-10 * (z_co2**5)
-        )
+        if z_co2 <= _Z_CO2_MAX:
+            pco2_ocean = (
+                1.3021 * z_co2
+                + 3.7929e-3 * (z_co2**2)
+                + 9.1193e-6 * (z_co2**3)
+                + 1.488e-8 * (z_co2**4)
+                + 1.2425e-10 * (z_co2**5)
+            )
+        else:
+            pco2_ocean = (
+                _PCO2_AT_MAX
+                + _DPCO2_DZ_AT_MAX * _Z_CO2_MAX * np.log(z_co2 / _Z_CO2_MAX)
+            )
+        return self.solubility_temp_feedback(dtemp) * pco2_ocean
 
     def co2em2conc(
         self, yr, em_co2_common, feedback_dict=None
