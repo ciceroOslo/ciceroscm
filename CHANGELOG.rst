@@ -14,13 +14,21 @@ The changes listed in this file are categorised as follows:
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
 
-[Unreleased]
+[Version 2.0.2]
 ---------------------------
 ### Added
 - Deployment workflow to publish package to PyPI on manual trigger
+- Support that makes cscmparwrapper run serial if only one worker is specified.
 
 ### Fixed
 - Temperature feedbacks were not passed to partial_pressure calculation in carbon cycle, meaning that the carbon cycle was not responding to temperature changes, this is now fixed and the carbon cycle will respond to temperature changes through the temperature feedbacks to ocean solubility and mixed layer depth.
+
+### Changed
+- Integral convolution in carbon cycle changed from using np.dot to np.einsum which leads to a significant speed up for longer timeseries on linux machines.
+- Other carbon cycle speed ups storing variables and checking states to avoid unnecessary calculations (especially problematic in back-calculations).
+- There was an instability in the carbon cycle at very high CO2 concentrations for some parameter values (though it would emerge eventually for most choices). Now the mixed layer depth is prevented from going below 10 meters, and there is a polynomial validity cap for pCO2.
+- Formatting tools to use naming scheme and comply with RCMIP phase 3.
+- What was previously a logger warning for non-allowed change of nyend, nystart and emstart, is now an info to not produce infinite output in parallel runs
 
 [Version 2.0.1]
 ---------------------------
