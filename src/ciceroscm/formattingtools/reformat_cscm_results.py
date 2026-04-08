@@ -6,6 +6,8 @@ and returns data to append to SCMRun
 import numpy as np
 import pandas as pd
 
+from ..constants import DAY_YEAR, OCEAN_AREA, SEC_DAY
+
 openscm_to_cscm_dict = {
     "Surface Air Temperature Change": "dT_glob_air",
     # GMST
@@ -336,7 +338,8 @@ class CSCMREADER:
             )
             years = self.indices
             if self.variable_dict[variable] == "RIB_glob":
-                unit = "W/m^2"
+                timeseries = timeseries * OCEAN_AREA * SEC_DAY * DAY_YEAR / 1e21
+                unit = "ZJ / yr"
             else:
                 unit = "K"
 

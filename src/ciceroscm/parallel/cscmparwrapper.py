@@ -189,7 +189,8 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
             over the run timeseries
         """
         runs = []
-        for pamset in cfgs:
+        for j, pamset in enumerate(cfgs):  # pylint: disable=unused-variable
+            # print(f"Running config {j+1} of {len(cfgs)} with index {pamset['Index']}")
             self.cscm._run(  # pylint: disable=protected-access
                 {"results_as_dict": True, "carbon_cycle_outputs": carbon_cycle_outputs},
                 pamset_udm=pamset.get("pamset_udm", None),

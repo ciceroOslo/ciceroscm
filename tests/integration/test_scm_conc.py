@@ -205,11 +205,9 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     assert len(cscm.results["carbon cycle"]["Ocean carbon flux"]) == len(
         cscm.ce_handler.years
     )
-    carbon_sum = (
-        np.cumsum(
-            cscm.results["carbon cycle"]["Airborne fraction CO2"]
-            * cscm.results["emissions"]["CO2"]
-        )
+    carbon_sum = np.cumsum(
+        cscm.results["carbon cycle"]["Airborne fraction CO2"]
+        * cscm.results["emissions"]["CO2"]
         + cscm.results["carbon cycle"]["Biosphere carbon flux"].values
         + cscm.results["carbon cycle"]["Ocean carbon flux"].values
     )
@@ -219,7 +217,13 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     assert np.allclose(
         carbon_sum, np.cumsum(cscm.results["emissions"]["CO2"]), rtol=5e-1
     )
-
+    carbon_flux_sum = (
+        cscm.results["carbon cycle"]["Airborne fraction CO2"]
+        * cscm.results["emissions"]["CO2"]
+        + cscm.results["carbon cycle"]["Biosphere carbon flux"].values
+        + cscm.results["carbon cycle"]["Ocean carbon flux"].values
+    )
+    assert np.allclose(carbon_flux_sum, cscm.results["emissions"]["CO2"], rtol=5e-1)
     # Block for testing reformatting of outputs
     sfilewriter = reformat_inputdata_to_cscm_format.COMMONSFILEWRITER(gaspamfile)
     cscm_reader = reformat_cscm_results.CSCMREADER(nystart, nyend)
@@ -229,6 +233,7 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "Airborne fraction CO2",
         "Carbon Pool|Land",
         "Emissions|CH4",
+        "Emissions|CO2",
         "Atmospheric Concentrations|CO2",
         "Heat Content|Ocean",
         "Effective Radiative Forcing|Anthropogenic|Aerosol|Aerosol-radiation Interactions",
@@ -245,6 +250,7 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "Unitless",
         "Pg C",
         "TgCH4 / yr",
+        "PgC / yr",
         "ppm",
         "ZJ",
         "W/m^2",
@@ -254,7 +260,7 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "W/m^2",
         "W/m^2",
         "K",
-        "W/m^2",
+        "ZJ / yr",
     ]
     for i, variable in enumerate(test_variables):
         format_output = cscm_reader.get_variable_timeseries(
