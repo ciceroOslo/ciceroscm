@@ -42,6 +42,7 @@ openscm_to_cscm_dict = {
     "Atmospheric Concentrations|CO2": "CO2",
     "Atmospheric Concentrations|CH4": "CH4",
     "Atmospheric Concentrations|N2O": "N2O",
+    "Atmospheric Concentrations|Ozone|Tropospheric'": "TROP_O3",
 }
 forc_sums = ["Aerosols", "Aerosols|Direct Effect"]
 fgas_list = [
