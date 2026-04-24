@@ -91,7 +91,10 @@ def test_back_calculate_emissions(test_data_dir):
     conc_co2_series = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
     dtemp_series = cscm.results["dT_glob"]
-    ccmod = carbon_cycle_mod.CarbonCycleModel({"nyend": 2100, "nystart": 1750})
+    ccmod = carbon_cycle_mod.CarbonCycleModel(
+        {"nyend": 2100, "nystart": 1750},
+        pamset_carbon={"preindustrial_co2_conc": cscm.ce_handler.conc_in["CO2"][1750]},
+    )
     em_back_calculated = ccmod.back_calculate_emissions(
         conc_co2_series, feedback_dict_series={"dtemp": dtemp_series}
     )
@@ -123,14 +126,26 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
     emis_series = cscm.results["emissions"]["CO2"].values
     temp_timseries = cscm.results["dT_glob"]
     print(cscm.ce_handler.carbon_cycle.pamset)
+    print(cscm.ce_handler.conc_in["CO2"][1750])
+    print(conc_co2_series_all_die[0])
 
     ccmod = carbon_cycle_mod.CarbonCycleModel(
         {"nyend": 2100, "nystart": 1750},
-        pamset_carbon={"t_threshold": 2, "w_threshold": 2},
+        pamset_carbon={
+            "t_threshold": 2,
+            "w_threshold": 2,
+            "preindustrial_co2_conc": cscm.ce_handler.conc_in["CO2"][1750],
+        },
     )
+    print(ccmod.pamset)
     em_back_calculated = ccmod.back_calculate_emissions(
         conc_co2_series_all_die, feedback_dict_series={"dtemp": temp_timseries}
     )
+    print(em_back_calculated[:5])
+    print(emis_series[:5])
+    print(conc_co2_series_all_die[:5])
+    print(conc_co2_series_default[:5])
+    print(temp_timseries[:5])
     assert not np.allclose(conc_co2_series_all_die, conc_co2_series_default)
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
     # TODO: Test carbon cycle outputs with feedbacks
@@ -153,7 +168,12 @@ def test_carbon_pools(test_data_dir):
     bioflux = cscm.ce_handler.carbon_cycle.get_biosphere_carbon_flux()
     oceanflux = cscm.ce_handler.carbon_cycle.get_ocean_carbon_flux()
     atmospheric_flux = (
-        reverse_cumsum((conc_co2_series - carbon_cycle_mod.PREINDUSTRIAL_CO2_CONC))
+        reverse_cumsum(
+            (
+                conc_co2_series
+                - cscm.ce_handler.carbon_cycle.pamset["preindustrial_co2_conc"]
+            )
+        )
         * carbon_cycle_mod.PPM_CO2_TO_PG_C
     )
     summed_fluxes = atmospheric_flux + bioflux + oceanflux

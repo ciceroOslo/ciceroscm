@@ -28,6 +28,10 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
             "idtm": 24,
         },
     )
+    assert (
+        cscm.ce_handler.carbon_cycle.pamset["preindustrial_co2_conc"]
+        == cscm.ce_handler.conc_in["CO2"][1900]
+    )
     cscm._run({"results_as_dict": True, "carbon_cycle_outputs": True})
     default_results = {
         "Biosphere carbon flux": cscm.results["carbon cycle"][
