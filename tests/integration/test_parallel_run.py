@@ -68,12 +68,12 @@ def test_cscmparwrapper(test_data_dir):
         "Effective Radiative Forcing|Greenhouse Gases",
         "Emissions|CH4",
         "Atmospheric Concentrations|N2O",
-        "Ocean carbon flux",
+        "Carbon Flux|Land",
         "Airborne fraction CO2",
-        "Biosphere carbon pool",
+        "Carbon Flux|Ocean",
+        "Invalid Variable",
     ]
     results = parwrapper.run_over_cfgs(cfgs, output_variables)
-    print(results)
     assert set(results["variable"].unique()) == set(
         [
             "Heat Content|Ocean",
@@ -82,9 +82,9 @@ def test_cscmparwrapper(test_data_dir):
             "Effective Radiative Forcing|Greenhouse Gases",
             "Emissions|CH4",
             "Atmospheric Concentrations|N2O",
-            "Ocean carbon flux",
+            "Carbon Flux|Land",
             "Airborne fraction CO2",
-            "Biosphere carbon pool",
+            "Carbon Flux|Ocean",
         ]
     )
     assert set(results["scenario"].unique()) == set(["ssp245"])
@@ -553,14 +553,14 @@ def test_parallel_conc_run(test_data_dir):
         "Emissions|CO2",
         "Heat Content|Ocean",
         "Atmospheric Concentrations|CO2",
-        "Effective Radiative Forcing|CO2",
-        "Effective Radiative Forcing|N2O",
-        "Effective Radiative Forcing|CH4",
-        "Effective Radiative Forcing|Aerosols",
-        "Effective Radiative Forcing|F-Gases",
-        "Biosphere carbon flux",
+        "Effective Radiative Forcing|Anthropogenic|CO2",
+        "Effective Radiative Forcing|Anthropogenic|N2O",
+        "Effective Radiative Forcing|Anthropogenic|CH4",
+        "Effective Radiative Forcing|Anthropogenic|Aerosol",
+        "Effective Radiative Forcing|Anthropogenic|F-Gases",
+        "Carbon Flux|Land",
         "Airborne fraction CO2",
-        "Ocean carbon flux",
+        "Carbon Flux|Ocean",
     ]
 
     results = run_ciceroscm_parallel(scenarios, cfgs, output_vars)

@@ -2,6 +2,7 @@
 Module to handle carbon cycle from CO2 emissions to concentrations
 """
 
+import logging
 from functools import partial
 
 import numpy as np
@@ -26,6 +27,8 @@ from .rfuns import (
     rs_function2,
     rs_function_array,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def sigmoid_gen(eval_point, sigmoid_center, sigmoid_width):
@@ -90,6 +93,31 @@ CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
     "preindustrial_co2_conc": PREINDUSTRIAL_CO2_CONC,
 }
 
+# Maximum z_co2 (µmol/kg DIC perturbation) for which the Mehrbach polynomial
+# approximation of ocean pCO2 is valid (~1320 ppm at T=18.2°C).
+_Z_CO2_MAX = 293.5
+
+# Beyond _Z_CO2_MAX the Mehrbach polynomial diverges (z^5 dominated), so
+# we switch to a logarithmic extrapolation that is C1-continuous (value
+# and first derivative match at the boundary):
+#   pCO2 = P0 + dP/dz * z_max * ln(z / z_max)
+# The derivative decays as 1/z, keeping the air-sea exchange feedback
+# numerically stable at high DIC concentrations.
+_PCO2_AT_MAX = (
+    1.3021 * _Z_CO2_MAX
+    + 3.7929e-3 * _Z_CO2_MAX**2
+    + 9.1193e-6 * _Z_CO2_MAX**3
+    + 1.488e-8 * _Z_CO2_MAX**4
+    + 1.2425e-10 * _Z_CO2_MAX**5
+)
+_DPCO2_DZ_AT_MAX = (
+    1.3021
+    + 2 * 3.7929e-3 * _Z_CO2_MAX
+    + 3 * 9.1193e-6 * _Z_CO2_MAX**2
+    + 4 * 1.488e-8 * _Z_CO2_MAX**3
+    + 5 * 1.2425e-10 * _Z_CO2_MAX**4
+)
+
 
 class CarbonCycleModel(AbstractCarbonCycleModel):
     """
@@ -124,6 +152,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             - w_threshold: Width of land uptake decay (K),
             - solubility_sen: Sensitivity of solubility of CO2 in the ocean to temperature.
             - solubility_limit: Limit to temperature solubility gain with temperature.
+            - ml_depth_min: Minimum allowed mixed layer depth in metres (default 10.0).
             - rs_function: User defined mixed layer to deep ocean impulse response function
             - rb_function: User defined land carbon impulse response decay function
         """
@@ -139,6 +168,10 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         self.pamset["years_tot"] = pamset["nyend"] - pamset["nystart"] + 1
         self.reset_co2_hold(pamset_carbon)
         self.precalc_r_functions()
+        self.temp_feedbacks = {
+            "solubility_temp_feedback": 1,
+            "mixed_layer_temp_feedback": self.pamset["mixed_carbon"],
+        }
 
     def reset_co2_hold(self, pamset_carbon=None):
         """
@@ -290,6 +323,29 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                 idtm=self.pamset["idtm"],
             )
 
+    def _update_temp_feedbacks(self, dtemp=0):
+        """
+        Update the temperature feedback related variables in the carbon cycle model
+
+        This is a helper function to update the temperature feedback related variables
+        in the carbon cycle model, this is useful to avoid having to call the individual
+        feedback functions multiple times and to keep all temperature feedback related
+        updates in one place. This should be called whenever a temperature change is sent
+        to the carbon cycle model, for example from the main cscm run loop or from the
+        back calculations.
+
+        Parameters
+        ----------
+        dtemp : float
+            Temperature change in degrees K, default is 0.0 which means no change from pre-industrial conditions
+        """
+        self.temp_feedbacks["solubility_temp_feedback"] = self.solubility_temp_feedback(
+            dtemp
+        )
+        self.temp_feedbacks["mixed_layer_temp_feedback"] = (
+            self.mixed_layer_temp_feedback(dtemp)
+        )
+
     def fnpp_from_temp(self, dtemp=0):
         """
         Temperature dependence function for fnpp
@@ -365,9 +421,10 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         )
         mixed_layer_temp = 1 - self.pamset["ml_fracmax"] * sigmoid(dtemp)
         baseline = 1 - self.pamset["ml_fracmax"] * sigmoid(0)
-        return self.pamset["mixed_carbon"] * mixed_layer_temp / baseline
+        depth = self.pamset["mixed_carbon"] * mixed_layer_temp / baseline
+        return np.maximum(depth, self.pamset["ml_depth_min"])
 
-    def _calculate_partial_pressure_mixed_layer(self, it, dtemp=0):
+    def _calculate_partial_pressure_mixed_layer(self, it):
         """
         Calculate ocean mixed layer partial pressure
 
@@ -387,8 +444,10 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         if it > 0:
             # Pulse response integrate carbon content in the mixed layer
             # Carbon decays into deep layer according to pulse response function
-            sumz = np.dot(
-                self.co2_hold["sCO2"][: it - 1], np.flip(self.r_functions[0, 1:it])
+            sumz = np.einsum(
+                "i,i->",
+                self.co2_hold["sCO2"][: it - 1],
+                np.flip(self.r_functions[0, 1:it]),
             )
         else:
             sumz = 0.0
@@ -398,7 +457,8 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             PPMKG_TO_UMOL_PER_VOL
             * GE_COEFF
             * dt
-            / self.mixed_layer_temp_feedback(dtemp)
+            # / self.mixed_layer_temp_feedback(dtemp)
+            / self.temp_feedbacks["mixed_layer_temp_feedback"]
             * (sumz + 0.5 * self.co2_hold["sCO2"][it])
         )
         # Partial pressure in ocean mixed layer,
@@ -411,13 +471,19 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         # This might be a natural place to look for/substitute with a
         # different / more general / temperature dependent formulation
         # which would be in line with the model philosophy and structure
-        return self.solubility_temp_feedback(dtemp) * (
-            1.3021 * z_co2
-            + 3.7929e-3 * (z_co2**2)
-            + 9.1193e-6 * (z_co2**3)
-            + 1.488e-8 * (z_co2**4)
-            + 1.2425e-10 * (z_co2**5)
-        )
+        if z_co2 <= _Z_CO2_MAX:
+            pco2_ocean = (
+                1.3021 * z_co2
+                + 3.7929e-3 * (z_co2**2)
+                + 9.1193e-6 * (z_co2**3)
+                + 1.488e-8 * (z_co2**4)
+                + 1.2425e-10 * (z_co2**5)
+            )
+        else:
+            pco2_ocean = _PCO2_AT_MAX + _DPCO2_DZ_AT_MAX * _Z_CO2_MAX * np.log(
+                z_co2 / _Z_CO2_MAX
+            )
+        return self.temp_feedbacks["solubility_temp_feedback"] * pco2_ocean
 
     def co2em2conc(
         self, yr, em_co2_common, feedback_dict=None
@@ -449,15 +515,18 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             dtemp = 0.0
         else:
             dtemp = feedback_dict.get("dtemp", 0.0)
+
+        self._update_temp_feedbacks(dtemp)
         # TIMESTEP (YR)
         dt = 1.0 / self.pamset["idtm"]
 
         cc1 = dt * OCEAN_AREA * GE_COEFF / (1 + dt * OCEAN_AREA * GE_COEFF / 2.0)
         yr_ix = yr - self.pamset["nystart"]
-        fnpp = self.fnpp_from_temp(dtemp=dtemp)
+        fnpp = self.fnpp_from_temp(dtemp)
         # Monthloop:
         for i in range(self.pamset["idtm"]):
             it = yr_ix * self.pamset["idtm"] + i
+            # print(f"step = {it}, dtemp = {dtemp}, mixed_layer_feedback = {self.temp_feedbacks['mixed_layer_temp_feedback']}, solubility_feedback = {self.temp_feedbacks['solubility_temp_feedback']}, from direct {self.mixed_layer_temp_feedback(dtemp)}, from direct solubility {self.solubility_temp_feedback(dtemp)}")
             sumf = 0.0
 
             # Net emissions, including biogenic fertilization effects
@@ -471,11 +540,10 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                     )
                 )
                 # Decay from previous primary production
-                sumf = float(
-                    np.dot(
-                        self.co2_hold["dfnpp"][1:it],
-                        np.flip(self.r_functions[1, : it - 1]),
-                    )
+                sumf = np.einsum(
+                    "i,i->",
+                    self.co2_hold["dfnpp"][1:it],
+                    np.flip(self.r_functions[1, : it - 1]),
                 )
             # Total biospheric sink:
             ffer = self.co2_hold["dfnpp"][it] - dt * sumf
@@ -515,9 +583,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             # different / more general / temperature dependent formulation
             # which would be in line with the model philosophy and structure
             yco2_prev = self.co2_hold["yCO2"]
-            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(
-                it, dtemp=dtemp
-            )
+            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(it)
             # Partial pressure in the atmosphere, this comes from
             # solving the transfer equation between atmosphere and
             # ocean  to get the resulting atmosphere partial pressure
@@ -583,15 +649,12 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             timesteps = self.pamset["idtm"] * self.pamset["years_tot"]
             dfnpp = self.co2_hold["dfnpp"]
         sumf = np.zeros(timesteps)
-        sumf[1:] = [
-            float(
-                np.dot(
-                    dfnpp[1:it],
-                    np.flip(self.r_functions[1, : it - 1]),
-                )
-            )
-            for it in range(1, timesteps)
-        ]
+        sumf[1:] = np.array(
+            [
+                np.einsum("i,i->", dfnpp[1:it], np.flip(self.r_functions[1, : it - 1]))
+                for it in range(1, timesteps)
+            ]
+        )
         ffer = dfnpp - dt * sumf
         return ffer
 
@@ -643,7 +706,11 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         return biosphere_carbon_flux
 
     def get_ocean_carbon_flux(
-        self, conc_run=False, co2_conc_series=None, dtemp_series=None
+        self,
+        conc_run=False,
+        co2_conc_series=None,
+        dtemp_series=None,
+        redo_back_calculation=True,
     ):
         """
         Get yearly timeseries of ocean carbon flux
@@ -661,7 +728,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             ocean carbon flux (Pg / C /yr)
         """
         # TODO: Don't redo this if back-calculation is already done...
-        if conc_run and co2_conc_series is not None:
+        if conc_run and co2_conc_series is not None and redo_back_calculation:
             self.back_calculate_emissions(
                 co2_conc_series, feedback_dict_series={"dtemp": dtemp_series}
             )
@@ -772,6 +839,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                     conc_run=conc_run,
                     co2_conc_series=conc_series,
                     dtemp_series=feedback_dict_series.get("dtemp", None),
+                    redo_back_calculation=False,  # Don't redo back calculation if we already did it to get emissions
                 ),
                 "Mixed layer depth": self.mixed_layer_temp_feedback(
                     feedback_dict_series.get("dtemp", None)

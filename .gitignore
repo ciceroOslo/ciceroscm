@@ -11,6 +11,9 @@ __pycache__/
 # C extensions
 *.so
 
+#  vscode
+.vscode/
+
 # Distribution / packaging
 .Python
 build/
@@ -135,3 +138,5 @@ dmypy.json
 
 # Vscode
 .vscode/
+
+scripts/*.txt

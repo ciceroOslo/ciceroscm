@@ -205,11 +205,9 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     assert len(cscm.results["carbon cycle"]["Ocean carbon flux"]) == len(
         cscm.ce_handler.years
     )
-    carbon_sum = (
-        np.cumsum(
-            cscm.results["carbon cycle"]["Airborne fraction CO2"]
-            * cscm.results["emissions"]["CO2"]
-        )
+    carbon_sum = np.cumsum(
+        cscm.results["carbon cycle"]["Airborne fraction CO2"]
+        * cscm.results["emissions"]["CO2"]
         + cscm.results["carbon cycle"]["Biosphere carbon flux"].values
         + cscm.results["carbon cycle"]["Ocean carbon flux"].values
     )
@@ -217,24 +215,31 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
     assert np.allclose(
         carbon_sum, np.cumsum(cscm.results["emissions"]["CO2"]), rtol=5e-1
     )
-
+    carbon_flux_sum = (
+        cscm.results["carbon cycle"]["Airborne fraction CO2"]
+        * cscm.results["emissions"]["CO2"]
+        + cscm.results["carbon cycle"]["Biosphere carbon flux"].values
+        + cscm.results["carbon cycle"]["Ocean carbon flux"].values
+    )
+    assert np.allclose(carbon_flux_sum, cscm.results["emissions"]["CO2"], rtol=5e-1)
     # Block for testing reformatting of outputs
     sfilewriter = reformat_inputdata_to_cscm_format.COMMONSFILEWRITER(gaspamfile)
     cscm_reader = reformat_cscm_results.CSCMREADER(nystart, nyend)
     print(cscm.results.keys())
     test_variables = [
-        "Ocean carbon flux",
+        "Carbon Flux|Ocean",
         "Airborne fraction CO2",
-        "Biosphere carbon pool",
+        "Carbon Pool|Land",
         "Emissions|CH4",
+        "Emissions|CO2",
         "Atmospheric Concentrations|CO2",
         "Heat Content|Ocean",
-        "Effective Radiative Forcing|Aerosols|Direct Effect",
+        "Effective Radiative Forcing|Anthropogenic|Aerosol|Aerosol-radiation Interactions",
         "Effective Radiative Forcing|Anthropogenic",
         "Effective Radiative Forcing",
-        "Effective Radiative Forcing|F-Gases",
+        "Effective Radiative Forcing|Anthropogenic|F-Gases",
         "Effective Radiative Forcing|Greenhouse Gases",
-        "Effective Radiative Forcing|C6F14",
+        "Effective Radiative Forcing|Anthropogenic|F-Gases|PFC|C6F14",
         "Surface Air Ocean Blended Temperature Change",
         "Heat Uptake",
     ]
@@ -243,6 +248,7 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "Unitless",
         "Pg C",
         "TgCH4 / yr",
+        "PgC / yr",
         "ppm",
         "ZJ",
         "W/m^2",
@@ -252,19 +258,18 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "W/m^2",
         "W/m^2",
         "K",
-        "W/m^2",
+        "ZJ / yr",
     ]
     for i, variable in enumerate(test_variables):
         format_output = cscm_reader.get_variable_timeseries(
             cscm.results, variable, sfilewriter
         )
         print(variable)
-        print(format_output[0])
         assert np.all(format_output[0] == np.arange(nystart, nyend + 1))
         assert len(format_output[0]) == nyend - nystart + 1
         assert format_output[2] == unit_list[i]
     empty_result = cscm_reader.get_variable_timeseries(
-        {}, "Ocean carbon flux", sfilewriter
+        {}, "Carbon Flux|Ocean", sfilewriter
     )
     assert len(empty_result[0]) == 0
     assert len(empty_result[1]) == 0

@@ -96,6 +96,16 @@ def run_ciceroscm_parallel(scendata, cfgs, output_vars, max_workers=4):
                 [cfgs[i : i + batch_size] for i in range(0, len(cfgs), batch_size)],
             )
         ]
+    if max_workers == 1:
+        LOGGER.info("Running in serial as max_workers is set to 1")
+        result = []
+        print(len(runs))
+        print(runs)
+        for i, run in enumerate(runs):
+            print(f"Running serial run {i+1} of {len(runs)}")
+            result.append(_execute_run(**run))
+        return pd.concat(result)
+
     LOGGER.info("Running in parallel with up to %d workers", max_workers)
 
     with ProcessPoolExecutor(max_workers=max_workers) as pool:
@@ -179,7 +189,8 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
             over the run timeseries
         """
         runs = []
-        for pamset in cfgs:
+        for j, pamset in enumerate(cfgs):  # pylint: disable=unused-variable
+            # print(f"Running config {j+1} of {len(cfgs)} with index {pamset['Index']}")
             self.cscm._run(  # pylint: disable=protected-access
                 {"results_as_dict": True, "carbon_cycle_outputs": carbon_cycle_outputs},
                 pamset_udm=pamset.get("pamset_udm", None),
@@ -196,6 +207,8 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
                 )
                 if isinstance(years, pd.DataFrame) and years.empty:  # pragma: no cover
                     continue  # pragma: no cover
+                if unit == "NoUnit":
+                    continue
                 # TODO: change CICERO-SCM-PY to include version number and/or
                 # thermal model and carbon cycle used from the cscm instance
                 data = [

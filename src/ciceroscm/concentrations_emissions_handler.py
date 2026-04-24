@@ -104,7 +104,7 @@ def check_pamset_consistency(pamset_old, pamset_new):
     pams_cant_change = ["idtm", "nystart", "nyend", "emstart", "conc_run"]
     for pam in pams_cant_change:
         if pam in pamset_new and pamset_new[pam] != pamset_old[pam]:
-            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
+            LOGGER.info(  # pylint: disable=logging-fstring-interpolation
                 f"{pam} can not be changed for same instance of ConcentrationsEmisssionsHandler. Resetting with old value {pamset_old[pam]}. If you want to run with a different value, please create a separate instance",
             )
             pamset_new[pam] = pamset_old[pam]
