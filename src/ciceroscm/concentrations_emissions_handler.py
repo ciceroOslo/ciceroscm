@@ -1048,9 +1048,7 @@ class ConcentrationsEmissionsHandler:
                         "Airborne fraction CO2": calculate_airborne_fraction(
                             em_series,
                             conc_series,
-                            preindustrial_co2_conc=self.carbon_cycle.pamset[
-                                "preindustrial_co2_conc"
-                            ],
+                            preindustrial_co2_conc=self.carbon_cycle.get_preindustrial_co2_conc(),
                         )
                     },
                     index=self.years,
@@ -1059,9 +1057,7 @@ class ConcentrationsEmissionsHandler:
                 df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
                     em_series,
                     conc_series,
-                    preindustrial_co2_conc=self.carbon_cycle.pamset[
-                        "preindustrial_co2_conc"
-                    ],
+                    preindustrial_co2_conc=self.carbon_cycle.get_preindustrial_co2_conc(),
                 )
         return df_carbon
 

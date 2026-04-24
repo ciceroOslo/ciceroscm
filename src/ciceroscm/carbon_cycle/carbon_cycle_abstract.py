@@ -115,6 +115,22 @@ class AbstractCarbonCycleModel(ABC):
         """
         return {}
 
+    def get_preindustrial_co2_conc(self):
+        """
+        Get the preindustrial co2 concentration value to use in calculations
+
+        This is needed to calculate the airborne fraction, as this is calculated as the
+        change in concentration since preindustrial times as defined by the run.
+
+        Returns
+        -------
+        float
+            Preindustrial CO2 concentration in ppm
+        """
+        if "preindustrial_co2_conc" not in self.pamset:
+            return PREINDUSTRIAL_CO2_CONC
+        return self.pamset["preindustrial_co2_conc"]
+
     def _set_co2_hold(self, hold_dict=None):
         """
         Set state variables for the carbon cycle from hold_dict dictionary
