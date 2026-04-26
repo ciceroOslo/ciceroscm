@@ -588,7 +588,9 @@ class ConcentrationsEmissionsHandler:
             q = ref_emission_species[tracer][1] * em_change
         return q
 
-    def conc2forc(self, yr, rf_luc, rf_sun):  # pylint: disable=too-many-branches
+    def conc2forc(
+        self, yr, rf_luc, rf_sun
+    ):  # pylint: disable=too-many-branches, too-many-locals
         """
         Calculate forcing from concentrations
 

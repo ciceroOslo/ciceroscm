@@ -95,7 +95,7 @@ class TwoLayerOceanModel(
     # No derived quantities depend on lambda, so no refresh is needed.
     # ------------------------------------------------------------------
     def get_feedback_gregory(self):
-        """Current feedback coefficient (W m^-2 K^-1)."""
+        """Return the current feedback coefficient (W m^-2 K^-1)."""
         return self.pamset["lambda"]
 
     def set_feedback_gregory(self, lambda_eff):

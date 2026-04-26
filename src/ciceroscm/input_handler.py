@@ -188,13 +188,14 @@ def read_forc(forc_file):
         # falls back to w_aero = 0 (no pattern-effect modulation).
         if "w_aero" not in df_forc.columns:
             aero_cols = [c for c in AEROSOL_TRACERS if c in df_forc.columns]
-            agent_cols = [c for c in df_forc.columns
-                          if c not in ("total", "FORC_NH", "FORC_SH")]
+            agent_cols = [
+                c for c in df_forc.columns if c not in ("total", "FORC_NH", "FORC_SH")
+            ]
             if aero_cols and agent_cols:
                 f_aero_mag = df_forc[aero_cols].abs().sum(axis=1)
                 f_abs_total = df_forc[agent_cols].abs().sum(axis=1)
-                df_forc["w_aero"] = (
-                    (f_aero_mag / f_abs_total).where(f_abs_total > 0, 0.0)
+                df_forc["w_aero"] = (f_aero_mag / f_abs_total).where(
+                    f_abs_total > 0, 0.0
                 )
     return df_forc
 

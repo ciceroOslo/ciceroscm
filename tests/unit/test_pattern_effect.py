@@ -22,7 +22,6 @@ from ciceroscm.thermal_model.upwelling_diffusion_model import (
     UpwellingDiffusionModel,
 )
 
-
 # ---------------------------------------------------------------------------
 # Capability protocol
 # ---------------------------------------------------------------------------
@@ -85,26 +84,18 @@ def test_udm_set_feedback_gregory_refreshes_derived_quantities():
 
     assert udm.pamset["rlamda"] == pytest.approx(new_feedback)
     expected_fnx = (
-        new_feedback
-        + udm.pamset["foan"] * udm.pamset["rlamdo"]
-        + udm.pamset["ebbeta"]
+        new_feedback + udm.pamset["foan"] * udm.pamset["rlamdo"] + udm.pamset["ebbeta"]
     )
     expected_fsx = (
-        new_feedback
-        + udm.pamset["foas"] * udm.pamset["rlamdo"]
-        + udm.pamset["ebbeta"]
+        new_feedback + udm.pamset["foas"] * udm.pamset["rlamdo"] + udm.pamset["ebbeta"]
     )
     assert udm.pamset["fnx"] == pytest.approx(expected_fnx)
     assert udm.pamset["fsx"] == pytest.approx(expected_fsx)
 
     # gamn/gams are recomputed by setup_ebud and use rlamda directly.
     blm = udm.pamset["ebbeta"] / udm.pamset["rlamdo"]
-    expected_gamn = (
-        udm.pamset["foan"] + new_feedback / udm.pamset["rlamdo"] + blm
-    )
-    expected_gams = (
-        udm.pamset["foas"] + new_feedback / udm.pamset["rlamdo"] + blm
-    )
+    expected_gamn = udm.pamset["foan"] + new_feedback / udm.pamset["rlamdo"] + blm
+    expected_gams = udm.pamset["foas"] + new_feedback / udm.pamset["rlamdo"] + blm
     assert udm.gamn == pytest.approx(expected_gamn)
     assert udm.gams == pytest.approx(expected_gams)
 

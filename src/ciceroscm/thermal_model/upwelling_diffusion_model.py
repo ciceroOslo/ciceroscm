@@ -179,6 +179,8 @@ class UpwellingDiffusionModel(
             "dtemp": 0.0,
         }
 
+        self.dtempprev = 0.0
+
     # ------------------------------------------------------------------
     # Pattern-mediated feedback (Tier 3) capability.
     # ``pamset["lambda"]`` is the climate-sensitivity parameter (K per
@@ -187,7 +189,7 @@ class UpwellingDiffusionModel(
     # Gregory units, so the conversion lives here.
     # ------------------------------------------------------------------
     def get_feedback_gregory(self):
-        """Current feedback coefficient (W m^-2 K^-1)."""
+        """Return the current feedback coefficient (W m^-2 K^-1)."""
         return self.pamset["rlamda"]
 
     def set_feedback_gregory(self, lambda_eff):
@@ -211,8 +213,6 @@ class UpwellingDiffusionModel(
             + self.pamset["ebbeta"]
         )
         self.setup_ebud()
-
-        self.dtempprev = 0.0
 
     def get_gam_and_fro_factor_ns(self, northern_hemisphere):
         """

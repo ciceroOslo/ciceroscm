@@ -235,7 +235,7 @@ class CICEROSCM:
         pamset_emiconc=None,
         pamset_carbon=None,
         make_plot=False,
-    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
+    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, too-many-branches
         """
         Run CICEROSCM
 
@@ -312,9 +312,7 @@ class CICEROSCM:
 
             # Apply pattern-mediated feedback for this year, if requested.
             if delta_lambda_aero != 0:
-                udm.set_feedback_gregory(
-                    lambda_0_gregory + delta_lambda_aero * w_aero
-                )
+                udm.set_feedback_gregory(lambda_0_gregory + delta_lambda_aero * w_aero)
 
             values = udm.energy_budget(
                 fn,

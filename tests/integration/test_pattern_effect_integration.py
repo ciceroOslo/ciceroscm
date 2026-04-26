@@ -26,9 +26,7 @@ def _build_cscm(test_data_dir):
             "nyend": 2100,
             "nystart": 1750,
             "emstart": 1850,
-            "concentrations_file": os.path.join(
-                test_data_dir, "ssp245_conc_RCMIP.txt"
-            ),
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
