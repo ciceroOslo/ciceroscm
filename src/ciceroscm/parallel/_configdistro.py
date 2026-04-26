@@ -19,16 +19,21 @@ prior_flat = {
     "cpi": [0.161, 0.569],
     "W": [0.55, 2.55],
     "beto": [0, 7],
-    "lambda": [2 / 3.71, 5 / 3.71],
+    # Climate-sensitivity parameter (K per W m^-2); inverse of the equilibrium
+    # Gregory feedback. Bounds bracket IPCC AR6 (Forster et al. 2021) long-term
+    # feedback 5-95% range [0.51, 1.81] W m^-2 K^-1 inverted to lambda
+    # [0.55, 1.96], with ~10-20% padding. See
+    # notebooks/CSCM_pattern_effect_observational_constraint.ipynb.
+    "lambda": [1.85/3.71, 8.01/3.71],
     "mixed": [25, 125],
     "ocean_efficacy": [0.8, 1.2],
-    # Pattern-mediated feedback (Tier 3) sensitivity. Prior is centered
-    # on zero (no pattern effect) and spans both signs; brief §6.2 gives
-    # ~+1.2 W m^-2 K^-1 from positive-feedback Marvel-style calibrations,
-    # while CMIP6 AMIP diagnostics (Andrews 2022, Kawaguchi & Ceppi 2025)
-    # imply the opposite sign. Range covers both. Default 0 keeps
-    # backward-compat distributions identical to today.
-    "delta_lambda_aero": [-2.0, 2.0],
+    # Pattern-mediated feedback (Tier 3) sensitivity. Bounds derived from the
+    # Forster/Sherwood AR6 pattern-effect assessment Delta_lambda = 0.5 +/- 0.5
+    # W m^-2 K^-1 (5-95%, allows ~zero on the low end consistent with Lewis &
+    # Mauritsen 2021), divided by the model-empirical <w_aero> ~ 0.35 over
+    # Andrews et al. (2022) v5 satellite-era windows, with ~20% padding. See
+    # notebooks/CSCM_pattern_effect_observational_constraint.ipynb.
+    "delta_lambda_aero": [-0.7, 3.4],
     "qbmb": [0, 2],
     "qo3": [0.4, 0.6],
     "qdirso2": [-0.006, -0.001],
