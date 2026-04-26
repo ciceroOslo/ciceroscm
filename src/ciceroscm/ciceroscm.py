@@ -171,9 +171,15 @@ class CICEROSCM:
 
         Returns
         -------
-        float
-             The total forcing for the year, including solar
-             forcing is added.
+        tuple
+            ``(fn, fs, forc, w_aero)``. The first three entries are the
+            hemispheric and total forcing for the year (with solar
+            added). ``w_aero`` is the magnitude-weighted aerosol
+            forcing fraction used by the pattern-effect machinery; it
+            comes from the optional ``w_aero`` column on the forcing
+            DataFrame and defaults to ``0.0`` when the column is
+            absent (graceful fallback for forcing files that do not
+            carry per-agent decomposition).
         """
         row_index = yr - self.cfg["nystart"]
         # Add support for other forcing formats
@@ -182,14 +188,18 @@ class CICEROSCM:
             forc = self.rf[row_index]  # + self.rf_luc.iloc[row_index][0]
             fn = forc
             fs = forc
+            w_aero = 0.0
         else:
             forc = self.rf["total"][yr]
             fn = self.rf["FORC_NH"][yr]
             fs = self.rf["FORC_SH"][yr]
+            w_aero = (
+                float(self.rf["w_aero"][yr]) if "w_aero" in self.rf.columns else 0.0
+            )
         forc = forc + rf_sun.iloc[row_index, 0]
         fn = fn + rf_sun.iloc[row_index, 0]
         fs = fs + rf_sun.iloc[row_index, 0]
-        return fn, fs, forc
+        return fn, fs, forc, w_aero
 
     def add_year_data_to_output(self, values, forc, index):
         """
@@ -256,6 +266,30 @@ class CICEROSCM:
         # udm = UpwellingDiffusionModel(pamset_udm)
 
         udm = self.thermal_model_class(pamset_udm)
+
+        # Pattern-mediated feedback (Tier 3) setup. When delta_lambda_aero
+        # != 0 we compute lambda_eff(t) = lambda_0 + delta_lambda_aero *
+        # w_aero(t) each year and apply it via the thermal model's
+        # set_feedback_gregory capability. We capture lambda_0 once now
+        # (after construction) and validate the thermal model implements
+        # the capability before the run loop, so misconfiguration errors
+        # surface at startup rather than mid-run.
+        delta_lambda_aero = (pamset_udm or {}).get("delta_lambda_aero", 0.0)
+        if delta_lambda_aero != 0:
+            try:
+                lambda_0_gregory = udm.get_feedback_gregory()
+            except NotImplementedError as err:
+                raise ValueError(
+                    f"delta_lambda_aero={delta_lambda_aero} requested, but "
+                    f"thermal model {type(udm).__name__} does not implement "
+                    "the pattern-mediated feedback capability "
+                    "(get_feedback_gregory / set_feedback_gregory). Set "
+                    "delta_lambda_aero=0 or use a thermal model that "
+                    "supports pattern-mediated feedback."
+                ) from err
+        else:
+            lambda_0_gregory = None
+
         values = None
         if not self.cfg["rf_run"]:
             self.ce_handler.reset_with_new_pams(pamset_emiconc, pamset_carbon)
@@ -267,14 +301,21 @@ class CICEROSCM:
                     )
                 else:
                     self.ce_handler.emi2conc(yr)
-                forc, fn, fs = self.ce_handler.conc2forc(
+                forc, fn, fs, w_aero = self.ce_handler.conc2forc(
                     yr,
                     self.rf_luc.iloc[yr - self.cfg["nystart"], 0],
                     self.rf_volc_sun["sun"].iloc[yr - self.cfg["nystart"], 0],
                 )
 
             else:
-                fn, fs, forc = self.forc_set(yr, self.rf_volc_sun["sun"])
+                fn, fs, forc, w_aero = self.forc_set(yr, self.rf_volc_sun["sun"])
+
+            # Apply pattern-mediated feedback for this year, if requested.
+            if delta_lambda_aero != 0:
+                udm.set_feedback_gregory(
+                    lambda_0_gregory + delta_lambda_aero * w_aero
+                )
+
             values = udm.energy_budget(
                 fn,
                 fs,

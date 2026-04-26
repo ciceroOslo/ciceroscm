@@ -12,6 +12,7 @@ import pandas as pd
 from ._utils import cut_and_check_pamset
 from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
 from .component_factory_functions import create_carbon_cycle_model
+from .constants import AEROSOL_TRACERS
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -615,10 +616,15 @@ class ConcentrationsEmissionsHandler:
 
         Returns
         -------
-        list
-            Consisting of total forcing and hemispherically split
-            forcing for the year.
-            In this way: tot_forc, forc_nh, forc_sh
+        tuple
+            ``(tot_forc, forc_nh, forc_sh, w_aero)``. The first three
+            entries are unchanged from earlier versions: total forcing
+            and hemispherically split forcing for the year. The fourth
+            entry ``w_aero`` is the magnitude-weighted aerosol forcing
+            fraction ``|F_aero| / sum_j |F_j|``, used by the driver to
+            modulate the climate feedback parameter when pattern-effect
+            modulation is active (Tier 3). It is ``0.0`` when no
+            forcing components are non-zero (pre-industrial baseline).
         """
         # Intialising with the combined values from CO2, N2O and CH4
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
@@ -697,7 +703,22 @@ class ConcentrationsEmissionsHandler:
         self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun
-        return tot_forc, forc_nh, forc_sh
+
+        # Magnitude-weighted aerosol forcing fraction for pattern-effect
+        # modulation. Built from the per-tracer self.forc dict; tracers
+        # not present in this run (e.g. partial setups) are skipped.
+        # Returns 0.0 when all components are zero (pre-industrial),
+        # which is the no-pattern-effect case anyway.
+        idx = yr - yr_0
+        f_aero_mag = sum(
+            abs(self.forc[t][idx]) for t in AEROSOL_TRACERS if t in self.forc
+        )
+        f_abs_total = sum(
+            abs(s[idx]) for k, s in self.forc.items() if k != "Total_forcing"
+        )
+        w_aero = f_aero_mag / f_abs_total if f_abs_total > 0 else 0.0
+
+        return tot_forc, forc_nh, forc_sh, w_aero
 
     def emi2conc(self, yr, feedback_dict=None):
         """

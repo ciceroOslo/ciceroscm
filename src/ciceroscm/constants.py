@@ -21,3 +21,17 @@ OCEAN_AREA = 3.61e14  # m^2 - Global ocean surface area
 
 # Derived constants
 YEAR_IN_SECONDS = DAY_YEAR * SEC_DAY  # Seconds per year
+
+# Pattern-mediated feedback (Tier 3): tracers grouped as "aerosol" for the
+# magnitude-weighted forcing fraction w_aero(t) that modulates the climate
+# feedback parameter. See notebooks/variablelambda/ for derivation.
+AEROSOL_TRACERS = (
+    "SO4_DIR",
+    "SO4_IND",
+    "BC",
+    "OC",
+    "NOx",
+    "NMVOC",
+    "NH3",
+    "BMB_AEROS",
+)

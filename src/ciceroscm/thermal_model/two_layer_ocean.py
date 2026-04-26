@@ -22,13 +22,19 @@ class TwoLayerOceanModel(
     """
 
     thermal_model_required_pamset = {
-        "lambda": 3.74 / 3,  # Climate feedback parameter (W/m^2/K)
+        "lambda": 3.74 / 3,  # Climate feedback parameter (W/m^2/K).
+        # Note: this two-layer model uses the Gregory convention
+        # directly (lambda = feedback), unlike UpwellingDiffusionModel
+        # where "lambda" is the inverse (climate sensitivity parameter).
         "mixed": 50,  # Ocean mixed layer depth (m)
         "deep": 1200,  # Deep ocean layer depth (m)
         "k": 0.5,  # Coupling coefficient between layers (W/m^2/K)
         "ocean_efficacy": 1,  # Efficacy of deep ocean heat uptake
         "foan": 0.61,  # Northern hemisphere ocean area fraction
         "foas": 0.81,  # Southern hemisphere ocean area fraction
+        # Pattern-mediated feedback (Tier 3) sensitivity. lambda_eff(t)
+        # = lambda_0 + delta_lambda_aero * w_aero(t). Default 0.0 = off.
+        "delta_lambda_aero": 0.0,
     }
 
     output_dict_default = {
@@ -81,6 +87,24 @@ class TwoLayerOceanModel(
         # Initialize temperatures for fast and slow layers
         self.temp_fast = 0.0
         self.temp_slow = 0.0
+
+    # ------------------------------------------------------------------
+    # Pattern-mediated feedback (Tier 3) capability.
+    # In this model ``pamset["lambda"]`` already stores the feedback in
+    # Gregory units (W m^-2 K^-1), so the get/set methods are direct.
+    # No derived quantities depend on lambda, so no refresh is needed.
+    # ------------------------------------------------------------------
+    def get_feedback_gregory(self):
+        """Current feedback coefficient (W m^-2 K^-1)."""
+        return self.pamset["lambda"]
+
+    def set_feedback_gregory(self, lambda_eff):
+        """Update the feedback coefficient.
+
+        ``lambda`` is read directly each ``energy_budget`` call, so no
+        cached state needs refreshing.
+        """
+        self.pamset["lambda"] = lambda_eff
 
     def energy_budget(
         self, forc_nh, forc_sh, fn_volc, fs_volc

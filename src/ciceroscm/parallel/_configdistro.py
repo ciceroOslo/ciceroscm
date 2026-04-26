@@ -22,6 +22,13 @@ prior_flat = {
     "lambda": [2 / 3.71, 5 / 3.71],
     "mixed": [25, 125],
     "ocean_efficacy": [0.8, 1.2],
+    # Pattern-mediated feedback (Tier 3) sensitivity. Prior is centered
+    # on zero (no pattern effect) and spans both signs; brief §6.2 gives
+    # ~+1.2 W m^-2 K^-1 from positive-feedback Marvel-style calibrations,
+    # while CMIP6 AMIP diagnostics (Andrews 2022, Kawaguchi & Ceppi 2025)
+    # imply the opposite sign. Range covers both. Default 0 keeps
+    # backward-compat distributions identical to today.
+    "delta_lambda_aero": [-2.0, 2.0],
     "qbmb": [0, 2],
     "qo3": [0.4, 0.6],
     "qdirso2": [-0.006, -0.001],

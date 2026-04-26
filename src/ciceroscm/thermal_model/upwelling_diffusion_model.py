@@ -115,7 +115,10 @@ class UpwellingDiffusionModel(
         "W": 2.2,
         "beto": 6.9,
         "threstemp": 7.0,
-        "lambda": 0.61,  # Climate feedback parameter (W/m^2/K)
+        "lambda": 0.61,  # Climate sensitivity parameter (K per W/m^2);
+        # the inverse of the Gregory feedback. The internal feedback
+        # coefficient that multiplies T in the TOA balance is
+        # rlamda = 1.0 / lambda (W m^-2 K^-1).
         "mixed": 107.0,  # Mixed layer depth (m)
         "foan": 0.61,  # Northern hemisphere ocean area fraction
         "foas": 0.81,  # Southern hemisphere ocean area fraction
@@ -123,6 +126,9 @@ class UpwellingDiffusionModel(
         "lm": 40,  # Number of ocean layers
         "ldtime": 12,  # Number of time steps per year
         "ocean_efficacy": 1.0,  # Efficacy of deep ocean heat uptake
+        # Pattern-mediated feedback (Tier 3) sensitivity. lambda_eff(t)
+        # = lambda_0 + delta_lambda_aero * w_aero(t). Default 0.0 = off.
+        "delta_lambda_aero": 0.0,
     }
 
     output_dict_default = {
@@ -172,6 +178,39 @@ class UpwellingDiffusionModel(
             "fs": 0.0,
             "dtemp": 0.0,
         }
+
+    # ------------------------------------------------------------------
+    # Pattern-mediated feedback (Tier 3) capability.
+    # ``pamset["lambda"]`` is the climate-sensitivity parameter (K per
+    # W/m^2); the Gregory feedback that multiplies T in the TOA balance
+    # is ``rlamda = 1 / lambda`` (W m^-2 K^-1). The driver works in
+    # Gregory units, so the conversion lives here.
+    # ------------------------------------------------------------------
+    def get_feedback_gregory(self):
+        """Current feedback coefficient (W m^-2 K^-1)."""
+        return self.pamset["rlamda"]
+
+    def set_feedback_gregory(self, lambda_eff):
+        """Update the feedback coefficient and refresh derived quantities.
+
+        Updates ``rlamda`` and the cached ``fnx``/``fsx`` parameters,
+        then calls ``setup_ebud`` so that ``gamn``, ``gams`` and the
+        per-step solver coefficients in ``self.varrying`` are
+        consistent with the new feedback before the next
+        ``energy_budget`` call.
+        """
+        self.pamset["rlamda"] = lambda_eff
+        self.pamset["fnx"] = (
+            lambda_eff
+            + self.pamset["foan"] * self.pamset["rlamdo"]
+            + self.pamset["ebbeta"]
+        )
+        self.pamset["fsx"] = (
+            lambda_eff
+            + self.pamset["foas"] * self.pamset["rlamdo"]
+            + self.pamset["ebbeta"]
+        )
+        self.setup_ebud()
 
         self.dtempprev = 0.0
 
