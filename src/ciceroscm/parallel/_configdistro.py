@@ -24,7 +24,7 @@ prior_flat = {
     # feedback 5-95% range [0.51, 1.81] W m^-2 K^-1 inverted to lambda
     # [0.55, 1.96], with ~10-20% padding. See
     # notebooks/CSCM_pattern_effect_observational_constraint.ipynb.
-    "lambda": [1.85/3.71, 8.01/3.71],
+    "lambda": [1.85 / 3.71, 8.01 / 3.71],
     "mixed": [25, 125],
     "ocean_efficacy": [0.8, 1.2],
     # Pattern-mediated feedback (Tier 3) sensitivity. Bounds derived from the
