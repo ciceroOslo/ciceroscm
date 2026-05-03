@@ -93,7 +93,7 @@ class AbstractThermalModel(ABC):
         """
 
     # ------------------------------------------------------------------
-    # Optional pattern-mediated feedback (Tier 3) interface.
+    # Optional pattern-mediated feedback interface.
     #
     # Thermal models that support a forcing-composition-dependent feedback
     # parameter override these two methods. The driver only invokes them
@@ -106,25 +106,14 @@ class AbstractThermalModel(ABC):
         """
         Return the current climate feedback parameter in Gregory units.
 
-        Returns
-        -------
-        float
-            Feedback parameter (W m^-2 K^-1), positive for a stabilising
-            feedback. Override in concrete thermal models that support
-            pattern-mediated feedback modulation.
-
-        Raises
-        ------
-        NotImplementedError
-            By default. Override to opt in to pattern-effect support.
+        Returned value should be a float.
+        Feedback parameter (W m^-2 K^-1), positive for a stabilising
+        feedback. Override in concrete thermal models that support
+        pattern-mediated feedback modulation.
         """
-        raise NotImplementedError(
-            f"Thermal model {type(self).__name__} does not implement "
-            "get_feedback_gregory; pattern-mediated feedback "
-            "(delta_lambda_aero != 0) is not supported."
-        )
+        return None
 
-    def set_feedback_gregory(self, lambda_eff):
+    def set_feedback_gregory(self, w_aero):
         """
         Update the climate feedback parameter to ``lambda_eff``.
 
@@ -135,16 +124,9 @@ class AbstractThermalModel(ABC):
 
         Parameters
         ----------
-        lambda_eff : float
-            New feedback parameter in Gregory units (W m^-2 K^-1).
+        w_aero : float
+            New aerosol based unitless feedback parameter
+            To be multiplied with delta_lambda_aero which is in Gregory units (W m^-2 K^-1)
+            And added to the ECS parameter.
 
-        Raises
-        ------
-        NotImplementedError
-            By default. Override to opt in to pattern-effect support.
         """
-        raise NotImplementedError(
-            f"Thermal model {type(self).__name__} does not implement "
-            "set_feedback_gregory; pattern-mediated feedback "
-            "(delta_lambda_aero != 0) is not supported."
-        )

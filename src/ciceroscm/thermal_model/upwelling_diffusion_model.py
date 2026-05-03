@@ -192,7 +192,7 @@ class UpwellingDiffusionModel(
         """Return the current feedback coefficient (W m^-2 K^-1)."""
         return self.pamset["rlamda"]
 
-    def set_feedback_gregory(self, lambda_eff):
+    def set_feedback_gregory(self, w_aero):
         """Update the feedback coefficient and refresh derived quantities.
 
         Updates ``rlamda`` and the cached ``fnx``/``fsx`` parameters,
@@ -201,6 +201,9 @@ class UpwellingDiffusionModel(
         consistent with the new feedback before the next
         ``energy_budget`` call.
         """
+        lambda_eff = (
+            1.0 / self.pamset["lambda"] + w_aero * self.pamset["delta_lambda_aero"]
+        )
         self.pamset["rlamda"] = lambda_eff
         self.pamset["fnx"] = (
             lambda_eff

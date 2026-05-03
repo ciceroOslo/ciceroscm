@@ -39,10 +39,7 @@ class _DummyNoCapability(AbstractThermalModel):
 
 def test_abstract_pattern_effect_default_raises():
     model = _DummyNoCapability()
-    with pytest.raises(NotImplementedError, match="get_feedback_gregory"):
-        model.get_feedback_gregory()
-    with pytest.raises(NotImplementedError, match="set_feedback_gregory"):
-        model.set_feedback_gregory(1.5)
+    assert model.get_feedback_gregory() is None
 
 
 # ---------------------------------------------------------------------------
@@ -77,25 +74,36 @@ def test_udm_get_feedback_gregory_returns_inverse_of_pamset_lambda():
 
 
 def test_udm_set_feedback_gregory_refreshes_derived_quantities():
-    udm = UpwellingDiffusionModel(_udm_pamset(lambda_pamset=0.5))
-    new_feedback = 2.5
+    pamset = _udm_pamset(lambda_pamset=0.5)
+    pamset["delta_lambda_aero"] = 1.0
+    udm = UpwellingDiffusionModel(pamset)
+    w_aero = 0.5
 
-    udm.set_feedback_gregory(new_feedback)
+    udm.set_feedback_gregory(w_aero)
+    expected_lambda_eff = 2.5  # 1/lambda + w_aero * delta_lambda_aero = 1/0.5 + 0.5*1.0
 
-    assert udm.pamset["rlamda"] == pytest.approx(new_feedback)
+    assert udm.pamset["rlamda"] == pytest.approx(expected_lambda_eff)
     expected_fnx = (
-        new_feedback + udm.pamset["foan"] * udm.pamset["rlamdo"] + udm.pamset["ebbeta"]
+        expected_lambda_eff
+        + udm.pamset["foan"] * udm.pamset["rlamdo"]
+        + udm.pamset["ebbeta"]
     )
     expected_fsx = (
-        new_feedback + udm.pamset["foas"] * udm.pamset["rlamdo"] + udm.pamset["ebbeta"]
+        expected_lambda_eff
+        + udm.pamset["foas"] * udm.pamset["rlamdo"]
+        + udm.pamset["ebbeta"]
     )
     assert udm.pamset["fnx"] == pytest.approx(expected_fnx)
     assert udm.pamset["fsx"] == pytest.approx(expected_fsx)
 
     # gamn/gams are recomputed by setup_ebud and use rlamda directly.
     blm = udm.pamset["ebbeta"] / udm.pamset["rlamdo"]
-    expected_gamn = udm.pamset["foan"] + new_feedback / udm.pamset["rlamdo"] + blm
-    expected_gams = udm.pamset["foas"] + new_feedback / udm.pamset["rlamdo"] + blm
+    expected_gamn = (
+        udm.pamset["foan"] + expected_lambda_eff / udm.pamset["rlamdo"] + blm
+    )
+    expected_gams = (
+        udm.pamset["foas"] + expected_lambda_eff / udm.pamset["rlamdo"] + blm
+    )
     assert udm.gamn == pytest.approx(expected_gamn)
     assert udm.gams == pytest.approx(expected_gams)
 
@@ -115,11 +123,15 @@ def test_udm_setting_same_feedback_is_noop_in_energy_budget():
 
 def test_udm_changed_feedback_changes_energy_budget_output():
     """A larger Gregory feedback should produce smaller dtemp under same forcing."""
-    udm_strong = UpwellingDiffusionModel(_udm_pamset())
-    udm_weak = UpwellingDiffusionModel(_udm_pamset())
+    pamset_strong = _udm_pamset()
+    pamset_strong["delta_lambda_aero"] = 1.3
+    pamset_weak = _udm_pamset()
+    pamset_weak["delta_lambda_aero"] = 0.5
+    udm_strong = UpwellingDiffusionModel(pamset_strong)
+    udm_weak = UpwellingDiffusionModel(pamset_weak)
 
-    udm_strong.set_feedback_gregory(2.5)  # stronger damping
-    udm_weak.set_feedback_gregory(1.2)  # weaker damping
+    udm_strong.set_feedback_gregory(1 / 3.0)  # stronger damping
+    udm_weak.set_feedback_gregory(1 / 3.0)  # weaker damping
 
     volc = np.zeros(12)
     # Run a few years to let the response build up.
@@ -145,17 +157,17 @@ def test_two_layer_get_feedback_gregory_returns_pamset_lambda():
 
 
 def test_two_layer_set_feedback_gregory_updates_pamset_lambda():
-    model = TwoLayerOceanModel({"lambda": 1.5})
-    model.set_feedback_gregory(2.25)
-    assert model.pamset["lambda"] == pytest.approx(2.25)
+    model = TwoLayerOceanModel({"lambda": 1.5, "delta_lambda_aero": 1.5})
+    model.set_feedback_gregory(0.5)
+    assert model.lambda_eff == pytest.approx(2.25)
 
 
 def test_two_layer_changed_feedback_changes_energy_budget_output():
-    model_strong = TwoLayerOceanModel()
-    model_weak = TwoLayerOceanModel()
+    model_strong = TwoLayerOceanModel(pamset={"delta_lambda_aero": 1.5})
+    model_weak = TwoLayerOceanModel(pamset={"delta_lambda_aero": 1.0})
 
-    model_strong.set_feedback_gregory(3.0)
-    model_weak.set_feedback_gregory(1.0)
+    model_strong.set_feedback_gregory(1 / 0.25)  # stronger damping
+    model_weak.set_feedback_gregory(1 / 0.25)  # weaker damping
 
     volc = np.zeros(12)
     for _ in range(10):

@@ -13,10 +13,8 @@ Verifies that:
 import os
 
 import numpy as np
-import pytest
 
 from ciceroscm import CICEROSCM
-from ciceroscm.thermal_model.abstract_thermal_model import AbstractThermalModel
 
 
 def _build_cscm(test_data_dir):
@@ -121,40 +119,3 @@ def test_negative_delta_lambda_weakens_feedback(test_data_dir):
     f_base = feedback(cscm_base)
     f_neg = feedback(cscm_neg)
     assert f_neg < f_base - 0.1
-
-
-def test_misconfiguration_raises_at_startup(test_data_dir):
-    """A thermal model that does not implement set_feedback_gregory must
-    cause delta_lambda_aero != 0 to raise ValueError before the run loop."""
-
-    class _NoCapability(AbstractThermalModel):
-        thermal_model_required_pamset = {
-            "lambda": 0.5,
-            "delta_lambda_aero": 0.0,
-        }
-        output_dict_default = {"dT_glob": "dtemp", "RIB_glob": "RIB"}
-
-        def __init__(self, params=None):
-            super().__init__(params)
-
-        def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc):
-            return {"dtemp": 0.0, "RIB": 0.0}
-
-    cscm = _build_cscm(test_data_dir)
-    cscm.thermal_model_class = _NoCapability
-
-    with pytest.raises(ValueError, match="does not implement"):
-        cscm._run(
-            {"results_as_dict": True},
-            pamset_udm={"lambda": 0.5, "delta_lambda_aero": 1.0},
-            pamset_emiconc={
-                "qbmb": 0.0,
-                "qo3": 0.5,
-                "qdirso2": -0.00308,
-                "qindso2": -0.97 / 57.052577209999995,
-                "qbc": 0.0279,
-                "qoc": -0.00433,
-                "qh2o_ch4": 0.091915,
-                "ref_yr": 2010,
-            },
-        )
