@@ -267,13 +267,12 @@ class CICEROSCM:
 
         udm = self.thermal_model_class(pamset_udm)
 
-        # Pattern-mediated feedback (Tier 3) setup. When delta_lambda_aero
-        # != 0 we compute lambda_eff(t) = lambda_0 + delta_lambda_aero *
-        # w_aero(t) each year and apply it via the thermal model's
-        # set_feedback_gregory capability. We capture lambda_0 once now
-        # (after construction) and validate the thermal model implements
-        # the capability before the run loop, so misconfiguration errors
-        # surface at startup rather than mid-run.
+        # Pattern-mediated feedback (Tier 3): each thermal model owns the
+        # lambda_eff = lambda_0 + delta_lambda_aero * w_aero formula
+        # internally; the driver only forwards w_aero each year, gated on
+        # delta_lambda_aero != 0 so the per-year recompute is skipped for
+        # the default-off case.
+        delta_lambda_aero = (pamset_udm or {}).get("delta_lambda_aero", 0.0)
 
         values = None
         if not self.cfg["rf_run"]:
@@ -296,7 +295,8 @@ class CICEROSCM:
                 fn, fs, forc, w_aero = self.forc_set(yr, self.rf_volc_sun["sun"])
 
             # Apply pattern-mediated feedback for this year, if requested.
-            udm.set_feedback_gregory(w_aero)
+            if delta_lambda_aero != 0:
+                udm.set_feedback_gregory(w_aero)
 
             values = udm.energy_budget(
                 fn,

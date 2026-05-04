@@ -37,7 +37,7 @@ class _DummyNoCapability(AbstractThermalModel):
         return {}
 
 
-def test_abstract_pattern_effect_default_raises():
+def test_abstract_pattern_effect_default_returns_none():
     model = _DummyNoCapability()
     assert model.get_feedback_gregory() is None
 
