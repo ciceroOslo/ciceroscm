@@ -201,6 +201,8 @@ class UpwellingDiffusionModel(
         consistent with the new feedback before the next
         ``energy_budget`` call.
         """
+        if self.pamset["delta_lambda_aero"] == 0.0:
+            return  # No change to apply
         lambda_eff = (
             1.0 / self.pamset["lambda"] + w_aero * self.pamset["delta_lambda_aero"]
         )
