@@ -267,28 +267,9 @@ class CICEROSCM:
 
         udm = self.thermal_model_class(pamset_udm)
 
-        # Pattern-mediated feedback (Tier 3) setup. When delta_lambda_aero
-        # != 0 we compute lambda_eff(t) = lambda_0 + delta_lambda_aero *
-        # w_aero(t) each year and apply it via the thermal model's
-        # set_feedback_gregory capability. We capture lambda_0 once now
-        # (after construction) and validate the thermal model implements
-        # the capability before the run loop, so misconfiguration errors
-        # surface at startup rather than mid-run.
-        delta_lambda_aero = (pamset_udm or {}).get("delta_lambda_aero", 0.0)
-        if delta_lambda_aero != 0:
-            try:
-                lambda_0_gregory = udm.get_feedback_gregory()
-            except NotImplementedError as err:
-                raise ValueError(
-                    f"delta_lambda_aero={delta_lambda_aero} requested, but "
-                    f"thermal model {type(udm).__name__} does not implement "
-                    "the pattern-mediated feedback capability "
-                    "(get_feedback_gregory / set_feedback_gregory). Set "
-                    "delta_lambda_aero=0 or use a thermal model that "
-                    "supports pattern-mediated feedback."
-                ) from err
-        else:
-            lambda_0_gregory = None
+        # Pattern-mediated feedback (Tier 3): each thermal model owns the
+        # lambda_eff = lambda_0 + delta_lambda_aero * w_aero formula
+        # internally; the driver only forwards w_aero each year
 
         values = None
         if not self.cfg["rf_run"]:
@@ -310,9 +291,7 @@ class CICEROSCM:
             else:
                 fn, fs, forc, w_aero = self.forc_set(yr, self.rf_volc_sun["sun"])
 
-            # Apply pattern-mediated feedback for this year, if requested.
-            if delta_lambda_aero != 0:
-                udm.set_feedback_gregory(lambda_0_gregory + delta_lambda_aero * w_aero)
+            udm.set_feedback_gregory(w_aero)
 
             values = udm.energy_budget(
                 fn,

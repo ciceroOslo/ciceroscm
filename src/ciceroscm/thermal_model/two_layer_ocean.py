@@ -87,6 +87,7 @@ class TwoLayerOceanModel(
         # Initialize temperatures for fast and slow layers
         self.temp_fast = 0.0
         self.temp_slow = 0.0
+        self.lambda_eff = self.pamset["lambda"]
 
     # ------------------------------------------------------------------
     # Pattern-mediated feedback (Tier 3) capability.
@@ -96,15 +97,21 @@ class TwoLayerOceanModel(
     # ------------------------------------------------------------------
     def get_feedback_gregory(self):
         """Return the current feedback coefficient (W m^-2 K^-1)."""
-        return self.pamset["lambda"]
+        return self.lambda_eff
 
-    def set_feedback_gregory(self, lambda_eff):
+    def set_feedback_gregory(self, w_aero):
         """Update the feedback coefficient.
 
-        ``lambda`` is read directly each ``energy_budget`` call, so no
-        cached state needs refreshing.
+        ``lambda_eff`` is updated based on the pattern-mediated feedback formulation.
+
+        Parameters
+        ----------
+        w_aero : float
+            Aerosol pattern-mediated feedback weight (unitless), typically between 0 and 1.
         """
-        self.pamset["lambda"] = lambda_eff
+        self.lambda_eff = (
+            self.pamset["lambda"] + w_aero * self.pamset["delta_lambda_aero"]
+        )
 
     def energy_budget(
         self, forc_nh, forc_sh, fn_volc, fs_volc
@@ -142,7 +149,7 @@ class TwoLayerOceanModel(
         # Fast layer temperature change
         dtemp_fast = (
             forc
-            - self.temp_fast * self.pamset["lambda"]
+            - self.temp_fast * self.lambda_eff
             - self.pamset["k"]
             * self.pamset["ocean_efficacy"]
             * (self.temp_fast - self.temp_slow)
@@ -161,14 +168,14 @@ class TwoLayerOceanModel(
 
         rib_toa = (
             forc
-            - self.pamset["lambda"] * self.temp_fast
+            - self.lambda_eff * self.temp_fast
             - (self.pamset["ocean_efficacy"] - 1)
             * self.pamset["k"]
             * (self.temp_fast - self.temp_slow)
         )
         dtemp = (
             forc
-            / self.pamset["lambda"]
+            / self.lambda_eff
             * (1 - (self.pamset["foan"] + self.pamset["foas"]) / 2.0)
             + self.temp_fast * (self.pamset["foan"] + self.pamset["foas"]) / 2
         )  # Approximate global mean temperature change
