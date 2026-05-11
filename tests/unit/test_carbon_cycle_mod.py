@@ -117,7 +117,6 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
         {"results_as_dict": True, "carbon_cycle_outputs": True},
     )
     conc_co2_series_default = cscm.results["concentrations"]["CO2"].values
-    print(cscm.ce_handler.carbon_cycle.pamset)
     cscm._run(
         {"results_as_dict": True, "carbon_cycle_outputs": True},
         pamset_carbon={"t_threshold": 2, "w_threshold": 2},
@@ -125,9 +124,7 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
     conc_co2_series_all_die = cscm.results["concentrations"]["CO2"].values
     emis_series = cscm.results["emissions"]["CO2"].values
     temp_timseries = cscm.results["dT_glob"]
-    print(cscm.ce_handler.carbon_cycle.pamset)
-    print(cscm.ce_handler.conc_in["CO2"][1750])
-    print(conc_co2_series_all_die[0])
+
 
     ccmod = carbon_cycle_mod.CarbonCycleModel(
         {"nyend": 2100, "nystart": 1750},
@@ -137,15 +134,10 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
             "preindustrial_co2_conc": cscm.ce_handler.conc_in["CO2"][1750],
         },
     )
-    print(ccmod.pamset)
     em_back_calculated = ccmod.back_calculate_emissions(
         conc_co2_series_all_die, feedback_dict_series={"dtemp": temp_timseries}
     )
-    print(em_back_calculated[:5])
-    print(emis_series[:5])
-    print(conc_co2_series_all_die[:5])
-    print(conc_co2_series_default[:5])
-    print(temp_timseries[:5])
+  
     assert not np.allclose(conc_co2_series_all_die, conc_co2_series_default)
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
     # TODO: Test carbon cycle outputs with feedbacks
@@ -187,11 +179,8 @@ def test_carbon_pools(test_data_dir):
 
 
 def reverse_cumsum(cumulated):
-    print(cumulated[:-1].copy())
     cumsum_shifted = np.insert(cumulated[:-1].copy(), 0, 0)
-    print(cumulated[0])
     decumulated = cumulated - cumsum_shifted
-    print(decumulated[0])
     return decumulated
 
 
