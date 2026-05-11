@@ -26,7 +26,7 @@ YEAR_IN_SECONDS = DAY_YEAR * SEC_DAY  # Seconds per year
 # magnitude-weighted forcing fraction w_aero(t) that modulates the climate
 # feedback parameter. See notebooks/variablelambda/ for derivation.
 AEROSOL_TRACERS = (
-    "SO4_DIR",
+    "SO2",  # stored as SO2 internally; renamed to SO4_DIR in output only
     "SO4_IND",
     "BC",
     "OC",
