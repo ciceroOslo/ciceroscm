@@ -52,7 +52,7 @@ docs = ["sphinx>=5", "sphinx_rtd_theme", "sphinx-click"]
 deploy = ["twine>=1.11.0", "setuptools>=41.2", "wheel>=0.31.0"]
 dev = [
         "bandit",
-        "black>=22.3.0",
+        "black>=26.3.0",
         "black-nb",
         "flake8",
         "isort>5",

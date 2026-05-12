@@ -30,7 +30,7 @@ jobs:
     - name: Formatting and linters
       run: |
         black --version
-        black --check src tests --exclude ciceroscm/_version.py
+        black --check src tests --exclude ciceroscm/_version.py --target-version py312
         isort --version
         isort --check-only --quiet --recursive src tests
         pydocstyle --version

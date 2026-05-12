@@ -96,6 +96,14 @@ def run_ciceroscm_parallel(scendata, cfgs, output_vars, max_workers=4):
                 [cfgs[i : i + batch_size] for i in range(0, len(cfgs), batch_size)],
             )
         ]
+    if max_workers == 1:
+        LOGGER.info("Running in serial as max_workers is set to 1")
+        result = []
+        for i, run in enumerate(runs):
+            print(f"Running serial run {i+1} of {len(runs)}")
+            result.append(_execute_run(**run))
+        return pd.concat(result)
+
     LOGGER.info("Running in parallel with up to %d workers", max_workers)
 
     with ProcessPoolExecutor(max_workers=max_workers) as pool:
@@ -196,6 +204,8 @@ class CSCMParWrapper:  # pylint: disable=too-few-public-methods
                 )
                 if isinstance(years, pd.DataFrame) and years.empty:  # pragma: no cover
                     continue  # pragma: no cover
+                if unit == "NoUnit":
+                    continue
                 # TODO: change CICERO-SCM-PY to include version number and/or
                 # thermal model and carbon cycle used from the cscm instance
                 data = [

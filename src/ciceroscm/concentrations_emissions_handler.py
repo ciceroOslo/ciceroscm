@@ -104,7 +104,7 @@ def check_pamset_consistency(pamset_old, pamset_new):
     pams_cant_change = ["idtm", "nystart", "nyend", "emstart", "conc_run"]
     for pam in pams_cant_change:
         if pam in pamset_new and pamset_new[pam] != pamset_old[pam]:
-            LOGGER.warning(  # pylint: disable=logging-fstring-interpolation
+            LOGGER.info(  # pylint: disable=logging-fstring-interpolation
                 f"{pam} can not be changed for same instance of ConcentrationsEmisssionsHandler. Resetting with old value {pamset_old[pam]}. If you want to run with a different value, please create a separate instance",
             )
             pamset_new[pam] = pamset_old[pam]
@@ -205,6 +205,11 @@ class ConcentrationsEmissionsHandler:
 
         # Setting up carbon cycle model
         model_type = self.pamset["carbon_cycle_model"]  # Default to "default"
+        # Adding in preindustrial CO2 concentration from input concentrations
+        pamset_carbon = pamset_carbon if pamset_carbon is not None else {}
+        pamset_carbon["preindustrial_co2_conc"] = self.conc_in["CO2"][
+            self.pamset["nystart"]
+        ]
         self.carbon_cycle = create_carbon_cycle_model(
             model_type, self.pamset, pamset_carbon
         )
@@ -1062,14 +1067,18 @@ class ConcentrationsEmissionsHandler:
                 df_carbon = pd.DataFrame(
                     data={
                         "Airborne fraction CO2": calculate_airborne_fraction(
-                            em_series, conc_series
+                            em_series,
+                            conc_series,
+                            preindustrial_co2_conc=self.carbon_cycle.get_preindustrial_co2_conc(),
                         )
                     },
                     index=self.years,
                 )
             else:
                 df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
-                    em_series, conc_series
+                    em_series,
+                    conc_series,
+                    preindustrial_co2_conc=self.carbon_cycle.get_preindustrial_co2_conc(),
                 )
         return df_carbon
 

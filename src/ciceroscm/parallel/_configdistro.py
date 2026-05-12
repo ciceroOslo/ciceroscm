@@ -79,6 +79,7 @@ ordering_standard_forc = [
     "lambda",
     "mixed",
     "ocean_efficacy",
+    "delta_lambda_aero",
     "threstemp",
     "lm",
     "ldtime",
