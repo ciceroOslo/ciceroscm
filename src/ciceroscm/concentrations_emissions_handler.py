@@ -592,7 +592,9 @@ class ConcentrationsEmissionsHandler:
             q = ref_emission_species[tracer][1] * em_change
         return q
 
-    def conc2forc(self, yr, rf_luc, rf_sun):  # pylint: disable=too-many-branches
+    def conc2forc(
+        self, yr, rf_luc, rf_sun
+    ):  # pylint: disable=too-many-branches, too-many-locals
         """
         Calculate forcing from concentrations
 
@@ -620,15 +622,21 @@ class ConcentrationsEmissionsHandler:
 
         Returns
         -------
-        list
-            Consisting of total forcing and hemispherically split
-            forcing for the year.
-            In this way: tot_forc, forc_nh, forc_sh
+        tuple
+            ``(tot_forc, forc_nh, forc_sh, w_aero)``. The first three
+            entries are unchanged from earlier versions: total forcing
+            and hemispherically split forcing for the year. The fourth
+            entry ``w_aero`` is the magnitude-weighted aerosol forcing
+            fraction ``|F_aero| / sum_j |F_j|``, used by the driver to
+            modulate the climate feedback parameter when pattern-effect
+            modulation is active. It is ``0.0`` when no
+            forcing components are non-zero (pre-industrial baseline).
         """
         # Intialising with the combined values from CO2, N2O and CH4
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
         yr_0 = self.years[0]
         # Finish per tracer calculations, add per tracer to printable df and sum the total
+        f_aero_mag = 0.0
         for tracer, forc_val_series in self.forc.items():
             if tracer in ["CO2", "N2O", "CH4"]:
                 continue
@@ -643,6 +651,7 @@ class ConcentrationsEmissionsHandler:
                 "BM",
             ]:
                 q = self.calc_aerosol_forcing(yr, tracer)
+                f_aero_mag = f_aero_mag + abs(q)
             elif (
                 tracer in self.df_gas.index
                 and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
@@ -702,7 +711,19 @@ class ConcentrationsEmissionsHandler:
         self.forc["Total_forcing"][yr - yr_0] = tot_forc
         forc_nh = forc_nh + rf_sun
         forc_sh = forc_sh + rf_sun
-        return tot_forc, forc_nh, forc_sh
+
+        # Magnitude-weighted aerosol forcing fraction for pattern-effect
+        # modulation. Built from the per-tracer self.forc dict; tracers
+        # not present in this run (e.g. partial setups) are skipped.
+        # Returns 0.0 when all components are zero (pre-industrial),
+        # which is the no-pattern-effect case anyway.
+        idx = yr - yr_0
+        f_abs_total = sum(
+            abs(s[idx]) for k, s in self.forc.items() if k != "Total_forcing"
+        )
+        w_aero = f_aero_mag / f_abs_total if f_abs_total > 0 else 0.0
+
+        return tot_forc, forc_nh, forc_sh, w_aero
 
     def emi2conc(self, yr, feedback_dict=None):
         """

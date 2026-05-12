@@ -22,6 +22,9 @@ The changes listed in this file are categorised as follows:
 
 ### Changed
 - Standard carbon cycle changed to have concentration based on initial concentration in concentrations_emissions handler and not absolute value
+- Pattern-mediated climate feedback: a new ``delta_lambda_aero`` parameter (in ``pamset_udm``) makes the climate feedback depend on the magnitude-weighted aerosol forcing fraction, ``lambda_eff(t) = lambda_0 + delta_lambda_aero * w_aero(t)``. Defaults to ``0.0`` (no change in behaviour). Implemented as an opt-in capability protocol on the abstract thermal model (``get_feedback_gregory`` / ``set_feedback_gregory``); both shipped thermal models (``UpwellingDiffusionModel``, ``TwoLayerOceanModel``) implement it. A ``ValueError`` is raised at startup if a non-zero ``delta_lambda_aero`` is paired with a thermal model that does not implement the capability. ``AEROSOL_TRACERS`` constant added to ``ciceroscm.constants``. Forcing-driven (``rf_run``) mode auto-derives ``w_aero(t)`` when per-agent columns are present in the forcing file and falls back to ``w_aero = 0`` otherwise.
+- ``ConcentrationsEmissionsHandler.conc2forc`` now returns a 4-tuple ``(tot_forc, forc_nh, forc_sh, w_aero)`` (was a 3-tuple). The new entry ``w_aero`` is the magnitude-weighted aerosol forcing fraction used by the pattern-mediated feedback wiring.
+- ``CICEROSCM.forc_set`` now returns a 4-tuple ``(fn, fs, forc, w_aero)`` (was a 3-tuple), reading ``w_aero`` from the forcing dataframe when present.
 
 ### Fixed
 - Temperature feedbacks were not passed to partial_pressure calculation in carbon cycle, meaning that the carbon cycle was not responding to temperature changes, this is now fixed and the carbon cycle will respond to temperature changes through the temperature feedbacks to ocean solubility and mixed layer depth.

@@ -22,13 +22,19 @@ class TwoLayerOceanModel(
     """
 
     thermal_model_required_pamset = {
-        "lambda": 3.74 / 3,  # Climate feedback parameter (W/m^2/K)
+        "lambda": 3.74 / 3,  # Climate feedback parameter (W/m^2/K).
+        # Note: this two-layer model uses the Gregory convention
+        # directly (lambda = feedback), unlike UpwellingDiffusionModel
+        # where "lambda" is the inverse (climate sensitivity parameter).
         "mixed": 50,  # Ocean mixed layer depth (m)
         "deep": 1200,  # Deep ocean layer depth (m)
         "k": 0.5,  # Coupling coefficient between layers (W/m^2/K)
         "ocean_efficacy": 1,  # Efficacy of deep ocean heat uptake
         "foan": 0.61,  # Northern hemisphere ocean area fraction
         "foas": 0.81,  # Southern hemisphere ocean area fraction
+        # Pattern-mediated feedback sensitivity. lambda_eff(t)
+        # = lambda_0 + delta_lambda_aero * w_aero(t). Default 0.0 = off.
+        "delta_lambda_aero": 0.0,
     }
 
     output_dict_default = {
@@ -81,6 +87,31 @@ class TwoLayerOceanModel(
         # Initialize temperatures for fast and slow layers
         self.temp_fast = 0.0
         self.temp_slow = 0.0
+        self.lambda_eff = self.pamset["lambda"]
+
+    # ------------------------------------------------------------------
+    # Pattern-mediated feedback capability.
+    # In this model ``pamset["lambda"]`` already stores the feedback in
+    # Gregory units (W m^-2 K^-1), so the get/set methods are direct.
+    # No derived quantities depend on lambda, so no refresh is needed.
+    # ------------------------------------------------------------------
+    def get_feedback_gregory(self):
+        """Return the current feedback coefficient (W m^-2 K^-1)."""
+        return self.lambda_eff
+
+    def set_feedback_gregory(self, w_aero):
+        """Update the feedback coefficient.
+
+        ``lambda_eff`` is updated based on the pattern-mediated feedback formulation.
+
+        Parameters
+        ----------
+        w_aero : float
+            Aerosol pattern-mediated feedback weight (unitless), typically between 0 and 1.
+        """
+        self.lambda_eff = (
+            self.pamset["lambda"] + w_aero * self.pamset["delta_lambda_aero"]
+        )
 
     def energy_budget(
         self, forc_nh, forc_sh, fn_volc, fs_volc
@@ -118,7 +149,7 @@ class TwoLayerOceanModel(
         # Fast layer temperature change
         dtemp_fast = (
             forc
-            - self.temp_fast * self.pamset["lambda"]
+            - self.temp_fast * self.lambda_eff
             - self.pamset["k"]
             * self.pamset["ocean_efficacy"]
             * (self.temp_fast - self.temp_slow)
@@ -137,14 +168,14 @@ class TwoLayerOceanModel(
 
         rib_toa = (
             forc
-            - self.pamset["lambda"] * self.temp_fast
+            - self.lambda_eff * self.temp_fast
             - (self.pamset["ocean_efficacy"] - 1)
             * self.pamset["k"]
             * (self.temp_fast - self.temp_slow)
         )
         dtemp = (
             forc
-            / self.pamset["lambda"]
+            / self.lambda_eff
             * (1 - (self.pamset["foan"] + self.pamset["foas"]) / 2.0)
             + self.temp_fast * (self.pamset["foan"] + self.pamset["foas"]) / 2
         )  # Approximate global mean temperature change

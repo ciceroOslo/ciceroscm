@@ -171,9 +171,15 @@ class CICEROSCM:
 
         Returns
         -------
-        float
-             The total forcing for the year, including solar
-             forcing is added.
+        tuple
+            ``(fn, fs, forc, w_aero)``. The first three entries are the
+            hemispheric and total forcing for the year (with solar
+            added). ``w_aero`` is the magnitude-weighted aerosol
+            forcing fraction used by the pattern-effect machinery; it
+            comes from the optional ``w_aero`` column on the forcing
+            DataFrame and defaults to ``0.0`` when the column is
+            absent (graceful fallback for forcing files that do not
+            carry per-agent decomposition).
         """
         row_index = yr - self.cfg["nystart"]
         # Add support for other forcing formats
@@ -182,14 +188,18 @@ class CICEROSCM:
             forc = self.rf[row_index]  # + self.rf_luc.iloc[row_index][0]
             fn = forc
             fs = forc
+            w_aero = 0.0
         else:
             forc = self.rf["total"][yr]
             fn = self.rf["FORC_NH"][yr]
             fs = self.rf["FORC_SH"][yr]
+            w_aero = (
+                float(self.rf["w_aero"][yr]) if "w_aero" in self.rf.columns else 0.0
+            )
         forc = forc + rf_sun.iloc[row_index, 0]
         fn = fn + rf_sun.iloc[row_index, 0]
         fs = fs + rf_sun.iloc[row_index, 0]
-        return fn, fs, forc
+        return fn, fs, forc, w_aero
 
     def add_year_data_to_output(self, values, forc, index):
         """
@@ -225,7 +235,7 @@ class CICEROSCM:
         pamset_emiconc=None,
         pamset_carbon=None,
         make_plot=False,
-    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
+    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, too-many-branches
         """
         Run CICEROSCM
 
@@ -256,6 +266,11 @@ class CICEROSCM:
         # udm = UpwellingDiffusionModel(pamset_udm)
 
         udm = self.thermal_model_class(pamset_udm)
+
+        # Pattern-mediated feedback: each thermal model owns the
+        # lambda_eff = lambda_0 + delta_lambda_aero * w_aero formula
+        # internally; the driver only forwards w_aero each year
+
         values = None
         if not self.cfg["rf_run"]:
             self.ce_handler.reset_with_new_pams(pamset_emiconc, pamset_carbon)
@@ -267,14 +282,17 @@ class CICEROSCM:
                     )
                 else:
                     self.ce_handler.emi2conc(yr)
-                forc, fn, fs = self.ce_handler.conc2forc(
+                forc, fn, fs, w_aero = self.ce_handler.conc2forc(
                     yr,
                     self.rf_luc.iloc[yr - self.cfg["nystart"], 0],
                     self.rf_volc_sun["sun"].iloc[yr - self.cfg["nystart"], 0],
                 )
 
             else:
-                fn, fs, forc = self.forc_set(yr, self.rf_volc_sun["sun"])
+                fn, fs, forc, w_aero = self.forc_set(yr, self.rf_volc_sun["sun"])
+
+            udm.set_feedback_gregory(w_aero)
+
             values = udm.energy_budget(
                 fn,
                 fs,
