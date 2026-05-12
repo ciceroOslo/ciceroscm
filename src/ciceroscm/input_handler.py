@@ -180,7 +180,7 @@ def read_forc(forc_file):
                 df_forc["FORC_NH"] = df_forc["total"]
                 df_forc["FORC_SH"] = df_forc["total"]
 
-        # Pattern-mediated feedback (Tier 3) precomputation: when the
+        # Pattern-mediated feedback precomputation: when the
         # forcing file carries per-agent columns matching AEROSOL_TRACERS
         # we precompute the magnitude-weighted aerosol fraction
         # w_aero(t) = |F_aero| / sum_j |F_j| as a column. Forcing files
@@ -188,6 +188,12 @@ def read_forc(forc_file):
         # falls back to w_aero = 0 (no pattern-effect modulation).
         if "w_aero" not in df_forc.columns:
             aero_cols = [c for c in AEROSOL_TRACERS if c in df_forc.columns]
+            aero_cols_reg = [
+                c for c in df_forc.columns if c[:2] in ["SO", "BC", "OC", "BM"]
+            ]
+            for c in aero_cols_reg:
+                if c not in aero_cols:
+                    aero_cols.append(c)
             agent_cols = [
                 c for c in df_forc.columns if c not in ("total", "FORC_NH", "FORC_SH")
             ]

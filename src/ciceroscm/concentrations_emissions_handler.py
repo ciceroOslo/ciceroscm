@@ -12,7 +12,6 @@ import pandas as pd
 from ._utils import cut_and_check_pamset
 from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
 from .component_factory_functions import create_carbon_cycle_model
-from .constants import AEROSOL_TRACERS
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -632,6 +631,7 @@ class ConcentrationsEmissionsHandler:
         tot_forc, forc_nh, forc_sh = self.calculate_forc_three_main(yr)
         yr_0 = self.years[0]
         # Finish per tracer calculations, add per tracer to printable df and sum the total
+        f_aero_mag = 0.0
         for tracer, forc_val_series in self.forc.items():
             if tracer in ["CO2", "N2O", "CH4"]:
                 continue
@@ -646,6 +646,7 @@ class ConcentrationsEmissionsHandler:
                 "BM",
             ]:
                 q = self.calc_aerosol_forcing(yr, tracer)
+                f_aero_mag = f_aero_mag + abs(q)
             elif (
                 tracer in self.df_gas.index
                 and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
@@ -712,9 +713,6 @@ class ConcentrationsEmissionsHandler:
         # Returns 0.0 when all components are zero (pre-industrial),
         # which is the no-pattern-effect case anyway.
         idx = yr - yr_0
-        f_aero_mag = sum(
-            abs(self.forc[t][idx]) for t in AEROSOL_TRACERS if t in self.forc
-        )
         f_abs_total = sum(
             abs(s[idx]) for k, s in self.forc.items() if k != "Total_forcing"
         )
