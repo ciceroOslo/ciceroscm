@@ -125,7 +125,6 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
     emis_series = cscm.results["emissions"]["CO2"].values
     temp_timseries = cscm.results["dT_glob"]
 
-
     ccmod = carbon_cycle_mod.CarbonCycleModel(
         {"nyend": 2100, "nystart": 1750},
         pamset_carbon={
@@ -137,7 +136,7 @@ def test_back_calculate_emissions_with_temperature_feedback(test_data_dir):
     em_back_calculated = ccmod.back_calculate_emissions(
         conc_co2_series_all_die, feedback_dict_series={"dtemp": temp_timseries}
     )
-  
+
     assert not np.allclose(conc_co2_series_all_die, conc_co2_series_default)
     assert np.allclose(em_back_calculated, emis_series, rtol=1.0e-2)
     # TODO: Test carbon cycle outputs with feedbacks

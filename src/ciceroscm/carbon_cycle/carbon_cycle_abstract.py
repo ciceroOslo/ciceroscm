@@ -297,7 +297,7 @@ class AbstractCarbonCycleModel(ABC):
             emission changes that can be used
         """
         prev_co2_series = np.zeros_like(co2_conc_series)
-        prev_co2_series[0] = PREINDUSTRIAL_CO2_CONC
+        prev_co2_series[0] = self.get_preindustrial_co2_conc()
         prev_co2_series[1:] = co2_conc_series[:-1]
         return (co2_conc_series - prev_co2_series) * PPM_CO2_TO_PG_C
 
@@ -329,10 +329,7 @@ class AbstractCarbonCycleModel(ABC):
             Timeseries of estimated emissions to match the concentration and
             temperature timeseries sent
         """
-        if "preindustrial_co2_conc" not in self.pamset:
-            prev_co2_conc = PREINDUSTRIAL_CO2_CONC
-        else:
-            prev_co2_conc = self.pamset["preindustrial_co2_conc"]
+        prev_co2_conc = self.get_preindustrial_co2_conc()
         em_series = np.zeros(len(co2_conc_series))
         if feedback_dict_series is None:
             feedback_dict_series = {
