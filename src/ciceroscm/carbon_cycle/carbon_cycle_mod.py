@@ -90,6 +90,7 @@ CARBON_CYCLE_MODEL_REQUIRED_PAMSET = {
     "solubility_sens": 0.02,
     "solubility_limit": 0.5,
     "ml_depth_min": 10.0,
+    "preindustrial_co2_conc": PREINDUSTRIAL_CO2_CONC,
 }
 
 # Maximum z_co2 (µmol/kg DIC perturbation) for which the Mehrbach polynomial
@@ -188,7 +189,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         """
         self.co2_hold = {
             "yCO2": 0.0,
-            "xCO2": PREINDUSTRIAL_CO2_CONC,
+            "xCO2": self.pamset["preindustrial_co2_conc"],
             "sCO2": np.zeros(self.pamset["idtm"] * self.pamset["years_tot"]),
             "emCO2_prev": 0.0,
             "dfnpp": np.zeros(self.pamset["idtm"] * self.pamset["years_tot"]),
@@ -233,7 +234,8 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             Dictionary containing hold values to set, the following keys are used.
             Defaults equal values for starting a run from pre-industrial conditions
             xco2 : float
-                CO2 concentration to set, default is PREINDUSTRIAL_CO2_CONC
+                CO2 concentration to set, default is self.pamset["preindustrial_co2_conc"]
+                which by default is set to PREINDUSTRIAL_CO2_CONC
                 which is 278.0 and the start value
             yco2 : float
                 yco2 value, default is 0.0 which is the start value
@@ -247,7 +249,9 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         if hold_dict is None:
             hold_dict = {}
         self.co2_hold["yCO2"] = hold_dict.get("yco2", 0.0)
-        self.co2_hold["xCO2"] = hold_dict.get("xco2", PREINDUSTRIAL_CO2_CONC)
+        self.co2_hold["xCO2"] = hold_dict.get(
+            "xco2", self.pamset["preindustrial_co2_conc"]
+        )
         self.co2_hold["emCO2_prev"] = hold_dict.get("emco2_prev", 0.0)
         self.co2_hold["ss1"] = hold_dict.get("ss1", 0.0)
         self.co2_hold["sums"] = hold_dict.get("sums", 0.0)
@@ -531,7 +535,9 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                 self.co2_hold["dfnpp"][it] = (
                     fnpp
                     * self.pamset["beta_f"]
-                    * np.log(self.co2_hold["xCO2"] / PREINDUSTRIAL_CO2_CONC)
+                    * np.log(
+                        self.co2_hold["xCO2"] / self.pamset["preindustrial_co2_conc"]
+                    )
                 )
                 # Decay from previous primary production
                 sumf = np.einsum(
@@ -587,7 +593,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                 self.co2_hold["sCO2"][it]
                 + 0.5 * self.co2_hold["yCO2"]
                 + 0.5 * yco2_prev
-                + PREINDUSTRIAL_CO2_CONC
+                + self.pamset["preindustrial_co2_conc"]
             )
             # print("it: %d, emCO2: %e, sCO2: %e, zCO2: %e, yCO2: %e, xCO2: %e, ss1: %e, ss2: %e, dnfpp:%e"%(it, em_co2, self.co2_hold["sCO2"][it], z_co2, self.co2_hold["yCO2"], self.co2_hold["xCO2"], self.co2_hold["ss1"], ss2, self.co2_hold["dfnpp"][it]))
         return self.co2_hold["xCO2"]
@@ -632,7 +638,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
                 np.repeat(
                     [
                         self.pamset["beta_f"]
-                        * np.log(co2_conc / PREINDUSTRIAL_CO2_CONC)
+                        * np.log(co2_conc / self.pamset["preindustrial_co2_conc"])
                         for co2_conc in co2_conc_series
                     ],
                     self.pamset["idtm"],
@@ -853,6 +859,7 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
         df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
             em_series,  # pylint: disable=possibly-used-before-assignment
             conc_series,
+            preindustrial_co2_conc=self.pamset["preindustrial_co2_conc"],
         )
         df_carbon["Emissions"] = em_series
         return df_carbon

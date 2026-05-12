@@ -22,7 +22,9 @@ PPM_CO2_TO_PG_C = 2.123
 PREINDUSTRIAL_CO2_CONC = 278.0
 
 
-def calculate_airborne_fraction(em_timeseries, conc_timeseries):
+def calculate_airborne_fraction(
+    em_timeseries, conc_timeseries, preindustrial_co2_conc=PREINDUSTRIAL_CO2_CONC
+):
     """
     Calculate Airborne Fraction of CO2 from emissions timeseries
 
@@ -34,6 +36,11 @@ def calculate_airborne_fraction(em_timeseries, conc_timeseries):
     conc_timeseries : np.ndarray
         Concentrations timeseries. Should be the same length as the emissions
         timeseries
+    preindustrial_co2_conc : float
+        Preindustrial CO2 concentration in ppm, default value 278 ppm. This is
+        needed to calculate the airborne fraction, as this is calculated as the
+        change in concentration since preindustrial times as defined by
+        the run.
 
     Returns
     -------
@@ -43,7 +50,7 @@ def calculate_airborne_fraction(em_timeseries, conc_timeseries):
     if any(np.cumsum(em_timeseries) == 0):
         return np.ones_like(em_timeseries) * np.nan
     airborne_fraction = (
-        (conc_timeseries - PREINDUSTRIAL_CO2_CONC)
+        (conc_timeseries - preindustrial_co2_conc)
         / np.cumsum(em_timeseries)
         * PPM_CO2_TO_PG_C
     )

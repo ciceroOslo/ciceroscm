@@ -20,6 +20,9 @@ The changes listed in this file are categorised as follows:
 - Deployment workflow to publish package to PyPI on manual trigger
 - Support that makes cscmparwrapper run serial if only one worker is specified.
 
+### Changed
+- Standard carbon cycle changed to have concentration based on initial concentration in concentrations_emissions handler and not absolute value
+
 ### Fixed
 - Temperature feedbacks were not passed to partial_pressure calculation in carbon cycle, meaning that the carbon cycle was not responding to temperature changes, this is now fixed and the carbon cycle will respond to temperature changes through the temperature feedbacks to ocean solubility and mixed layer depth.
 

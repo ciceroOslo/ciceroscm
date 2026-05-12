@@ -205,6 +205,11 @@ class ConcentrationsEmissionsHandler:
 
         # Setting up carbon cycle model
         model_type = self.pamset["carbon_cycle_model"]  # Default to "default"
+        # Adding in preindustrial CO2 concentration from input concentrations
+        pamset_carbon = pamset_carbon if pamset_carbon is not None else {}
+        pamset_carbon["preindustrial_co2_conc"] = self.conc_in["CO2"][
+            self.pamset["nystart"]
+        ]
         self.carbon_cycle = create_carbon_cycle_model(
             model_type, self.pamset, pamset_carbon
         )
@@ -1041,14 +1046,18 @@ class ConcentrationsEmissionsHandler:
                 df_carbon = pd.DataFrame(
                     data={
                         "Airborne fraction CO2": calculate_airborne_fraction(
-                            em_series, conc_series
+                            em_series,
+                            conc_series,
+                            preindustrial_co2_conc=self.carbon_cycle.get_preindustrial_co2_conc(),
                         )
                     },
                     index=self.years,
                 )
             else:
                 df_carbon["Airborne fraction CO2"] = calculate_airborne_fraction(
-                    em_series, conc_series
+                    em_series,
+                    conc_series,
+                    preindustrial_co2_conc=self.carbon_cycle.get_preindustrial_co2_conc(),
                 )
         return df_carbon
 

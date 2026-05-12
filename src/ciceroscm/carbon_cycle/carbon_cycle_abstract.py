@@ -115,6 +115,22 @@ class AbstractCarbonCycleModel(ABC):
         """
         return {}
 
+    def get_preindustrial_co2_conc(self):
+        """
+        Get the preindustrial co2 concentration value to use in calculations
+
+        This is needed to calculate the airborne fraction, as this is calculated as the
+        change in concentration since preindustrial times as defined by the run.
+
+        Returns
+        -------
+        float
+            Preindustrial CO2 concentration in ppm
+        """
+        if "preindustrial_co2_conc" not in self.pamset:
+            return PREINDUSTRIAL_CO2_CONC
+        return self.pamset["preindustrial_co2_conc"]
+
     def _set_co2_hold(self, hold_dict=None):
         """
         Set state variables for the carbon cycle from hold_dict dictionary
@@ -281,11 +297,15 @@ class AbstractCarbonCycleModel(ABC):
             emission changes that can be used
         """
         prev_co2_series = np.zeros_like(co2_conc_series)
-        prev_co2_series[0] = PREINDUSTRIAL_CO2_CONC
+        prev_co2_series[0] = self.get_preindustrial_co2_conc()
         prev_co2_series[1:] = co2_conc_series[:-1]
         return (co2_conc_series - prev_co2_series) * PPM_CO2_TO_PG_C
 
-    def back_calculate_emissions(self, co2_conc_series, feedback_dict_series=None):
+    def back_calculate_emissions(
+        self,
+        co2_conc_series,
+        feedback_dict_series=None,
+    ):
         """
         Back calculate emissions from conc_run
 
@@ -309,7 +329,7 @@ class AbstractCarbonCycleModel(ABC):
             Timeseries of estimated emissions to match the concentration and
             temperature timeseries sent
         """
-        prev_co2_conc = PREINDUSTRIAL_CO2_CONC
+        prev_co2_conc = self.get_preindustrial_co2_conc()
         em_series = np.zeros(len(co2_conc_series))
         if feedback_dict_series is None:
             feedback_dict_series = {
