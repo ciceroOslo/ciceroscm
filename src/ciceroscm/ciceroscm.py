@@ -267,7 +267,7 @@ class CICEROSCM:
 
         udm = self.thermal_model_class(pamset_udm)
 
-        # Pattern-mediated feedback (Tier 3): each thermal model owns the
+        # Pattern-mediated feedback: each thermal model owns the
         # lambda_eff = lambda_0 + delta_lambda_aero * w_aero formula
         # internally; the driver only forwards w_aero each year
 

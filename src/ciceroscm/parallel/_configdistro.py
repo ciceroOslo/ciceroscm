@@ -27,7 +27,7 @@ prior_flat = {
     "lambda": [1.85 / 3.71, 8.01 / 3.71],
     "mixed": [25, 125],
     "ocean_efficacy": [0.8, 1.2],
-    # Pattern-mediated feedback (Tier 3) sensitivity. Bounds derived from the
+    # Pattern-mediated feedback sensitivity. Bounds derived from the
     # Forster/Sherwood AR6 pattern-effect assessment Delta_lambda = 0.5 +/- 0.5
     # W m^-2 K^-1 (5-95%, allows ~zero on the low end consistent with Lewis &
     # Mauritsen 2021), divided by the model-empirical <w_aero> ~ 0.35 over

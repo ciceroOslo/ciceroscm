@@ -624,7 +624,7 @@ class ConcentrationsEmissionsHandler:
             entry ``w_aero`` is the magnitude-weighted aerosol forcing
             fraction ``|F_aero| / sum_j |F_j|``, used by the driver to
             modulate the climate feedback parameter when pattern-effect
-            modulation is active (Tier 3). It is ``0.0`` when no
+            modulation is active. It is ``0.0`` when no
             forcing components are non-zero (pre-industrial baseline).
         """
         # Intialising with the combined values from CO2, N2O and CH4

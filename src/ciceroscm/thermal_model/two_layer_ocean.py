@@ -32,7 +32,7 @@ class TwoLayerOceanModel(
         "ocean_efficacy": 1,  # Efficacy of deep ocean heat uptake
         "foan": 0.61,  # Northern hemisphere ocean area fraction
         "foas": 0.81,  # Southern hemisphere ocean area fraction
-        # Pattern-mediated feedback (Tier 3) sensitivity. lambda_eff(t)
+        # Pattern-mediated feedback sensitivity. lambda_eff(t)
         # = lambda_0 + delta_lambda_aero * w_aero(t). Default 0.0 = off.
         "delta_lambda_aero": 0.0,
     }
@@ -90,7 +90,7 @@ class TwoLayerOceanModel(
         self.lambda_eff = self.pamset["lambda"]
 
     # ------------------------------------------------------------------
-    # Pattern-mediated feedback (Tier 3) capability.
+    # Pattern-mediated feedback capability.
     # In this model ``pamset["lambda"]`` already stores the feedback in
     # Gregory units (W m^-2 K^-1), so the get/set methods are direct.
     # No derived quantities depend on lambda, so no refresh is needed.

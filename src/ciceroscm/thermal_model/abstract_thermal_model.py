@@ -117,7 +117,7 @@ class AbstractThermalModel(ABC):
         """
         Apply the pattern-mediated feedback update for this year.
 
-        Used by the driver each year (Tier 3 of the pattern-effect
+        Used by the driver each year (including the pattern-effect
         formulation). Implementations compute
         ``lambda_eff = lambda_0 + w_aero * delta_lambda_aero`` in their
         own internal units and refresh any cached derived quantities so

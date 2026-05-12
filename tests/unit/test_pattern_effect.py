@@ -1,5 +1,5 @@
 """
-Tests for pattern-mediated feedback (Tier 3) machinery.
+Tests for pattern-mediated feedback machinery.
 
 Covers:
   * The thermal-model pattern-effect capability protocol

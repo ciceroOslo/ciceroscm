@@ -1,11 +1,11 @@
 """
-End-to-end integration tests for the Tier-3 pattern-mediated feedback wiring.
+End-to-end integration tests for the pattern-mediated feedback wiring.
 
 Verifies that:
   * ``delta_lambda_aero = 0`` produces bit-for-bit identical output to a run
     without the parameter at all (backward compatibility).
   * A non-zero ``delta_lambda_aero`` shifts the diagnosed Gregory feedback
-    in the expected direction (Tier-3 signature).
+    in the expected direction.
   * Misconfiguration (``delta_lambda_aero != 0`` with a thermal model that
     does not implement the capability) raises ``ValueError`` at startup.
 """

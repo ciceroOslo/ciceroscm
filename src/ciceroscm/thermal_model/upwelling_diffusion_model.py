@@ -126,7 +126,7 @@ class UpwellingDiffusionModel(
         "lm": 40,  # Number of ocean layers
         "ldtime": 12,  # Number of time steps per year
         "ocean_efficacy": 1.0,  # Efficacy of deep ocean heat uptake
-        # Pattern-mediated feedback (Tier 3) sensitivity. lambda_eff(t)
+        # Pattern-mediated feedback sensitivity. lambda_eff(t)
         # = lambda_0 + delta_lambda_aero * w_aero(t). Default 0.0 = off.
         "delta_lambda_aero": 0.0,
     }
@@ -182,7 +182,7 @@ class UpwellingDiffusionModel(
         self.dtempprev = 0.0
 
     # ------------------------------------------------------------------
-    # Pattern-mediated feedback (Tier 3) capability.
+    # Pattern-mediated feedback capability.
     # ``pamset["lambda"]`` is the climate-sensitivity parameter (K per
     # W/m^2); the Gregory feedback that multiplies T in the TOA balance
     # is ``rlamda = 1 / lambda`` (W m^-2 K^-1). The driver works in
