@@ -125,3 +125,60 @@ def test_gaspam_compatibility_check(test_data_dir):
                 ),
             }
         )
+
+
+def test_read_forc_with_aerosol_pattern_effect(test_data_dir, tmpdir):
+    # Case 1: CO2, BC, SO4_IND (SO4_IND has negative values)
+    forc_csv_1 = tmpdir.join("forc_aero_basic.csv")
+    forc_csv_1.write(
+        "year,CO2,BC,SO4_IND\n"
+        "2000,2.0,0.4,-0.8\n"
+        "2001,3.0,0.3,-0.3\n"
+        "2002,1.0,0.5,-0.5\n"
+    )
+    df1 = input_handler.read_forc(str(forc_csv_1))
+    assert "w_aero" in df1.columns
+    # w_aero = (|BC| + |SO4_IND|) / (|CO2| + |BC| + |SO4_IND|)
+    expected_w_aero_1 = np.array(
+        [
+            (0.4 + 0.8) / (2.0 + 0.4 + 0.8),  # 1.2 / 3.2 = 0.375
+            (0.3 + 0.3) / (3.0 + 0.3 + 0.3),  # 0.6 / 3.6 = 1/6
+            (0.5 + 0.5) / (1.0 + 0.5 + 0.5),  # 1.0 / 2.0 = 0.5
+        ]
+    )
+    np.testing.assert_allclose(df1["w_aero"].to_numpy(), expected_w_aero_1)
+
+    # Case 2: CO2, BC, SO4_IND, OC_Asia, OC_Africa (all aerosol cols negative except BC)
+    # OC_Asia and OC_Africa start with "OC" so they are picked up by aero_cols_reg
+    forc_csv_2 = tmpdir.join("forc_aero_regional_oc.csv")
+    forc_csv_2.write(
+        "year,CO2,BC,SO4_IND,OC_Asia,OC_Africa\n"
+        "2000,2.0,0.4,-0.8,-0.2,-0.1\n"
+        "2001,3.0,0.3,-0.3,-0.15,-0.05\n"
+        "2002,1.0,0.5,-0.5,-0.1,-0.1\n"
+    )
+    df2 = input_handler.read_forc(str(forc_csv_2))
+    assert "w_aero" in df2.columns
+    # w_aero = (|BC| + |SO4_IND| + |OC_Asia| + |OC_Africa|) / (|CO2| + |BC| + |SO4_IND| + |OC_Asia| + |OC_Africa|)
+    expected_w_aero_2 = np.array(
+        [
+            (0.4 + 0.8 + 0.2 + 0.1) / (2.0 + 0.4 + 0.8 + 0.2 + 0.1),  # 1.5 / 3.5
+            (0.3 + 0.3 + 0.15 + 0.05) / (3.0 + 0.3 + 0.3 + 0.15 + 0.05),  # 0.8 / 3.8
+            (0.5 + 0.5 + 0.1 + 0.1) / (1.0 + 0.5 + 0.5 + 0.1 + 0.1),  # 1.2 / 2.2
+        ]
+    )
+    np.testing.assert_allclose(df2["w_aero"].to_numpy(), expected_w_aero_2)
+
+    # Case 3: same columns as Case 1 but w_aero is already present in the file;
+    # read_forc should pass through the precalculated values unchanged.
+    precalc_w_aero = expected_w_aero_1
+    forc_csv_3 = tmpdir.join("forc_aero_precalc_w_aero.csv")
+    forc_csv_3.write(
+        f"year,CO2,BC,SO4_IND,w_aero\n"
+        f"2000,2.0,0.4,-0.8,{precalc_w_aero[0]}\n"
+        f"2001,3.0,0.3,-0.3,{precalc_w_aero[1]}\n"
+        f"2002,1.0,0.5,-0.5,{precalc_w_aero[2]}\n"
+    )
+    df3 = input_handler.read_forc(str(forc_csv_3))
+    assert "w_aero" in df3.columns
+    np.testing.assert_allclose(df3["w_aero"].to_numpy(), precalc_w_aero)
