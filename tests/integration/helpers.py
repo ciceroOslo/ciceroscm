@@ -43,7 +43,7 @@ def build_cscm(test_data_dir):
     """Return an uninitialised CICEROSCM configured for the SSP2-4.5 test dataset."""
     return CICEROSCM(
         {
-            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "gaspam_file": os.path.join(test_data_dir, "gases_vupdate_2022_AR6.txt"),
             "nyend": 2100,
             "nystart": 1750,
             "emstart": 1850,

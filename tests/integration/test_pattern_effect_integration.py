@@ -11,8 +11,23 @@ Verifies that:
 """
 
 import numpy as np
-
 from helpers import build_cscm, run_cscm
+
+
+def feedback(cscm):
+    """
+    Compute the diagnosed Gregory feedback parameter over the historical period.
+
+    Convenience function to compute the diagnosed Gregory feedback parameter
+    including aerosol pattern effects over the historical aerosol period.
+    """
+    years = np.arange(1750, 2101)
+    hist = (years >= 1900) & (years <= 2014)
+    T = np.asarray(cscm.results["dT_glob"])[hist]
+    N = np.asarray(cscm.results["RIB_glob"])[hist]
+    F = np.asarray(cscm.results["Total_forcing"])[hist]
+    R = N - F
+    return -np.cov(T, R, ddof=0)[0, 1] / np.var(T)
 
 
 def test_delta_lambda_zero_matches_baseline(test_data_dir):
@@ -34,16 +49,6 @@ def test_positive_delta_lambda_strengthens_feedback(test_data_dir):
     cscm_base = run_cscm(build_cscm(test_data_dir))
     cscm_pos = run_cscm(build_cscm(test_data_dir), delta_lambda_aero=1.5)
 
-    years = np.arange(1750, 2101)
-    hist = (years >= 1900) & (years <= 2014)
-
-    def feedback(cscm):
-        T = np.asarray(cscm.results["dT_glob"])[hist]
-        N = np.asarray(cscm.results["RIB_glob"])[hist]
-        F = np.asarray(cscm.results["Total_forcing"])[hist]
-        R = N - F
-        return -np.cov(T, R, ddof=0)[0, 1] / np.var(T)
-
     f_base = feedback(cscm_base)
     f_pos = feedback(cscm_pos)
     # Positive delta_lambda_aero should produce a *larger* (more strongly
@@ -54,16 +59,6 @@ def test_positive_delta_lambda_strengthens_feedback(test_data_dir):
 def test_negative_delta_lambda_weakens_feedback(test_data_dir):
     cscm_base = run_cscm(build_cscm(test_data_dir))
     cscm_neg = run_cscm(build_cscm(test_data_dir), delta_lambda_aero=-1.5)
-
-    years = np.arange(1750, 2101)
-    hist = (years >= 1900) & (years <= 2014)
-
-    def feedback(cscm):
-        T = np.asarray(cscm.results["dT_glob"])[hist]
-        N = np.asarray(cscm.results["RIB_glob"])[hist]
-        F = np.asarray(cscm.results["Total_forcing"])[hist]
-        R = N - F
-        return -np.cov(T, R, ddof=0)[0, 1] / np.var(T)
 
     f_base = feedback(cscm_base)
     f_neg = feedback(cscm_neg)
