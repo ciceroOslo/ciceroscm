@@ -19,7 +19,7 @@ The changes listed in this file are categorised as follows:
 
 ### Changed
 
-- Adaptive extra stepping emulation for carbon_cycle_mod.py to  avoid negative atmospheric CO2 concentrations. This is done by checking whether the predicted change in partial pressure in the timestep is too large, and if so recomputing the added air-sea flux using a midpoint value.
+- Adaptive extra stepping emulation for carbon_cycle_mod.py to avoid negative atmospheric CO2 concentrations. This is done by checking whether the predicted change in partial pressure in the timestep is too large, and if so recomputing the added air-sea flux using a midpoint value.
 
 ### Fixed
 
