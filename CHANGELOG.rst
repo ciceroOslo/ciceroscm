@@ -28,6 +28,7 @@ The changes listed in this file are categorised as follows:
 
 ### Fixed
 - Temperature feedbacks were not passed to partial_pressure calculation in carbon cycle, meaning that the carbon cycle was not responding to temperature changes, this is now fixed and the carbon cycle will respond to temperature changes through the temperature feedbacks to ocean solubility and mixed layer depth.
+- ``ConcentrationsEmissionsHandler`` carbon-cycle output gating was a key-presence check (``if "carbon_cycle_outputs" in cfg:``) rather than a value check, so passing ``carbon_cycle_outputs=False`` still triggered the expensive back-calculation. Since ``CSCMParWrapper.run_over_cfgs`` always passes the key, every CICEROSCM run paid the cost (~30-50x per-member runtime on conc-driven runs). Gating is now ``if cfg.get("carbon_cycle_outputs"):``; ``False`` (or omitting the key) skips the back-calculation as intended. Regression test added in ``tests/integration/test_carbon_cycle_variables_integrated.py``.
 
 ### Changed
 - Integral convolution in carbon cycle changed from using np.dot to np.einsum which leads to a significant speed up for longer timeseries on linux machines.
