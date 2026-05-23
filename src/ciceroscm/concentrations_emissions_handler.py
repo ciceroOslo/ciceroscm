@@ -948,7 +948,7 @@ class ConcentrationsEmissionsHandler:
                 "conc", results_dict["concentrations"], outdir, self.df_gas["CONC_UNIT"]
             )
 
-        if "carbon_cycle_outputs" in cfg:
+        if cfg.get("carbon_cycle_outputs"):
             # Adding carbon cycle outputs here
             # Typically back_calculated emissions for conc_run
             # Airborne fraction
@@ -1021,7 +1021,7 @@ class ConcentrationsEmissionsHandler:
         results["concentrations"] = df_conc
         results["forcing"] = df_forc
 
-        if "carbon_cycle_outputs" in cfg:
+        if cfg.get("carbon_cycle_outputs"):
             results["carbon cycle"] = self.get_carbon_cycle_data(
                 feedback_dict_series=feedback_dict_series
             )
