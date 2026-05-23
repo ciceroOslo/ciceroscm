@@ -221,3 +221,50 @@ def test_changing_carbon_cycle_parameters(test_data_dir):
         if key == "CO2 concentration":
             continue
         assert not np.allclose(value, default_results[key])
+
+
+def test_carbon_cycle_outputs_false_skips_back_calculation(test_data_dir):
+    """
+    Passing ``carbon_cycle_outputs=False`` must skip the carbon-cycle
+    back-calculation (regression test).
+
+    The pre-fix code gated the carbon-cycle output via
+    ``if "carbon_cycle_outputs" in cfg:``, i.e. a key-presence check
+    rather than a value check. That meant passing the key with value
+    ``False`` (or any falsy value) still triggered the expensive
+    back-calculation. After the fix the gating is a value check, so
+    ``False`` skips the work and ``"carbon cycle"`` does not appear in
+    ``results``.
+    """
+    cscm = CICEROSCM(
+        {
+            "gaspam_file": os.path.join(test_data_dir, "gases_v1RCMIP.txt"),
+            "nystart": 1900,
+            "emstart": 1950,
+            "nyend": 2015,
+            "concentrations_file": os.path.join(test_data_dir, "ssp245_conc_RCMIP.txt"),
+            "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
+            "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
+            "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+            "idtm": 24,
+        },
+    )
+
+    cscm._run({"results_as_dict": True})
+    assert "carbon cycle" not in cscm.results, (
+        "Omitting the carbon_cycle_outputs key should leave "
+        "results['carbon cycle'] unset"
+    )
+
+    cscm._run({"results_as_dict": True, "carbon_cycle_outputs": False})
+    assert "carbon cycle" not in cscm.results, (
+        "carbon_cycle_outputs=False should skip back-calculation; "
+        "results['carbon cycle'] should not be set (regression: "
+        "previous key-presence check triggered it for any value)"
+    )
+
+    cscm._run({"results_as_dict": True, "carbon_cycle_outputs": True})
+    assert "carbon cycle" in cscm.results, (
+        "carbon_cycle_outputs=True should run the back-calculation "
+        "and populate results['carbon cycle']"
+    )
