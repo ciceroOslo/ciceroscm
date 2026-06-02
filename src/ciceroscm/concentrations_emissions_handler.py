@@ -213,6 +213,21 @@ class ConcentrationsEmissionsHandler:
         self.carbon_cycle = create_carbon_cycle_model(
             model_type, self.pamset, pamset_carbon
         )
+        # Hot-path caches populated by _build_df_gas_cache (called via
+        # reset_with_new_pams below); declared here so they are recognised
+        # as instance attributes and rebuilt on every reset.
+        self._alpha = {}
+        self._sarf_to_erf = {}
+        self._conc_unit = {}
+        self._tau1 = {}
+        self._beta = {}
+        self._nat_em = {}
+        self._nat_em_co2 = 0.0
+        self._inv_tau2_ch4 = 0.0
+        self._inv_tau3_ch4 = 0.0
+        self._yr0 = 0
+        self._emis_arr = {}
+        self._ref_em_species = {}
         # not really needed, but I guess the linter will complain...
         self.reset_with_new_pams(pamset, pamset_carbon, preexisting=False)
 
@@ -554,7 +569,8 @@ class ConcentrationsEmissionsHandler:
             )
             + 0.17 * (self._emis_arr["NOx"][yr_idx] - self._emis_arr["NOx"][ref_yr_idx])
             + 0.0014 * (self._emis_arr["CO"][yr_idx] - self._emis_arr["CO"][ref_yr_idx])
-            + 0.0042 * (self._emis_arr["NMVOC"][yr_idx] - self._emis_arr["NMVOC"][ref_yr_idx])
+            + 0.0042
+            * (self._emis_arr["NMVOC"][yr_idx] - self._emis_arr["NMVOC"][ref_yr_idx])
         )
         # RBS101115
         # IF (yr_ix.LT.yr_2010) THEN ! Proportional to TROP_O3 build-up
@@ -585,10 +601,14 @@ class ConcentrationsEmissionsHandler:
         yr_idx = yr - self._yr0
         q = 0
         if self._alpha[tracer] != 0:
-            q = (self._emis_arr[tracer][yr_idx] - self._emis_arr[tracer][0]) * self._alpha[tracer]
+            q = (
+                self._emis_arr[tracer][yr_idx] - self._emis_arr[tracer][0]
+            ) * self._alpha[tracer]
         elif tracer in self._ref_em_species:
             em_tracer, coeff = self._ref_em_species[tracer]
-            q = coeff * (self._emis_arr[em_tracer][yr_idx] - self._emis_arr[em_tracer][0])
+            q = coeff * (
+                self._emis_arr[em_tracer][yr_idx] - self._emis_arr[em_tracer][0]
+            )
         return q
 
     def conc2forc(
@@ -662,14 +682,13 @@ class ConcentrationsEmissionsHandler:
                 )  # +forc_pert
 
             elif tracer == "TROP_O3":
-                q = (
-                    self.tropospheric_ozone_forcing(yr)
-                    * self._sarf_to_erf[tracer]
-                )
+                q = self.tropospheric_ozone_forcing(yr) * self._sarf_to_erf[tracer]
             elif tracer == "STRAT_H2O":
                 q = (
                     self.pamset["qh2o_ch4"] * self.forc["CH4"][yr - yr_0]
-                ) * self._sarf_to_erf[tracer]  # + FORC_PERT(yr_ix,trc_ix)
+                ) * self._sarf_to_erf[
+                    tracer
+                ]  # + FORC_PERT(yr_ix,trc_ix)
             elif tracer == "OTHER":
                 # Possible with forcing perturbations for other
                 # components such as contrails, cirrus etc...
@@ -755,9 +774,7 @@ class ConcentrationsEmissionsHandler:
         if yr < self.pamset["emstart"]:
             self.conc["CO2"][yr] = self.carbon_cycle.co2em2conc(
                 yr,
-                self.emis["CO2_FF"][yr]
-                + self.emis["CO2_AFOLU"][yr]
-                + self._nat_em_co2,
+                self.emis["CO2_FF"][yr] + self.emis["CO2_AFOLU"][yr] + self._nat_em_co2,
                 feedback_dict=feedback_dict,
             )
             self.fill_one_row_conc(yr, avoid=["CO2"])
@@ -831,9 +848,15 @@ class ConcentrationsEmissionsHandler:
             yr_2000_idx = 2000 - self._yr0
             dln_oh = (
                 -0.32 * (np.log(conc_local) - np.log(1751.0))
-                + 0.0042 * (self._emis_arr["NOx"][yr_idx] - self._emis_arr["NOx"][yr_2000_idx])
-                - 0.000105 * (self._emis_arr["CO"][yr_idx] - self._emis_arr["CO"][yr_2000_idx])
-                - 0.000315 * (self._emis_arr["NMVOC"][yr_idx] - self._emis_arr["NMVOC"][yr_2000_idx])
+                + 0.0042
+                * (self._emis_arr["NOx"][yr_idx] - self._emis_arr["NOx"][yr_2000_idx])
+                - 0.000105
+                * (self._emis_arr["CO"][yr_idx] - self._emis_arr["CO"][yr_2000_idx])
+                - 0.000315
+                * (
+                    self._emis_arr["NMVOC"][yr_idx]
+                    - self._emis_arr["NMVOC"][yr_2000_idx]
+                )
             )
             q = q * (dln_oh + 1)
 
