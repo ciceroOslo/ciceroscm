@@ -372,6 +372,20 @@ class ConcentrationsEmissionsHandler:
                     self.conc[tracer] = {}
                 self.forc[tracer] = np.zeros(years_tot)
         self.forc["Total_forcing"] = np.zeros(years_tot)
+        self._build_df_gas_cache()
+
+    def _build_df_gas_cache(self):
+        """Cache hot-path df_gas column accesses and emis numpy arrays."""
+        # df_gas column caches (static for the run)
+        self._alpha = self.df_gas["ALPHA"].to_dict()
+        self._sarf_to_erf = self.df_gas["SARF_TO_ERF"].to_dict()
+        self._conc_unit = self.df_gas["CONC_UNIT"].to_dict()
+        self._tau1 = self.df_gas["TAU1"].to_dict()
+        self._beta = self.df_gas["BETA"].to_dict()
+        self._nat_em = self.df_gas["NAT_EM"].to_dict()
+        self._nat_em_co2 = float(self.df_gas["NAT_EM"]["CO2"])
+        self._inv_tau2_ch4 = 1.0 / float(self.df_gas["TAU2"]["CH4"])
+        self._inv_tau3_ch4 = 1.0 / float(self.df_gas["TAU3"]["CH4"])
 
     def calculate_strat_quantities(self, yr, conc):
         """
@@ -478,9 +492,9 @@ class ConcentrationsEmissionsHandler:
             + 0.043
         ) * (np.sqrt(c_ch4) - np.sqrt(c0_ch4))
         # Feedback factor: Smith et al 2018
-        q_co2 = self.df_gas["SARF_TO_ERF"]["CO2"] * q_co2  # + FORC_PERT(yr_ix,trc_ix))
-        q_n2o = self.df_gas["SARF_TO_ERF"]["N2O"] * q_n2o  # + FORC_PERT(yr_ix,trc_ix))
-        q_ch4 = self.df_gas["SARF_TO_ERF"]["CH4"] * q_ch4  # + FORC_PERT(yr_ix,trc_ix))
+        q_co2 = self._sarf_to_erf["CO2"] * q_co2  # + FORC_PERT(yr_ix,trc_ix))
+        q_n2o = self._sarf_to_erf["N2O"] * q_n2o  # + FORC_PERT(yr_ix,trc_ix))
+        q_ch4 = self._sarf_to_erf["CH4"] * q_ch4  # + FORC_PERT(yr_ix,trc_ix))
 
         self.forc["CO2"][yr - yr_0] = q_co2
         self.forc["CH4"][yr - yr_0] = q_ch4
@@ -653,26 +667,24 @@ class ConcentrationsEmissionsHandler:
                 q = self.calc_aerosol_forcing(yr, tracer)
                 f_aero_mag = f_aero_mag + abs(q)
             elif (
-                tracer in self.df_gas.index
-                and self.df_gas["ALPHA"][tracer] != 0  # pylint: disable=compare-to-zero
+                tracer in self._alpha
+                and self._alpha[tracer] != 0  # pylint: disable=compare-to-zero
             ):
                 q = (
                     (self.conc[tracer][yr] - self.conc[tracer][yr_0])
-                    * self.df_gas["ALPHA"][tracer]
-                    * self.df_gas["SARF_TO_ERF"][tracer]
+                    * self._alpha[tracer]
+                    * self._sarf_to_erf[tracer]
                 )  # +forc_pert
 
             elif tracer == "TROP_O3":
                 q = (
                     self.tropospheric_ozone_forcing(yr)
-                    * self.df_gas["SARF_TO_ERF"][tracer]
+                    * self._sarf_to_erf[tracer]
                 )
             elif tracer == "STRAT_H2O":
                 q = (
                     self.pamset["qh2o_ch4"] * self.forc["CH4"][yr - yr_0]
-                ) * self.df_gas["SARF_TO_ERF"][
-                    tracer
-                ]  # + FORC_PERT(yr_ix,trc_ix)
+                ) * self._sarf_to_erf[tracer]  # + FORC_PERT(yr_ix,trc_ix)
             elif tracer == "OTHER":
                 # Possible with forcing perturbations for other
                 # components such as contrails, cirrus etc...
@@ -760,7 +772,7 @@ class ConcentrationsEmissionsHandler:
                 yr,
                 self.emis["CO2_FF"][yr]
                 + self.emis["CO2_AFOLU"][yr]
-                + self.df_gas["NAT_EM"]["CO2"],
+                + self._nat_em_co2,
                 feedback_dict=feedback_dict,
             )
             self.fill_one_row_conc(yr, avoid=["CO2"])
@@ -769,7 +781,7 @@ class ConcentrationsEmissionsHandler:
 
         for tracer, value_dict in self.conc.items():
             # something something postscenario...?
-            if self.df_gas["CONC_UNIT"][tracer] == "-":
+            if self._conc_unit[tracer] == "-":
                 # Forcing calculated from emissions, should now only be TROP_O3
                 continue
             if tracer == "CO2":
@@ -777,7 +789,7 @@ class ConcentrationsEmissionsHandler:
                     yr,
                     self.emis["CO2_FF"][yr]
                     + self.emis["CO2_AFOLU"][yr]
-                    + self.df_gas["NAT_EM"]["CO2"],
+                    + self._nat_em_co2,
                     feedback_dict=feedback_dict,
                 )
                 continue
@@ -789,18 +801,20 @@ class ConcentrationsEmissionsHandler:
             else:
                 conc_local = self.conc_in[tracer][yr]
 
-            q = 1.0 / self.df_gas["TAU1"][tracer]
+            q = 1.0 / self._tau1[tracer]
 
             if tracer == "CH4":
-                self.df_gas.at[tracer, "NAT_EM"] = self.nat_emis_ch4["CH4"][yr]
+                nat_em = self.nat_emis_ch4["CH4"][yr]
                 q = self.methane_lifetime(q, conc_local, yr)
-            if tracer == "N2O":
-                self.df_gas.at[tracer, "NAT_EM"] = self.nat_emis_n2o["N2O"][yr]
+            elif tracer == "N2O":
+                nat_em = self.nat_emis_n2o["N2O"][yr]
+            else:
+                nat_em = self._nat_em[tracer]
 
             # natural emissions, from gasspamfile
-            emis = self.emis[tracer][yr] + self.df_gas["NAT_EM"][tracer]
+            emis = self.emis[tracer][yr] + nat_em
 
-            point_conc = emis / self.df_gas["BETA"][tracer]
+            point_conc = emis / self._beta[tracer]
             # Rewrote this quite a bit from an original loop,
             # but I think it is mathematically equivalent
             value_dict[yr] = point_conc / q + (conc_local - point_conc / q) * np.exp(-q)
@@ -841,7 +855,7 @@ class ConcentrationsEmissionsHandler:
         elif self.pamset["lifetime_mode"] == "WIGLEY":
             q = q * (((conc_local / 1700.0)) ** (ch4_wigley_exp))
 
-        q = q + 1.0 / self.df_gas["TAU2"]["CH4"] + 1.0 / self.df_gas["TAU3"]["CH4"]
+        q = q + self._inv_tau2_ch4 + self._inv_tau3_ch4
 
         return q
 
