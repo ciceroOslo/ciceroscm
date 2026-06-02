@@ -386,6 +386,20 @@ class ConcentrationsEmissionsHandler:
         self._nat_em_co2 = float(self.df_gas["NAT_EM"]["CO2"])
         self._inv_tau2_ch4 = 1.0 / float(self.df_gas["TAU2"]["CH4"])
         self._inv_tau3_ch4 = 1.0 / float(self.df_gas["TAU3"]["CH4"])
+        # emis as numpy arrays; index 0 corresponds to nystart (self.years[0])
+        self._yr0 = int(self.years[0])
+        self._emis_arr = {col: self.emis[col].to_numpy() for col in self.emis.columns}
+        # Aerosol reference map built once per run (avoids per-call dict construction)
+        self._ref_em_species = {
+            "SO2": ("SO2", self.pamset["qdirso2"]),
+            "SO4_IND": ("SO2", self.pamset["qindso2"]),
+            "OC": ("OC", self.pamset["qoc"]),
+            "BC": ("BC", self.pamset["qbc"]),
+            "BMB_AEROS": ("BMB_AEROS_OC", self.pamset["qbmb"]),
+            "NMVOC": ("NMVOC", self.pamset["qnmvoc"]),
+            "NH3": ("NH3", self.pamset["qnh3"]),
+            "NOx": ("NOx", self.pamset["qnox"]),
+        }
 
     def calculate_strat_quantities(self, yr, conc):
         """
@@ -528,6 +542,8 @@ class ConcentrationsEmissionsHandler:
         """
         yr_0 = self.years[0]
         tracer = "TROP_O3"
+        yr_idx = yr - self._yr0
+        ref_yr_idx = self.pamset["ref_yr"] - self._yr0
         # ALOG(1700.0))  !Concentration in 2010 &
         self.conc[tracer][yr] = (
             30.0
@@ -536,10 +552,9 @@ class ConcentrationsEmissionsHandler:
                 np.log(self.conc["CH4"][yr])
                 - np.log(self.conc_in["CH4"][self.pamset["ref_yr"]])
             )
-            + 0.17 * (self.emis["NOx"][yr] - self.emis["NOx"][self.pamset["ref_yr"]])
-            + 0.0014 * (self.emis["CO"][yr] - self.emis["CO"][self.pamset["ref_yr"]])
-            + 0.0042
-            * (self.emis["NMVOC"][yr] - self.emis["NMVOC"][self.pamset["ref_yr"]])
+            + 0.17 * (self._emis_arr["NOx"][yr_idx] - self._emis_arr["NOx"][ref_yr_idx])
+            + 0.0014 * (self._emis_arr["CO"][yr_idx] - self._emis_arr["CO"][ref_yr_idx])
+            + 0.0042 * (self._emis_arr["NMVOC"][yr_idx] - self._emis_arr["NMVOC"][ref_yr_idx])
         )
         # RBS101115
         # IF (yr_ix.LT.yr_2010) THEN ! Proportional to TROP_O3 build-up
@@ -567,43 +582,13 @@ class ConcentrationsEmissionsHandler:
         float
             Forcing from aerosol in question for year in question
         """
-        ref_emission_species = {
-            "SO2": ["SO2", self.pamset["qdirso2"]],
-            "SO4_IND": ["SO2", self.pamset["qindso2"]],
-            "OC": ["OC", self.pamset["qoc"]],
-            "BC": ["BC", self.pamset["qbc"]],
-            "BMB_AEROS": ["BMB_AEROS_OC", self.pamset["qbmb"]],
-            "NMVOC": ["NMVOC", self.pamset["qnmvoc"]],
-            "NH3": ["NH3", self.pamset["qnh3"]],
-            "NOx": ["NOx", self.pamset["qnox"]],
-        }
-        # Natural emissions
-        # (after IPCC TPII on simple climate models, 1997)
-        # enat = 42.0 Not used, why is this here?
-        # Aerosol forcing used to be scaled to reference year
-        # No just total forcing change
-        # Only with emission to concentration factors differing
-        # These are held in dictionary
-
-        yr_0 = self.years[0]
+        yr_idx = yr - self._yr0
         q = 0
-        # Natural emissions
-        # (after IPCC TPII on simple climate models, 1997)
-        # enat = 42.0 Not used, why is this here?
-        # Emission in reference year
-        # SO2, SO4_IND, BC and OC are treated exactly the same
-        # Only with emission to concentration factors differing
-        # These are held in dictionary
-        if self.df_gas["ALPHA"][tracer] != 0:
-            q = (self.emis[tracer][yr] - self.emis[tracer][yr_0]) * self.df_gas[
-                "ALPHA"
-            ][tracer]
-        elif tracer in ref_emission_species:
-            em_change = (
-                self.emis[ref_emission_species[tracer][0]][yr]
-                - self.emis[ref_emission_species[tracer][0]][yr_0]
-            )
-            q = ref_emission_species[tracer][1] * em_change
+        if self._alpha[tracer] != 0:
+            q = (self._emis_arr[tracer][yr_idx] - self._emis_arr[tracer][0]) * self._alpha[tracer]
+        elif tracer in self._ref_em_species:
+            em_tracer, coeff = self._ref_em_species[tracer]
+            q = coeff * (self._emis_arr[em_tracer][yr_idx] - self._emis_arr[em_tracer][0])
         return q
 
     def conc2forc(
@@ -812,7 +797,7 @@ class ConcentrationsEmissionsHandler:
                 nat_em = self._nat_em[tracer]
 
             # natural emissions, from gasspamfile
-            emis = self.emis[tracer][yr] + nat_em
+            emis = self._emis_arr[tracer][yr - self._yr0] + nat_em
 
             point_conc = emis / self._beta[tracer]
             # Rewrote this quite a bit from an original loop,
@@ -842,11 +827,13 @@ class ConcentrationsEmissionsHandler:
         ch4_wigley_exp = -0.238
         if self.pamset["lifetime_mode"] == "TAR":
             # 1751 is reference conc in 2000
+            yr_idx = yr - self._yr0
+            yr_2000_idx = 2000 - self._yr0
             dln_oh = (
                 -0.32 * (np.log(conc_local) - np.log(1751.0))
-                + 0.0042 * (self.emis["NOx"][yr] - self.emis["NOx"][2000])
-                - 0.000105 * (self.emis["CO"][yr] - self.emis["CO"][2000])
-                - 0.000315 * (self.emis["NMVOC"][yr] - self.emis["NMVOC"][2000])
+                + 0.0042 * (self._emis_arr["NOx"][yr_idx] - self._emis_arr["NOx"][yr_2000_idx])
+                - 0.000105 * (self._emis_arr["CO"][yr_idx] - self._emis_arr["CO"][yr_2000_idx])
+                - 0.000315 * (self._emis_arr["NMVOC"][yr_idx] - self._emis_arr["NMVOC"][yr_2000_idx])
             )
             q = q * (dln_oh + 1)
 
