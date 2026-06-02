@@ -5,13 +5,17 @@ Energy budget upwelling diffusion model
 import logging
 
 import numpy as np
-from scipy.linalg import solve_banded
+from scipy.linalg.lapack import get_lapack_funcs
 
 # TODO Go over and move additional constants to ciceroscm/constants.py
 from ..constants import DAY_YEAR, SEC_DAY, WATER_DENSITY, WATER_HEAT_CAPACITY
 from .abstract_thermal_model import AbstractThermalModel
 
 LOGGER = logging.getLogger(__name__)
+
+# Bind the LAPACK tridiagonal solver (?gtsv) once; double precision is used
+# throughout the ocean energy budget.
+_GTSV = get_lapack_funcs("gtsv", (np.empty(1, dtype=np.float64),))
 
 
 def _band(a_array, b_array, c_array, d_array):
@@ -34,7 +38,12 @@ def _band(a_array, b_array, c_array, d_array):
     np.ndarray
              band value through ocean layers
     """
-    return solve_banded((1, 1), np.array([c_array, b_array, a_array]), d_array)
+    # Tridiagonal (1,1)-banded solve via LAPACK ?gtsv. Faster than
+    # scipy.linalg.solve_banded (specialised tridiagonal routine, no
+    # array-API validation wrapper) and bit-identical. Diagonals map as
+    # sub=a[:-1], main=b, super=c[1:]; ?gtsv returns (du2, d, du, x, info)
+    # without overwriting the inputs, so the solution is element [3].
+    return _GTSV(a_array[:-1], b_array, c_array[1:], d_array)[3]
 
 
 def check_pamset(pamset):
