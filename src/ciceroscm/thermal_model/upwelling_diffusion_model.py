@@ -176,6 +176,7 @@ class UpwellingDiffusionModel(
         self.dz = np.ones(self.pamset["lm"]) * 100.0
         self.dz[0] = self.pamset["mixed"]
         self.varrying = {}
+        self._precompute_coeff_constants()
         self.setup_ebud()
 
         # Intialising temperature values
@@ -264,6 +265,29 @@ class UpwellingDiffusionModel(
         )
         return factor
 
+    def _precompute_coeff_constants(self):
+        """Precompute the wcfac/gam-independent parts of the coeff arrays.
+
+        ``coeff`` is called once per hemisphere per energy-budget substep, so
+        the parts of a/b/c that depend only on run-constant geometry
+        (``dz``, ``rakapa``, ``dt``) are hoisted here. Only the
+        ``wcfac``- and ``gam_fro_fac``-dependent terms are recomputed per call.
+        ``dz``, ``rakapa`` and ``dt`` never change after construction, so this
+        is safe to compute once.
+        """
+        lm = self.pamset["lm"]
+        dz = self.dz
+        rakapafac = 2.0 * self.pamset["rakapa"] * self.pamset["dt"]
+
+        self._coeff_c1 = -rakapafac / (dz[0] * dz[1])
+        self._coeff_a0 = -rakapafac / (dz[1] ** 2)
+        self._coeff_a_mid = -rakapafac / (dz[2:] * (dz[1 : lm - 1] + dz[2:]))
+        self._coeff_c2 = -rakapafac / (dz[1 : lm - 1] * (dz[1 : lm - 1] + dz[2:]))
+        self._coeff_inv_dz0 = 1.0 / dz[0]
+        self._coeff_inv_dz1 = 1.0 / dz[1]
+        self._coeff_inv_dz_mid = 1.0 / dz[1 : lm - 1]
+        self._coeff_inv_dz_last = 1.0 / dz[lm - 1]
+
     def coeff(self, wcfac, gam_fro_fac):
         """
         Calculate a, b c coefficient arrays for hemisphere
@@ -287,25 +311,21 @@ class UpwellingDiffusionModel(
             Containing the a, b and c coefficients over the ocean layers
         """
         lm = self.pamset["lm"]
-        a = np.zeros(lm)
-        b = np.zeros(lm)
-        c = np.zeros(lm)
-        rakapafac = 2 * self.pamset["rakapa"] * self.pamset["dt"]
+        a = np.empty(lm)
+        b = np.empty(lm)
+        c = np.empty(lm)
 
-        c[1] = -rakapafac / (
-            self.dz[0] * (0.0 * self.dz[0] + self.dz[1])
-        )  # Can the 0.*dz(0) term be dropped here?
-        b[0] = 1.0 - c[1] + gam_fro_fac - wcfac / self.dz[0]
-        a[0] = -rakapafac / (self.dz[1] ** 2) + wcfac / self.dz[1]
-        a[1 : lm - 1] = -rakapafac / (self.dz[2:] * (self.dz[1 : lm - 1] + self.dz[2:]))
-        c[2:] = (
-            -rakapafac / (self.dz[1 : lm - 1] * (self.dz[1 : lm - 1] + self.dz[2:]))
-            - wcfac / self.dz[1 : lm - 1]
-        )
+        c[0] = 0.0
+        c[1] = self._coeff_c1
+        c[2:] = self._coeff_c2 - wcfac * self._coeff_inv_dz_mid
+
+        a[0] = self._coeff_a0 + wcfac * self._coeff_inv_dz1
+        a[1 : lm - 1] = self._coeff_a_mid
+        a[lm - 1] = 0.0
+
+        b[0] = 1.0 - c[1] + gam_fro_fac - wcfac * self._coeff_inv_dz0
         b[1 : lm - 1] = 1.0 - a[: lm - 2] - c[2:]
-        b[lm - 1] = (
-            1.0 - a[lm - 2] + wcfac / self.dz[lm - 1]
-        )  # Her var det brukt i selvom vi var utenfor loekka, litt uklart hva som er ment...
+        b[lm - 1] = 1.0 - a[lm - 2] + wcfac * self._coeff_inv_dz_last
         return a, b, c
 
     def setup_ebud2(self, temp_1n, temp_1s):
