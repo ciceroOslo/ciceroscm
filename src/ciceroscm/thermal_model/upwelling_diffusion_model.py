@@ -288,6 +288,20 @@ class UpwellingDiffusionModel(
         self._coeff_inv_dz_mid = 1.0 / dz[1 : lm - 1]
         self._coeff_inv_dz_last = 1.0 / dz[lm - 1]
 
+        # Deep-layer diffusion factors for the energy_budget substep loop.
+        # ``beto``/``dt``/``c1``/``fnso`` and ``dz`` are run-constant, so the
+        # per-layer factor is hoisted out of the per-substep loop. Kept as the
+        # exact expression order from energy_budget so output is bit-identical.
+        self._eb_deep_fac_n = (
+            self.pamset["beto"] * self.pamset["dt"] / (self.pamset["c1"] * dz[1 : lm - 1])
+        )
+        self._eb_deep_fac_s = (
+            self.pamset["fnso"]
+            * self.pamset["beto"]
+            * self.pamset["dt"]
+            / (self.pamset["c1"] * dz[1 : lm - 1])
+        )
+
     def coeff(self, wcfac, gam_fro_fac):
         """
         Calculate a, b c coefficient arrays for hemisphere
@@ -564,14 +578,10 @@ class UpwellingDiffusionModel(
                 + self.varrying["dtrm3s"] * dqs
                 + self.varrying["dtrm4s"] * dqn
             )
-            dn[1 : lm - 1] = self.tn[1 : lm - 1] + self.pamset["beto"] * self.pamset[
-                "dt"
-            ] / (self.pamset["c1"] * self.dz[1 : lm - 1]) * (
+            dn[1 : lm - 1] = self.tn[1 : lm - 1] + self._eb_deep_fac_n * (
                 self.ts[1 : lm - 1] - self.tn[1 : lm - 1]
             )
-            ds[1 : lm - 1] = self.ts[1 : lm - 1] + self.pamset["fnso"] * self.pamset[
-                "beto"
-            ] * self.pamset["dt"] / (self.pamset["c1"] * self.dz[1 : lm - 1]) * (
+            ds[1 : lm - 1] = self.ts[1 : lm - 1] + self._eb_deep_fac_s * (
                 self.tn[1 : lm - 1] - self.ts[1 : lm - 1]
             )
 
