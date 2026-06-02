@@ -19,7 +19,7 @@ The changes listed in this file are categorised as follows:
 
 ### Changed
 
-- Adaptive extra stepping emulation for carbon_cycle_mod.py to avoid negative atmospheric CO2 concentrations. This is done by checking whether the predicted change in partial pressure in the timestep is too large, and if so recomputing the added air-sea flux using a midpoint value.
+- Adaptive (single) extra stepping emulation for carbon_cycle_mod.py to avoid negative atmospheric CO2 concentrations. This is done by checking whether the predicted change in partial pressure in the timestep is too large, and if so recomputing the added air-sea flux using a midpoint value. For now this is done only once to avoid to convoluted code, it might be something that needs to be applied recursively in the future for even more extreme cases where multiple adaptive midpoint steps are needed.
 
 ### Fixed
 
@@ -40,18 +40,16 @@ The changes listed in this file are categorised as follows:
 - Pattern-mediated climate feedback: a new ``delta_lambda_aero`` parameter (in ``pamset_udm``) makes the climate feedback depend on the magnitude-weighted aerosol forcing fraction, ``lambda_eff(t) = lambda_0 + delta_lambda_aero * w_aero(t)``. Defaults to ``0.0`` (no change in behaviour). Implemented as an opt-in capability protocol on the abstract thermal model (``get_feedback_gregory`` / ``set_feedback_gregory``); both shipped thermal models (``UpwellingDiffusionModel``, ``TwoLayerOceanModel``) implement it. A ``ValueError`` is raised at startup if a non-zero ``delta_lambda_aero`` is paired with a thermal model that does not implement the capability. ``AEROSOL_TRACERS`` constant added to ``ciceroscm.constants``. Forcing-driven (``rf_run``) mode auto-derives ``w_aero(t)`` when per-agent columns are present in the forcing file and falls back to ``w_aero = 0`` otherwise.
 - ``ConcentrationsEmissionsHandler.conc2forc`` now returns a 4-tuple ``(tot_forc, forc_nh, forc_sh, w_aero)`` (was a 3-tuple). The new entry ``w_aero`` is the magnitude-weighted aerosol forcing fraction used by the pattern-mediated feedback wiring.
 - ``CICEROSCM.forc_set`` now returns a 4-tuple ``(fn, fs, forc, w_aero)`` (was a 3-tuple), reading ``w_aero`` from the forcing dataframe when present.
-
-### Fixed
-
-- Temperature feedbacks were not passed to partial_pressure calculation in carbon cycle, meaning that the carbon cycle was not responding to temperature changes, this is now fixed and the carbon cycle will respond to temperature changes through the temperature feedbacks to ocean solubility and mixed layer depth.
-
-### Changed
-
 - Integral convolution in carbon cycle changed from using np.dot to np.einsum which leads to a significant speed up for longer timeseries on linux machines.
 - Other carbon cycle speed ups storing variables and checking states to avoid unnecessary calculations (especially problematic in back-calculations).
 - There was an instability in the carbon cycle at very high CO2 concentrations for some parameter values (though it would emerge eventually for most choices). Now the mixed layer depth is prevented from going below 10 meters, and there is a polynomial validity cap for pCO2.
 - Formatting tools to use naming scheme and comply with RCMIP phase 3.
 - What was previously a logger warning for non-allowed change of nyend, nystart and emstart, is now an info to not produce infinite output in parallel runs
+
+### Fixed
+
+- Temperature feedbacks were not passed to partial_pressure calculation in carbon cycle, meaning that the carbon cycle was not responding to temperature changes, this is now fixed and the carbon cycle will respond to temperature changes through the temperature feedbacks to ocean solubility and mixed layer depth.
+
 
 [Version 2.0.1]
 ---------------------------
