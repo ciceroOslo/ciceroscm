@@ -30,6 +30,12 @@ from .rfuns import (
 
 logger = logging.getLogger(__name__)
 
+# Adaptive corrector constants: if yCO2 changed by more than a factor of 2 across the
+# sub-step, the lagged use of yco2_prev in ss2 is no longer representative
+# of the interval.
+_YCO2_RATIO_TOL = 2.0  # trigger when new/prev or prev/new exceeds this
+_YCO2_FLOOR = 1.0e-6  # avoid division by ~0 when yco2_prev is tiny
+
 
 def sigmoid_gen(eval_point, sigmoid_center, sigmoid_width):
     """
@@ -582,8 +588,42 @@ class CarbonCycleModel(AbstractCarbonCycleModel):
             # This might be a natural place to look for/substitute with a
             # different / more general / temperature dependent formulation
             # which would be in line with the model philosophy and structure
+            # Predictor: tentative ocean mixed-layer partial pressure with the lagged ss2
             yco2_prev = self.co2_hold["yCO2"]
-            self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(it)
+            yco2_pred = self._calculate_partial_pressure_mixed_layer(it)
+
+            # Adaptive corrector: if yCO2 changed by more than a factor of 2 across the
+            # sub-step, the lagged use of yco2_prev in ss2 is no longer representative
+            # of the interval. Redo the step using the midpoint estimate of yCO2,
+            # which is equivalent to halving dt for the dominant (lag) error term.
+            needs_correction = (
+                it > 0
+                and max(abs(yco2_pred), abs(yco2_prev)) > _YCO2_FLOOR
+                and max(abs(yco2_pred), abs(yco2_prev))
+                > _YCO2_RATIO_TOL * min(abs(yco2_pred), abs(yco2_prev))
+            )
+
+            if needs_correction:
+                yco2_mid = 0.5 * (yco2_prev + yco2_pred)
+                # Recompute ss2 with the midpoint estimate of yCO2 over the interval
+                ss2 = 0.5 * em_co2 / (OCEAN_AREA * GE_COEFF) - yco2_mid / (
+                    dt * OCEAN_AREA * GE_COEFF
+                )
+                self.co2_hold["sCO2"][it] = cc1 * (
+                    self.co2_hold["sums"] + self.co2_hold["ss1"] + ss2
+                )
+                self.co2_hold["yCO2"] = self._calculate_partial_pressure_mixed_layer(it)
+                logger.debug(
+                    "co2em2conc: applied yCO2 corrector at it=%d "
+                    "(yco2_prev=%.4g, yco2_pred=%.4g, yco2_new=%.4g)",
+                    it,
+                    yco2_prev,
+                    yco2_pred,
+                    self.co2_hold["yCO2"],
+                )
+            else:
+                self.co2_hold["yCO2"] = yco2_pred
+
             # Partial pressure in the atmosphere, this comes from
             # solving the transfer equation between atmosphere and
             # ocean  to get the resulting atmosphere partial pressure

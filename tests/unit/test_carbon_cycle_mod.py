@@ -1,3 +1,4 @@
+import logging
 import os
 
 import numpy as np
@@ -181,6 +182,47 @@ def reverse_cumsum(cumulated):
     cumsum_shifted = np.insert(cumulated[:-1].copy(), 0, 0)
     decumulated = cumulated - cumsum_shifted
     return decumulated
+
+
+def test_adaptive_ycO2_corrector_keeps_xco2_nonnegative(caplog):
+    """
+    Regression test for the adaptive yCO2 corrector branch in
+    CarbonCycleModel.co2em2conc.
+
+    Several years of very high positive CO2 emissions in a warm climate are
+    used to build up a large ocean partial pressure (yCO2) in a very shallow
+    mixed layer.  Partial pressure should be changing so fast that
+    adaptive substepping is needed to keep the ocean carbon flux
+    calculation stable, the yCO2 corrector should be triggered to prevent
+    overshooting of ocean carbon uptake and negative atmospheric CO2 concentrations.
+
+    The test asserts that:
+      - the adaptive yCO2 corrector branch is exercised (debug log emitted), and
+      - the resulting atmospheric CO2 concentration stays non-negative.
+    """
+    nystart, nyend = 1850, 1860
+    # Set very shallow mixed layer to exaggerate ocean carbon response to emissions and temperature, and
+    ccmod = carbon_cycle_mod.CarbonCycleModel(
+        {"nystart": nystart, "nyend": nyend}, pamset_carbon={"mixed_carbon": 20.0}
+    )
+
+    # Build up a large ocean carbon signal with several years of extreme
+    # positive emissions at elevated temperature. Magnitudes are deliberately
+    # exaggerated so the test is robust against small parameter changes.
+    high_em = 5.0e4  # PgC/yr
+    dtemp = 4.0
+    caplog.set_level(logging.DEBUG, logger=carbon_cycle_mod.__name__)
+    for yr in range(nystart, nyend - 1):
+        ccmod.co2em2conc(yr, high_em, feedback_dict={"dtemp": dtemp})
+
+    assert ccmod.co2_hold["yCO2"] > 0.0, "Setup did not build up ocean pCO2"
+
+    assert any(
+        "applied yCO2 corrector" in rec.message for rec in caplog.records
+    ), "Adaptive yCO2 corrector branch was not exercised"
+
+    # Atmospheric partial pressure must remain physical.
+    assert ccmod.co2_hold["xCO2"] >= 0.0
 
 
 # TODO: Check ocean calculation with and without internal back calculation
