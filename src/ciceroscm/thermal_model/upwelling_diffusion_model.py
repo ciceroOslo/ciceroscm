@@ -34,7 +34,12 @@ def _band(a_array, b_array, c_array, d_array):
     np.ndarray
              band value through ocean layers
     """
-    return solve_banded((1, 1), np.array([c_array, b_array, a_array]), d_array)
+    return solve_banded(
+        (1, 1),
+        np.array([c_array, b_array, a_array]),
+        d_array,
+        check_finite=False,
+    )
 
 
 def check_pamset(pamset):
