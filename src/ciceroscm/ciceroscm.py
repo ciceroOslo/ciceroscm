@@ -138,6 +138,15 @@ class CICEROSCM:
 
         # Add support for sending filename in cfg
         self.rf_luc = input_handler.get_data("rf_luc")
+        # Cache solar/volcanic/LUC forcing as numpy arrays for the year loop;
+        # these inputs are static for the run, so positional indexing by
+        # (yr - nystart) avoids repeated pandas .iloc access in the hot path.
+        self._sun_arr = self.rf_volc_sun["sun"].iloc[:, 0].to_numpy()
+        self._volc_n_arr = self.rf_volc_sun["volc_n"].to_numpy()
+        self._volc_s_arr = self.rf_volc_sun["volc_s"].to_numpy()
+        self._volc_n_mean = self._volc_n_arr.mean(axis=1)
+        self._volc_s_mean = self._volc_s_arr.mean(axis=1)
+        self._rf_luc_arr = self.rf_luc.iloc[:, 0].to_numpy()
         self.initialise_output_arrays()
 
     def initialise_output_arrays(self):
@@ -220,13 +229,9 @@ class CICEROSCM:
         for output, name in self.thermal_model_class.get_output_dict_thermal().items():
             self.results[output][index] = values[name]
         self.results["Total_forcing"][index] = forc
-        self.results["Solar_forcing"][index] = self.rf_volc_sun["sun"].iloc[index, 0]
-        self.results["Volcanic_forcing_NH"][index] = np.mean(
-            np.array(self.rf_volc_sun["volc_n"].iloc[index, :])
-        )
-        self.results["Volcanic_forcing_SH"][index] = np.mean(
-            np.array(self.rf_volc_sun["volc_s"].iloc[index, :])
-        )
+        self.results["Solar_forcing"][index] = self._sun_arr[index]
+        self.results["Volcanic_forcing_NH"][index] = self._volc_n_mean[index]
+        self.results["Volcanic_forcing_SH"][index] = self._volc_s_mean[index]
 
     def _run(
         self,
@@ -284,8 +289,8 @@ class CICEROSCM:
                     self.ce_handler.emi2conc(yr)
                 forc, fn, fs, w_aero = self.ce_handler.conc2forc(
                     yr,
-                    self.rf_luc.iloc[yr - self.cfg["nystart"], 0],
-                    self.rf_volc_sun["sun"].iloc[yr - self.cfg["nystart"], 0],
+                    self._rf_luc_arr[yr - self.cfg["nystart"]],
+                    self._sun_arr[yr - self.cfg["nystart"]],
                 )
 
             else:
@@ -296,8 +301,8 @@ class CICEROSCM:
             values = udm.energy_budget(
                 fn,
                 fs,
-                np.array(self.rf_volc_sun["volc_n"].iloc[yr - self.cfg["nystart"], :]),
-                np.array(self.rf_volc_sun["volc_s"].iloc[yr - self.cfg["nystart"], :]),
+                self._volc_n_arr[yr - self.cfg["nystart"]],
+                self._volc_s_arr[yr - self.cfg["nystart"]],
             )
             self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 
