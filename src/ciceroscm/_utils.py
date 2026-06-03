@@ -4,7 +4,41 @@ Class for common utility functions
 
 import logging
 
+import numpy as np
+
 LOGGER = logging.getLogger(__name__)
+
+
+def write_results_tsv(dataframe, filepath):
+    r"""Write a results dataframe to a tab-separated output file
+
+    Reproduces the legacy ``to_csv(sep="\t", index=False,
+    float_format="%.5e")`` output byte-for-byte while avoiding pandas'
+    per-value formatting overhead. Integer columns (e.g. ``Year``) are
+    written as integers and floating point columns with ``%.5e``,
+    matching pandas regardless of column order.
+
+    Parameters
+    ----------
+    dataframe : pandas.DataFrame
+        Results frame whose columns are integer year indices and
+        floating point values.
+    filepath : str
+        Path of the tab-separated file to write.
+    """
+    columns = list(dataframe.columns)
+    fmt = [
+        "%d" if np.issubdtype(dtype, np.integer) else "%.5e"
+        for dtype in dataframe.dtypes
+    ]
+    np.savetxt(
+        filepath,
+        dataframe.to_numpy(),
+        fmt=fmt,
+        delimiter="\t",
+        header="\t".join(columns),
+        comments="",
+    )
 
 
 def check_numeric_pamset(required, pamset):

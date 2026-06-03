@@ -19,6 +19,15 @@ The changes listed in this file are categorised as follows:
 
 ### Changed
 
+- Changed solution of tridiagonal matrix in the `upwelling_diffusion_model.py` thermal model from scipy.linalg.solve_banded to LAPACK 
+- Precalculating constant coefficients for ocean calculations in the `upwelling_diffusion_model.py` to avoid recalculating in every subyearly timestep.
+- Output write using `pandas.DataFrame.to_csv` rewritten using a helper function that uses `numpy.savetext` instead, this increases speed and tidies up the code.
+
+[Version 2.1.1]
+---------------------------
+
+### Changed
+
 - Adaptive (single) extra stepping emulation for carbon_cycle_mod.py to avoid negative atmospheric CO2 concentrations. This is done by checking whether the predicted change in partial pressure in the timestep is too large, and if so recomputing the added air-sea flux using a midpoint value. For now this is done only once to avoid to convoluted code, it might be something that needs to be applied recursively in the future for even more extreme cases where multiple adaptive midpoint steps are needed.
 
 ### Fixed
