@@ -130,23 +130,18 @@ class CICEROSCM:
             self.feedback_list = self.ce_handler.get_feedback_list()
         self.results = {}
         # Reading in solar and volcanic forcing
-        self.rf_volc_sun = {
-            "volc_n": input_handler.get_data("rf_volc_n"),
-            "volc_s": input_handler.get_data("rf_volc_s"),
-            "sun": input_handler.get_data("rf_sun"),
-        }
 
-        # Add support for sending filename in cfg
-        self.rf_luc = input_handler.get_data("rf_luc")
         # Cache solar/volcanic/LUC forcing as numpy arrays for the year loop;
         # these inputs are static for the run, so positional indexing by
         # (yr - nystart) avoids repeated pandas .iloc access in the hot path.
-        self._sun_arr = self.rf_volc_sun["sun"].iloc[:, 0].to_numpy()
-        self._volc_n_arr = self.rf_volc_sun["volc_n"].to_numpy()
-        self._volc_s_arr = self.rf_volc_sun["volc_s"].to_numpy()
+        # TODO: get inputhandler to return these arrays directly to avoid the pandas overhead entirely
+        self._sun_arr = (input_handler.get_data("rf_sun")).iloc[:, 0].to_numpy()
+        self._volc_n_arr = (input_handler.get_data("rf_volc_n")).to_numpy()
+        self._volc_s_arr = (input_handler.get_data("rf_volc_s")).to_numpy()
         self._volc_n_mean = self._volc_n_arr.mean(axis=1)
         self._volc_s_mean = self._volc_s_arr.mean(axis=1)
-        self._rf_luc_arr = self.rf_luc.iloc[:, 0].to_numpy()
+        # Add support for sending filename in cfg
+        self._rf_luc_arr = (input_handler.get_data("rf_luc")).iloc[:, 0].to_numpy()
         self.initialise_output_arrays()
 
     def initialise_output_arrays(self):
@@ -163,7 +158,7 @@ class CICEROSCM:
         for output in output_variables:
             self.results[output] = np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1)
 
-    def forc_set(self, yr, rf_sun):
+    def forc_set(self, yr):
         """
         Read the forcing for this year
 
@@ -174,9 +169,6 @@ class CICEROSCM:
         ----------
         yr : int
           Year for which to read out data
-        rf_sun : pandas.Dataframe
-              Dataframe with solar forcing to  add to the other
-              forcings.
 
         Returns
         -------
@@ -205,9 +197,9 @@ class CICEROSCM:
             w_aero = (
                 float(self.rf["w_aero"][yr]) if "w_aero" in self.rf.columns else 0.0
             )
-        forc = forc + rf_sun.iloc[row_index, 0]
-        fn = fn + rf_sun.iloc[row_index, 0]
-        fs = fs + rf_sun.iloc[row_index, 0]
+        forc = forc + self._sun_arr[row_index]
+        fn = fn + self._sun_arr[row_index]
+        fs = fs + self._sun_arr[row_index]
         return fn, fs, forc, w_aero
 
     def add_year_data_to_output(self, values, forc, index):
@@ -294,7 +286,7 @@ class CICEROSCM:
                 )
 
             else:
-                fn, fs, forc, w_aero = self.forc_set(yr, self.rf_volc_sun["sun"])
+                fn, fs, forc, w_aero = self.forc_set(yr)
 
             udm.set_feedback_gregory(w_aero)
 
