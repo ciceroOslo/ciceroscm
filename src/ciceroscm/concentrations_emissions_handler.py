@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 # from ._utils import check_numeric_pamset
-from ._utils import cut_and_check_pamset
+from ._utils import cut_and_check_pamset, write_results_tsv
 from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
 from .component_factory_functions import create_carbon_cycle_model
 from .make_plots import plot_output2
@@ -930,13 +930,11 @@ class ConcentrationsEmissionsHandler:
         }
         for outtype, df in results_dict.items():
 
-            df.to_csv(
+            write_results_tsv(
+                df,
                 os.path.join(
                     outdir, f"{filename_start}_{longname_shortname_dict[outtype]}.txt"
                 ),
-                sep="\t",
-                index=False,
-                float_format="%.5e",
             )
 
         if make_plot:
@@ -956,11 +954,9 @@ class ConcentrationsEmissionsHandler:
             # Ocean carbon flux
             # Yearly fluxes
 
-            results_dict["carbon cycle"].to_csv(
+            write_results_tsv(
+                results_dict["carbon cycle"],
                 os.path.join(outdir, f"{filename_start}_carbon.txt"),
-                sep="\t",
-                index=False,
-                float_format="%.5e",
             )
 
     def add_results_to_dict(self, cfg, feedback_dict_series=None):
