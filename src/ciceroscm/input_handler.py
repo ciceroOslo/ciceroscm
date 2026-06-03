@@ -428,17 +428,10 @@ class InputHandler:
                 self.cfg["rf_volc_n_data"] = self.cfg["rf_volc_data"]
                 self.cfg["rf_volc_s_data"] = self.cfg["rf_volc_data"]
         else:
-            indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
-            self.cfg["rf_volc_n_data"] = pd.DataFrame(
-                data=np.zeros((self.cfg["nyend"] - self.cfg["nystart"] + 1, 12)),
-                index=indices,
-                columns=range(12),
-            )
+            nrows = self.cfg["nyend"] - self.cfg["nystart"] + 1
+            self.cfg["rf_volc_n_data"] = np.zeros((nrows, 12))
             self.cfg["rf_volc_s_data"] = self.cfg["rf_volc_n_data"]
-            self.cfg["rf_sun_data"] = pd.DataFrame(
-                data=np.zeros(self.cfg["nyend"] - self.cfg["nystart"] + 1),
-                index=indices,
-            )
+            self.cfg["rf_sun_data"] = np.zeros(nrows)
 
     def get_rf_type(self):
         """
@@ -499,8 +492,22 @@ class InputHandler:
                 )
             return self.read_methods[f"{what}"](self.cfg[f"{what}_file"])
         if f"{what}_data" in self.cfg:
-            # Sanity check of input data?
-            return self.cfg[f"{what}_data"]
+            data = self.cfg[f"{what}_data"]
+            # Year-row inputs (rf_sun / rf_luc / rf_volc_n / rf_volc_s) are
+            # contracted to return numpy directly; coerce user-supplied
+            # DataFrames to match the file-path shape (1D for the single-
+            # column solar / LUC series, 2D for the multi-column volcanic
+            # data so downstream .mean(axis=1) still works).
+            if what in ("rf_sun", "rf_luc"):
+                if isinstance(data, pd.DataFrame):
+                    data = data.to_numpy()
+                data = np.asarray(data).reshape(-1)
+            elif what in ("rf_volc_n", "rf_volc_s"):
+                if isinstance(data, pd.DataFrame):
+                    data = data.to_numpy()
+                arr = np.asarray(data)
+                data = arr[:, None] if arr.ndim == 1 else arr
+            return data
         raise KeyError(f"No user or default data for {what}")
 
     def read_emissions(self, filename):
@@ -605,11 +612,16 @@ class InputHandler:
         """
         Read in data from file with no headers
 
-
         Read in data from file with no headers where
         each year is a row. Typically this is the format for
         volcano and solar data. The years are taken to be
-        the years from the defined startyear and endyear
+        the years from the defined startyear and endyear.
+
+        The result is returned as a numpy array (1D for single-column files
+        such as solar / LUC, 2D for multi-column files such as the volcanic
+        per-month data) rather than a pandas DataFrame — the consumer
+        positionally indexes by ``(yr - nystart)``, so the DataFrame layer
+        was only ever immediately discarded by the caller.
 
         Parameters
         ----------
@@ -618,23 +630,11 @@ class InputHandler:
 
         Returns
         -------
-        pandas.Dataframe
-                        Dataframe containing the data with the years as
-                        indices
+        numpy.ndarray
+                        Array containing the data with rows indexed by
+                        ``(yr - nystart)``. Shape ``(N,)`` for single-column
+                        files, ``(N, ncols)`` otherwise.
         """
-        indices = np.arange(self.cfg["nystart"], self.cfg["nyend"] + 1)
-        nrows = len(indices)
-        if self.cfg["nystart"] > 1750:
-            skiprows = self.cfg["nystart"] - 1750
-            df_data = pd.read_csv(
-                volc_datafile,
-                header=None,
-                skiprows=skiprows,
-                nrows=nrows,
-                sep=r"\s+",
-            )
-        else:
-            df_data = pd.read_csv(volc_datafile, header=None, nrows=nrows, sep=r"\s+")
-
-        df_data.set_axis(labels=indices)
-        return df_data
+        nrows = self.cfg["nyend"] - self.cfg["nystart"] + 1
+        skiprows = max(self.cfg["nystart"] - 1750, 0)
+        return np.loadtxt(volc_datafile, skiprows=skiprows, max_rows=nrows)

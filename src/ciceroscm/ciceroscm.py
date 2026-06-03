@@ -129,19 +129,18 @@ class CICEROSCM:
             )
             self.feedback_list = self.ce_handler.get_feedback_list()
         self.results = {}
-        # Reading in solar and volcanic forcing
-
-        # Cache solar/volcanic/LUC forcing as numpy arrays for the year loop;
-        # these inputs are static for the run, so positional indexing by
-        # (yr - nystart) avoids repeated pandas .iloc access in the hot path.
-        # TODO: get inputhandler to return these arrays directly to avoid the pandas overhead entirely
-        self._sun_arr = (input_handler.get_data("rf_sun")).iloc[:, 0].to_numpy()
-        self._volc_n_arr = (input_handler.get_data("rf_volc_n")).to_numpy()
-        self._volc_s_arr = (input_handler.get_data("rf_volc_s")).to_numpy()
+        # Solar / volcanic / LUC forcing as numpy arrays for the year loop;
+        # these inputs are static for the run and the InputHandler returns
+        # them as numpy directly, indexed positionally by (yr - nystart).
+        # Sun and LUC are 1D; volcanic data is 2D (rows x hemispheric
+        # subgrid) so we keep the per-year row for the thermal model and
+        # pre-average for the annual output.
+        self._sun_arr = input_handler.get_data("rf_sun")
+        self._volc_n_arr = input_handler.get_data("rf_volc_n")
+        self._volc_s_arr = input_handler.get_data("rf_volc_s")
         self._volc_n_mean = self._volc_n_arr.mean(axis=1)
         self._volc_s_mean = self._volc_s_arr.mean(axis=1)
-        # Add support for sending filename in cfg
-        self._rf_luc_arr = (input_handler.get_data("rf_luc")).iloc[:, 0].to_numpy()
+        self._rf_luc_arr = input_handler.get_data("rf_luc")
         self.initialise_output_arrays()
 
     def initialise_output_arrays(self):

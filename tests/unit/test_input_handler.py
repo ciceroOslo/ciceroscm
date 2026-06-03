@@ -79,23 +79,19 @@ def test_read_volc_sun(test_data_dir):
         }
     )
 
-    # Testing volcano rf reading
-    df_volc = ih.read_data_on_year_row(
+    # Testing volcano rf reading (12-column file -> 2D numpy)
+    arr_volc = ih.read_data_on_year_row(
         os.path.join(test_data_dir, "meanVOLCmnd_ipcc_NH.txt")
     )
-    print(df_volc.columns.tolist)
-    assert len(df_volc.index) == 351
-    assert df_volc.columns.tolist() == list(range(12))
+    assert arr_volc.shape == (351, 12)
 
-    # Testing solar rf reading:
-    df_sun = ih.read_data_on_year_row(os.path.join(test_data_dir, "solar_IPCC.txt"))
-    assert len(df_sun.index) == 351
-    assert df_sun.columns.tolist() == [0]
+    # Testing solar rf reading (single-column file -> 1D numpy)
+    arr_sun = ih.read_data_on_year_row(os.path.join(test_data_dir, "solar_IPCC.txt"))
+    assert arr_sun.shape == (351,)
 
-    # Testing LUCalbedo rf reading
-    df_luc = ih.read_data_on_year_row(os.path.join(test_data_dir, "IPCC_LUCalbedo.txt"))
-    assert len(df_luc.index) == 351
-    assert df_luc.columns.tolist() == [0]
+    # Testing LUCalbedo rf reading (single-column file -> 1D numpy)
+    arr_luc = ih.read_data_on_year_row(os.path.join(test_data_dir, "IPCC_LUCalbedo.txt"))
+    assert arr_luc.shape == (351,)
 
 
 def test_gaspam_compatibility_check(test_data_dir):
