@@ -14,7 +14,7 @@ The changes listed in this file are categorised as follows:
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
 
-[Version 2.1.1]
+[Unreleased]
 ---------------------------
 
 ### Changed
@@ -22,6 +22,7 @@ The changes listed in this file are categorised as follows:
 - Changed solution of tridiagonal matrix in the `upwelling_diffusion_model.py` thermal model from scipy.linalg.solve_banded to LAPACK 
 - Precalculating constant coefficients for ocean calculations in the `upwelling_diffusion_model.py` to avoid recalculating in every subyearly timestep.
 - Output write using `pandas.DataFrame.to_csv` rewritten using a helper function that uses `numpy.savetext` instead, this increases speed and tidies up the code.
+- Cutting out pandas for gaspam dataframe and emissions dataframe in `concentrations_emissions_handler.py` and dataframes for natural forcings in `ciceroscm.py`.
 
 [Version 2.1.1]
 ---------------------------
