@@ -14,7 +14,16 @@ The changes listed in this file are categorised as follows:
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
 
-[Unreleased]
+[Version 2.1.1]
+---------------------------
+
+### Changed
+
+- Changed solution of tridiagonal matrix in the `upwelling_diffusion_model.py` thermal model from scipy.linalg.solve_banded to LAPACK 
+- Precalculating constant coefficients for ocean calculations in the `upwelling_diffusion_model.py` to avoid recalculating in every subyearly timestep.
+- Output write using `pandas.DataFrame.to_csv` rewritten using a helper function that uses `numpy.savetext` instead, this increases speed and tidies up the code.
+
+[Version 2.1.1]
 ---------------------------
 
 ### Changed

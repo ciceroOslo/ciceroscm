@@ -8,7 +8,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from ._utils import cut_and_check_pamset
+from ._utils import cut_and_check_pamset, write_results_tsv
 from .component_factory_functions import create_thermal_model
 from .concentrations_emissions_handler import ConcentrationsEmissionsHandler
 from .input_handler import InputHandler
@@ -391,24 +391,9 @@ class CICEROSCM:
         for vari in list_temp:
             df_temp[vari] = self.results[vari]
 
-        df_ohc.to_csv(
-            os.path.join(outdir, f"{filename_start}_ohc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
-        df_rib.to_csv(
-            os.path.join(outdir, f"{filename_start}_rib.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
-        df_temp.to_csv(
-            os.path.join(outdir, f"{filename_start}_temp.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
-        )
+        write_results_tsv(df_ohc, os.path.join(outdir, f"{filename_start}_ohc.txt"))
+        write_results_tsv(df_rib, os.path.join(outdir, f"{filename_start}_rib.txt"))
+        write_results_tsv(df_temp, os.path.join(outdir, f"{filename_start}_temp.txt"))
         df_sunvolc = pd.DataFrame(
             data={
                 "Year": indices,
@@ -417,19 +402,13 @@ class CICEROSCM:
                 "Volcanic_forcing_SH": self.results["Volcanic_forcing_SH"],
             }
         )
-        df_sunvolc.to_csv(
-            os.path.join(outdir, f"{filename_start}_sunvolc.txt"),
-            sep="\t",
-            index=False,
-            float_format="%.5e",
+        write_results_tsv(
+            df_sunvolc, os.path.join(outdir, f"{filename_start}_sunvolc.txt")
         )
         if self.cfg["rf_run"]:
             df_forc = pd.DataFrame(
                 data={"Year": indices, "Total_forcing": self.results["Total_forcing"]}
             )
-            df_forc.to_csv(
-                os.path.join(outdir, f"{filename_start}_forc.txt"),
-                sep="\t",
-                index=False,
-                float_format="%.5e",
+            write_results_tsv(
+                df_forc, os.path.join(outdir, f"{filename_start}_forc.txt")
             )
