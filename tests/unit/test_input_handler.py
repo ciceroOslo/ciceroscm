@@ -90,7 +90,9 @@ def test_read_volc_sun(test_data_dir):
     assert arr_sun.shape == (351,)
 
     # Testing LUCalbedo rf reading (single-column file -> 1D numpy)
-    arr_luc = ih.read_data_on_year_row(os.path.join(test_data_dir, "IPCC_LUCalbedo.txt"))
+    arr_luc = ih.read_data_on_year_row(
+        os.path.join(test_data_dir, "IPCC_LUCalbedo.txt")
+    )
     assert arr_luc.shape == (351,)
 
 
