@@ -96,6 +96,12 @@ def run_ciceroscm_parallel(scendata, cfgs, output_vars, max_workers=4):
                 [cfgs[i : i + batch_size] for i in range(0, len(cfgs), batch_size)],
             )
         ]
+    if max_workers > len(cfgs) * len(scendata):
+        LOGGER.info(
+            "max_workers is greater than the number of runs to do, setting max_workers to %d",
+            len(cfgs) * len(scendata),
+        )
+        max_workers = len(cfgs) * len(scendata)
     if max_workers == 1:
         LOGGER.info("Running in serial as max_workers is set to 1")
         result = []
