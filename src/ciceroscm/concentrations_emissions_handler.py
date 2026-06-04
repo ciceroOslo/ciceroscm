@@ -122,34 +122,52 @@ class ConcentrationsEmissionsHandler:
     Attributes
     ----------
     df_gas : pd.Dataframe
-             Dataframe containing names of the various components
-             units, possible natural emissions and emissions to
-             concentrations and concentrations to forcing conversion
-             factors
+              Gas-parameter table containing the component metadata
+              and coefficients used by the concentration and forcing
+              calculations.
     conc : dict
-           Dictionary with component keys and arrays with concentrations
-           for each year as values. These values are calculated
-           when emi2conc method is called. Before emissions start
-           or if a concentration run is used, they will be read
-           directly from conc_in
+            Per-species concentration time series for the current run.
+            Species handled through input concentrations are read from
+            ``conc_in`` when needed; computed species are filled during
+            ``emi2conc``.
+        forc : dict
+            Per-species and total forcing time series for the current
+            run, populated by ``conc2forc``.
     nat_emis_ch4 : pd.Dataframe
-                   Natural emissions for CH4 per year
+                 Natural CH4 emissions by year.
     nat_emis_n2o : pd.Dataframe
-                   Natural emissions for N2O per year
+                 Natural N2O emissions by year.
     pamset : dict
-             Dictionary of parameters
+              Normalized parameter dictionary for the handler,
+              including run mode flags and carbon-cycle settings.
     years : np.ndarray
-            Array with all the years for the handler
+             Simulation years covered by the handler instance.
     conc_in : pd.Dataframe
-              Input concentrations read from file. These are used
-              before emissions start, or throughout the run if
-              a concentration run is used
+            Input concentrations read from file. These are used
+            before emissions start, or throughout the run for
+            concentration-driven simulations.
     emis : pd.Dataframe
-           Emissions dataframe read from input file
-    r_functions : np.ndarray
-                  2D array with precalculated values of pulse
-                  response and biotic decay functions for each
-                  of the idtm values of each year
+            Emissions input read from file.
+    precalc_dict : dict
+            Cached precomputed concentration and forcing tables for
+            vanilla gases, plus helper lists used when building each
+            run state.
+    carbon_cycle : object
+            Carbon cycle model instance used for CO2 concentration
+            updates and optional carbon-cycle diagnostics.
+    _alpha, _sarf_to_erf, _conc_unit, _tau1, _beta, _nat_em : dict
+            Cached columns from ``df_gas`` used in the hot path.
+    _nat_em_co2, _inv_tau2_ch4, _inv_tau3_ch4 : float
+            Scalar cache values derived from ``df_gas`` for repeated
+            CO2 and CH4 calculations.
+    _yr0 : int
+            First simulation year, cached for array indexing.
+    _emis_arr : dict
+            Emissions columns cached as numpy arrays for fast indexed
+            access during the year loop.
+    _ref_em_species : dict
+            Cached mapping from forcing species to reference emission
+            series and scaling coefficients.
 
 
     """

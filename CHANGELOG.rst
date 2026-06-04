@@ -14,6 +14,13 @@ The changes listed in this file are categorised as follows:
     - Fixed: any bug fixes
     - Security: in case of vulnerabilities.
 
+[Unreleased]
+---------------------------
+
+### Added
+- Parallelisation wrapper `cscmparwrapper.py` caps max number of workers if the number exceeds the number of configurations times scenarios to do.
+
+
 [Version 2.1.2]
 ---------------------------
 

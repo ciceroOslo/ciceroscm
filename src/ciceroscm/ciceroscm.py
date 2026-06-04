@@ -38,33 +38,34 @@ class CICEROSCM:
     Attributes
     ----------
     cfg : dict
-          Configurations dictionary with startyear,
-          endyear, emissions start plus optional
-          configs, like a forcing file path for pure
-          forcing runs, else input files needed for
-          concentrations and emission handler,
-          a parameter to include volcanic and solar
-          forcing, one to indicate a pure concentrations
-          run, perturbation files etc.
+            Normalized configuration dictionary with the
+            simulation year range, optional forcing-run
+            settings, and the selected thermal and carbon
+            cycle model names.
+        thermal_model_class : type
+            Thermal model class selected from the current
+            configuration and instantiated for each run.
+        rf : np.ndarray or pd.DataFrame
+            External forcing input used for forcing-only runs.
+            Present only when ``cfg["rf_run"]`` is true.
     ce_handler : ciceroscm.ConcentrationsEmissionsHandler
-                     Concentrations emissions handler for the
-                     model. It can be reset for multiple runs
-                     but needs to be used with the same year range
-                     and with either Concentrations or emissions
-                     run consistently
+                   Concentrations and emissions handler for
+                   concentration- or emissions-driven runs.
+                   Present only when ``cfg["rf_run"]`` is false.
+        feedback_list : list[str] or None
+            Feedback variables retrieved from the concentrations
+            and emissions handler. Present only when
+            ``cfg["rf_run"]`` is false.
     results : dict
-                  Results dictionary which stores results from
-                  upwelling diffusion model. If a results_as_dict
-                  is sent as True to the run call, the results
-                  from the Concentrations emissions handler
-                  (emissions, componentwise forcings and concentrations)
-                  will also be added to this dictionary and can be
-                  accessed from there
-    rf_volc_sun : dict
-                  With solar and volcanic forcing read from standard files
-                  or set to zero according to configurations
-    rf_luc : pd.Dataframe
-             Dataframe of land use albedo forcing with years as index
+                Results dictionary for thermal-model output.
+                When ``results_as_dict`` is requested, handler
+                output such as emissions, concentrations, and
+                component-wise forcings is merged into it as well.
+        _sun_arr, _volc_n_arr, _volc_s_arr, _volc_n_mean,
+        _volc_s_mean, _rf_luc_arr : np.ndarray
+            Preloaded annual forcing inputs used during the model
+            year loop. These arrays back solar, volcanic, and land-use
+            forcing contributions.
     """
 
     # pylint: disable=too-many-instance-attributes

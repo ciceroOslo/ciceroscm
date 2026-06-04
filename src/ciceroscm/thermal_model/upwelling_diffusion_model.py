@@ -90,31 +90,39 @@ class UpwellingDiffusionModel(
     Attributes
     ----------
     pamset : dict
-             Dictionary of parameter values
+             Normalized parameter dictionary for the thermal model,
+             including derived coefficients such as ``rlamda`` and
+             timestep-related values.
     dz : np.ndarray
-         Array of depth of ocean layers
+           Ocean-layer thicknesses, with the mixed layer in the first
+           element and fixed deep-ocean layers below.
     varrying : dict
-               Dictionary of coefficient, temperature values
-               etc which varry over time, but do not need to
-               be stored apart from current value
+               Dictionary of per-run and per-substep solver
+               coefficients used during the energy-budget updates.
     tn : np.ndarray
-         Temperature change in the ocean layers of the
-         Northern hemisphere
+           Northern-hemisphere ocean temperature anomaly profile.
     ts : np.ndarray
-         Temperature change in the ocean layers of the
-         Southern hemisphere
+           Southern-hemisphere ocean temperature anomaly profile.
     prev_values : dict
-                  Dictionary with values from pervious time step
-                  needed in calculations, typically previous
-                  temperature change etc
+                Values carried between yearly calls, including the
+                previous hemispheric forcings and global mean
+                surface-temperature anomaly.
     dtempprev : float
-                Temperature change in previous time step
-    press : np.ndarray
-            Pressure in ocean layers
-    tempunp : np.ndarray
-              Temperature in ocean layers
-    dens0 : np.ndarray
-            Density in ocean layers
+                Global mean surface-temperature anomaly from the
+                previous timestep.
+    gamn, gams : float
+            Hemispheric coupling factors derived from the current
+            feedback and ocean-exchange parameters.
+     _coeff_c1, _coeff_a0, _coeff_a_mid, _coeff_c2 : float or np.ndarray
+            Precomputed tridiagonal coefficient terms used when building
+            the implicit ocean solver matrices.
+    _coeff_inv_dz0, _coeff_inv_dz1, _coeff_inv_dz_mid,
+    _coeff_inv_dz_last : float or np.ndarray
+            Cached inverse layer thickness factors used in coefficient
+            assembly.
+    _eb_deep_fac_n, _eb_deep_fac_s : np.ndarray
+            Precomputed deep-ocean diffusion factors for the northern
+            and southern hemisphere energy-budget substeps.
     """
 
     thermal_model_required_pamset = {
