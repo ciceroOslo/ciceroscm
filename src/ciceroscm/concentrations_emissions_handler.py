@@ -55,8 +55,8 @@ def check_pamset(pamset):
         "qh2o_ch4": 0.091915,
         "ref_yr": 2010,
         "qnmvoc": 0.0,
-        "qnh3": 0.0,
-        "qnox": 0.0,
+        "qnh3": -0.00101722, # From AMMONIA project
+        "qnox": -0.00081486, # From AMMONIA project
         "idtm": 24,
         "nystart": 1750,
         "nyend": 2100,
@@ -585,11 +585,13 @@ class ConcentrationsEmissionsHandler:
                 np.log(self.conc["CH4"][yr])
                 - np.log(self.conc_in["CH4"][self.pamset["ref_yr"]])
             )
-            + 0.17 * (self._emis_arr["NOx"][yr_idx] - self._emis_arr["NOx"][ref_yr_idx])
+            + 0.13 * (self._emis_arr["NOx"][yr_idx] - self._emis_arr["NOx"][ref_yr_idx])
+            - 0.00282* (self._emis_arr["NH3"][yr_idx] - self._emis_arr["NH3"][ref_yr_idx])
             + 0.0014 * (self._emis_arr["CO"][yr_idx] - self._emis_arr["CO"][ref_yr_idx])
             + 0.0042
             * (self._emis_arr["NMVOC"][yr_idx] - self._emis_arr["NMVOC"][ref_yr_idx])
         )
+        # Coefficient numbers updated for the AMMONIA project for NOx and added for NH3
         # RBS101115
         # IF (yr_ix.LT.yr_2010) THEN ! Proportional to TROP_O3 build-up
         # Rewritten a bit, place to check for differences...
@@ -877,7 +879,23 @@ class ConcentrationsEmissionsHandler:
                 )
             )
             q = q * (dln_oh + 1)
-
+        elif self.pamset["lifetime_mode"] == "AMMONIA":
+            # 1751 is reference conc in 2000
+            yr_idx = yr - self._yr0
+            yr_2000_idx = 2000 - self._yr0
+            dln_oh = (
+                -0.32 * (np.log(conc_local) - np.log(1751.0))
+                + 0.0046652 # Updated coefficient for NOx for the AMMONIA project
+                * (self._emis_arr["NOx"][yr_idx] - self._emis_arr["NOx"][yr_2000_idx])
+                - 0.000105
+                * (self._emis_arr["CO"][yr_idx] - self._emis_arr["CO"][yr_2000_idx])
+                - 0.000315
+                * (
+                    self._emis_arr["NMVOC"][yr_idx]
+                    - self._emis_arr["NMVOC"][yr_2000_idx]
+                )
+            )
+            q = q * (dln_oh + 1)
         elif self.pamset["lifetime_mode"] == "CONSTANT_12":
             q = 1.0 / 12.0
         elif self.pamset["lifetime_mode"] == "WIGLEY":

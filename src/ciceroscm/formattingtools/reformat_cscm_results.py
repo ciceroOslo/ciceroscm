@@ -321,7 +321,7 @@ class CSCMREADER:
                 years, timeseries = self.get_data_from_forc(
                     results, self.variable_dict[variable]
                 )
-                unit = "W/m^2"
+                unit = "W / m^2"
 
         elif variable in carbon_cycle_outputs:
             if "carbon cycle" in results.keys():
