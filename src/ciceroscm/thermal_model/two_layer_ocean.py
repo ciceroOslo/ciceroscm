@@ -114,8 +114,8 @@ class TwoLayerOceanModel(
         )
 
     def energy_budget(
-        self, forc_nh, forc_sh, fn_volc, fs_volc, w_aero=0.0
-    ):  # pylint: disable=too-many-locals, too-many-arguments, too-many-positional-arguments
+        self, forc_nh, forc_sh, fn_volc, fs_volc, w_aero=0.0, year_index=0
+    ):  # pylint: disable=too-many-locals, too-many-arguments, too-many-positional-arguments, unused-argument
         """
         Calculate temperature response with multiple thermal timescales.
 
