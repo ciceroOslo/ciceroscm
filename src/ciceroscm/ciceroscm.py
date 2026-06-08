@@ -294,6 +294,7 @@ class CICEROSCM:
                 self._volc_n_arr[yr - self.cfg["nystart"]],
                 self._volc_s_arr[yr - self.cfg["nystart"]],
                 w_aero,
+                yr - self.cfg["nystart"],
             )
             self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 

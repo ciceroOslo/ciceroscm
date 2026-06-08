@@ -204,7 +204,6 @@ class UpwellingDiffusionModel(
             "fs": 0.0,
             "dtemp": 0.0,
         }
-        self.current_year = -1
         self.dtempprev = 0.0
 
     # ------------------------------------------------------------------
@@ -227,9 +226,18 @@ class UpwellingDiffusionModel(
         consistent with the new feedback before the next
         ``energy_budget`` call.
         """
-        if self.pamset["delta_lambda_aero"] == 0.0 and (
-            self.pdo_index == 0.0 or self.pamset["delta_lambda_pdo"] == 0.0
-        ):
+        has_aero = self.pamset["delta_lambda_aero"] != 0.0
+        has_pdo_lambda = (
+            self.pamset["delta_lambda_pdo"] != 0.0 and self.pdo_index != 0.0
+        )
+        # pdo_efficacy_scale modulates ocean_efficacy in setup_ebud2; it has
+        # no effect on lambda_eff but still requires setup_ebud() to refresh
+        # the solver coefficients with the current pdo_index.
+        has_pdo_efficacy = (
+            self.pdo_index_data is not None
+            and self.pamset["pdo_efficacy_scale"] != 0.0
+        )
+        if not (has_aero or has_pdo_lambda or has_pdo_efficacy):
             return  # No change to apply
         lambda_eff = (
             1.0 / self.pamset["lambda"]
@@ -522,7 +530,7 @@ class UpwellingDiffusionModel(
         self.setup_ebud2(0, 0)
 
     def energy_budget(
-        self, forc_nh, forc_sh, fn_volc, fs_volc, w_aero=0
+        self, forc_nh, forc_sh, fn_volc, fs_volc, w_aero=0, year_index=0
     ):  # pylint: disable=too-many-locals, too-many-statements, too-many-positional-arguments, too-many-arguments
         """
         Do energy budget calculation for single year
@@ -539,6 +547,9 @@ class UpwellingDiffusionModel(
                Northern hemispheric volcanic forcing
         w_aero : float
                Aerosol index for pattern-mediated feedback;
+        year_index : int
+               Offset of the current year from nystart. Used to index
+               ``pdo_index_data`` when PDO modulation is active.
 
         Returns
         -------
@@ -578,27 +589,12 @@ class UpwellingDiffusionModel(
         dn = np.zeros(lm)
         ds = np.zeros(lm)
 
-        update_annual = not (
-            self.pdo_index_data is not None
-            and (
-                self.pamset["delta_lambda_pdo"] != 0.0
-                or self.pamset["pdo_efficacy_scale"] != 0.0
-            )
-        )
-        if update_annual:
-            self.set_feedback_gregory(
-                w_aero
-            )  # Ensure feedback is set for the first year if pattern-mediated feedback is active
-        self.current_year += 1
+        if self.pdo_index_data is not None:
+            self.pdo_index = self.pdo_index_data[year_index, 0]
+        self.set_feedback_gregory(w_aero)
+
         for im in range(self.pamset["ldtime"]):
             volc_idx = im % len(fn_volc)
-            if not update_annual and im == 0:
-                # Update the feedback at the start of the year if it's tied to the PDO index.
-                self.pdo_index = self.pdo_index_data[self.current_year, im]
-                self.set_feedback_gregory(
-                    w_aero
-                )  # Update feedback based on new PDO index
-
             if self.pamset["threstemp"] != 0:  # pylint: disable=compare-to-zero
                 self.setup_ebud2(temp1n, temp1s)
 
