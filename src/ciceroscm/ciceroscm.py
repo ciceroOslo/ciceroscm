@@ -265,7 +265,7 @@ class CICEROSCM:
         udm = self.thermal_model_class(pamset_udm)
 
         # Pattern-mediated feedback: each thermal model owns the
-        # lambda_eff = lambda_0 + delta_lambda_aero * w_aero formula
+        # lambda_eff = lambda_0 + delta_lambda_aero * w_aero formula + delta_lambda_pdo
         # internally; the driver only forwards w_aero each year
 
         values = None
@@ -288,13 +288,12 @@ class CICEROSCM:
             else:
                 fn, fs, forc, w_aero = self.forc_set(yr)
 
-            udm.set_feedback_gregory(w_aero)
-
             values = udm.energy_budget(
                 fn,
                 fs,
                 self._volc_n_arr[yr - self.cfg["nystart"]],
                 self._volc_s_arr[yr - self.cfg["nystart"]],
+                w_aero,
             )
             self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 

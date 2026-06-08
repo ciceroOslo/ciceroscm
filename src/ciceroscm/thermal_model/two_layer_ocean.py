@@ -114,8 +114,8 @@ class TwoLayerOceanModel(
         )
 
     def energy_budget(
-        self, forc_nh, forc_sh, fn_volc, fs_volc
-    ):  # pylint: disable=too-many-locals
+        self, forc_nh, forc_sh, fn_volc, fs_volc, w_aero=0.0
+    ):  # pylint: disable=too-many-locals, too-many-arguments, too-many-positional-arguments
         """
         Calculate temperature response with multiple thermal timescales.
 
@@ -129,6 +129,8 @@ class TwoLayerOceanModel(
                Northern hemispheric volcanic forcing (W/m^2)
         fs_volc : float
                Northern hemispheric volcanic forcing (W/m^2)
+        w_aero : float
+               Aerosol pattern-mediated feedback weight (unitless), typically between 0 and 1.
 
         Returns
         -------
@@ -144,6 +146,9 @@ class TwoLayerOceanModel(
               hemisphere-specific)
             - OHCTOT/OHC_MIXED/OHC_DEEP/OHC700: Ocean heat content diagnostics
         """
+        self.set_feedback_gregory(
+            w_aero
+        )  # Update feedback based on current aerosol forcing
         forc = (forc_nh + forc_sh) / 2 + np.mean(fn_volc + fs_volc)
 
         # Fast layer temperature change
