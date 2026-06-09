@@ -56,14 +56,18 @@ def test_pdo_input_with_zero_knobs_matches_baseline(test_data_dir):
 
     cscm_base = run_cscm(build_cscm(test_data_dir))
     cscm_pdo = run_cscm(
-      build_cscm(test_data_dir),
-      pdo_index_data=pdo,
-      delta_lambda_pdo=0.0,
-      pdo_efficacy_scale=0.0,
+        build_cscm(test_data_dir),
+        pdo_index_data=pdo,
+        delta_lambda_pdo=0.0,
+        pdo_efficacy_scale=0.0,
     )
 
-    np.testing.assert_array_equal(cscm_base.results["dT_glob"], cscm_pdo.results["dT_glob"])
-    np.testing.assert_array_equal(cscm_base.results["OHCTOT"], cscm_pdo.results["OHCTOT"])
+    np.testing.assert_array_equal(
+        cscm_base.results["dT_glob"], cscm_pdo.results["dT_glob"]
+    )
+    np.testing.assert_array_equal(
+        cscm_base.results["OHCTOT"], cscm_pdo.results["OHCTOT"]
+    )
 
 
 def test_positive_delta_lambda_strengthens_feedback(test_data_dir):
@@ -96,9 +100,9 @@ def test_positive_pdo_modulation_strengthens_feedback(test_data_dir):
 
     cscm_base = run_cscm(build_cscm(test_data_dir), pdo_index_data=pdo)
     cscm_pos = run_cscm(
-      build_cscm(test_data_dir),
-      pdo_index_data=pdo,
-      delta_lambda_pdo=1.0,
+        build_cscm(test_data_dir),
+        pdo_index_data=pdo,
+        delta_lambda_pdo=1.0,
     )
 
     assert feedback(cscm_pos) > feedback(cscm_base) + 0.05
@@ -109,9 +113,9 @@ def test_negative_pdo_modulation_weakens_feedback(test_data_dir):
 
     cscm_base = run_cscm(build_cscm(test_data_dir), pdo_index_data=pdo)
     cscm_neg = run_cscm(
-      build_cscm(test_data_dir),
-      pdo_index_data=pdo,
-      delta_lambda_pdo=-1.0,
+        build_cscm(test_data_dir),
+        pdo_index_data=pdo,
+        delta_lambda_pdo=-1.0,
     )
 
     assert feedback(cscm_neg) < feedback(cscm_base) - 0.05
@@ -122,9 +126,9 @@ def test_positive_pdo_efficacy_scale_changes_ocean_heat_uptake(test_data_dir):
 
     cscm_base = run_cscm(build_cscm(test_data_dir), pdo_index_data=pdo)
     cscm_eff = run_cscm(
-      build_cscm(test_data_dir),
-      pdo_index_data=pdo,
-      pdo_efficacy_scale=0.5,
+        build_cscm(test_data_dir),
+        pdo_index_data=pdo,
+        pdo_efficacy_scale=0.5,
     )
     print(pdo)
     assert cscm_eff.results["OHCTOT"][-100] > cscm_base.results["OHCTOT"][-100]

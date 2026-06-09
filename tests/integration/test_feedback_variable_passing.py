@@ -80,7 +80,9 @@ def test_feedback_variable_passing_with_pdo_input_is_stable(test_data_dir):
     )
 
     assert set(cscm_pdo.feedback_list) == {"dtemp"}
-    np.testing.assert_array_equal(cscm_base.results["dT_glob"], cscm_pdo.results["dT_glob"])
+    np.testing.assert_array_equal(
+        cscm_base.results["dT_glob"], cscm_pdo.results["dT_glob"]
+    )
     np.testing.assert_array_equal(
         cscm_base.results["concentrations"]["CO2"].to_numpy(),
         cscm_pdo.results["concentrations"]["CO2"].to_numpy(),
