@@ -204,7 +204,7 @@ def test_udm_pdo_efficacy_scale_updates_solver_coefficients():
     wcfac = udm.pamset["W"] / 365.0 / 24.0 / 60.0 / 60.0 * udm.pamset["dt"]
     _, b_phys_n, c_phys_n = udm.coeff(wcfac, udm.get_gam_and_fro_factor_ns(True))
     _, b_phys_s, c_phys_s = udm.coeff(wcfac, udm.get_gam_and_fro_factor_ns(False))
-    expected_efficacy = 1.0 - pamset["pdo_efficacy_scale"] * udm.pdo_index
+    expected_efficacy = 1.0 + pamset["pdo_efficacy_scale"] * udm.pdo_index
 
     assert udm.varrying["ccoeffn"][1] == pytest.approx(c_phys_n[1] * expected_efficacy)
     assert udm.varrying["bcoeffn"][0] == pytest.approx(

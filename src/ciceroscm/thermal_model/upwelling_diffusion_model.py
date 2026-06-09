@@ -383,7 +383,7 @@ class UpwellingDiffusionModel(
         ocean_efficacy = self.pamset.get("ocean_efficacy", 1.0)
         if self.pdo_index_data is not None:
             ocean_efficacy = (
-                ocean_efficacy - self.pamset["pdo_efficacy_scale"] * self.pdo_index
+                ocean_efficacy + self.pamset["pdo_efficacy_scale"] * self.pdo_index
             )
         if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
             wcfac = self.pamset["W"] / (SEC_DAY * DAY_YEAR) * self.pamset["dt"]

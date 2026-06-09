@@ -1,7 +1,7 @@
 """5x5 sweep over delta_lambda_pdo x pdo_efficacy_scale on an SSP2-4.5 historical run.
 
 Runs CICEROSCM from 1750 to 2025 with the observed PDO index loaded from
-``tests/test-data/pdo.timeseries.sstens.csv`` (1870-2025, padded with zeros
+``tests/test-data/pdo_ts_noaa.dat`` (1870-2025, padded with zeros
 before 1870). All other UDM parameters held at the integration-test defaults.
 Output: a 5x5 grid of dT_glob time series, one subplot per parameter combo.
 """
@@ -51,25 +51,19 @@ PAMSET_EMICONC = {
 
 
 def load_pdo_monthly(nystart, nyend):
-    """Read pdo.timeseries.sstens.csv and return a (nyears, 12) array."""
-    path = os.path.join(TEST_DATA, "pdo.timeseries.sstens.csv")
+    """Read pdo_ts_noaa.dat and return a (nyears, 12) array."""
+    path = os.path.join(TEST_DATA, "pdo_ts_noaa.dat")
     dates, values = [], []
     with open(path, "r", encoding="utf-8") as fh:
-        next(fh)  # skip header
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            date_str, val_str = [s.strip() for s in line.split(",")]
-            dates.append(date_str)
-            values.append(float(val_str))
-    years = np.array([int(d[:4]) for d in dates])
-    months = np.array([int(d[5:7]) for d in dates])
-    values = np.array(values)
+        raw = np.loadtxt(fh, dtype=float, skiprows=1)
+        print(raw)
+        years = raw[:, 0].astype(int)
+        values = raw[:, 1:]
 
     padded = np.zeros((nyend - nystart + 1, 12), dtype=float)
     mask = (years >= nystart) & (years <= nyend)
-    padded[years[mask] - nystart, months[mask] - 1] = values[mask]
+    padded[years[mask] - nystart, :] = values[mask]
+    padded = np.where(padded == -99.99, 0.0, padded)  # Replace missing value code with 0.0
     return padded
 
 

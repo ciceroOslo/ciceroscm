@@ -131,5 +131,5 @@ def test_positive_pdo_efficacy_scale_changes_ocean_heat_uptake(test_data_dir):
         pdo_efficacy_scale=0.5,
     )
     print(pdo)
-    assert cscm_eff.results["OHCTOT"][-100] > cscm_base.results["OHCTOT"][-100]
-    assert cscm_eff.results["dT_glob"][-100] > cscm_base.results["dT_glob"][-100]
+    assert cscm_eff.results["OHCTOT"][-100] < cscm_base.results["OHCTOT"][-100]
+    assert cscm_eff.results["dT_glob"][-100] < cscm_base.results["dT_glob"][-100]
