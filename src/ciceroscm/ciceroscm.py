@@ -261,7 +261,10 @@ class CICEROSCM:
         self.initialise_output_arrays()
         # Setting up thermal model with parameters
         # udm = UpwellingDiffusionModel(pamset_udm)
-
+        if "pdo_index_data" in cfg and "pdo_index_data" is not None:
+            if pamset_udm is None:
+                pamset_udm = {}
+            pamset_udm["pdo_index_data"] = cfg("pdo_index_data")
         udm = self.thermal_model_class(pamset_udm)
 
         # Pattern-mediated feedback: each thermal model owns the
