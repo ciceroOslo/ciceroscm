@@ -97,7 +97,7 @@ class CICEROSCM:
         self.cfg = cut_and_check_pamset(
             {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24},
             cfg,
-            {"carbon_cycle_model": "default", "thermal_model": "default"},
+            {"carbon_cycle_model": "default", "thermal_model": "default", "pdo_index_data": None},
         )
         cfg.update(self.cfg)
 
@@ -261,10 +261,10 @@ class CICEROSCM:
         self.initialise_output_arrays()
         # Setting up thermal model with parameters
         # udm = UpwellingDiffusionModel(pamset_udm)
-        if "pdo_index_data" in cfg and "pdo_index_data" is not None:
+        if "pdo_index_data" in self.cfg and "pdo_index_data" not in pamset_udm:
             if pamset_udm is None:
                 pamset_udm = {}
-            pamset_udm["pdo_index_data"] = cfg("pdo_index_data")
+            pamset_udm["pdo_index_data"] = self.cfg["pdo_index_data"]
         udm = self.thermal_model_class(pamset_udm)
 
         # Pattern-mediated feedback: each thermal model owns the
