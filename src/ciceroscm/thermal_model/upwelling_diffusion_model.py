@@ -592,7 +592,7 @@ class UpwellingDiffusionModel(
         self.current_year += 1
         for im in range(self.pamset["ldtime"]):
             volc_idx = im % len(fn_volc)
-            if not update_annual and im == 0:
+            if not update_annual:
                 # Update the feedback at the start of the year if it's tied to the PDO index.
                 self.pdo_index = self.pdo_index_data[self.current_year, im]
                 self.set_feedback_gregory(
