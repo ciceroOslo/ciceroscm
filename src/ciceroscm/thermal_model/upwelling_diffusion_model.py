@@ -165,6 +165,8 @@ class UpwellingDiffusionModel(
         "dT_SHsea": "dtempsh_sea",
         "OHC700": "OHC700",
         "OHCTOT": "OHCTOT",
+        "anomalous_radiation": "anomalous_radiation",
+        "dynamic_lambda": "dynamic_lambda",
     }
 
     def __init__(self, params=None):
@@ -592,10 +594,12 @@ class UpwellingDiffusionModel(
                 or self.pamset["pdo_efficacy_scale"] != 0.0
             )
         )
+        rlambda_eff_mean = 0
         if update_annual:
             self.set_feedback_gregory(
                 w_aero
             )  # Ensure feedback is set for the first year if pattern-mediated feedback is active
+            rlambda_eff_mean = self.pamset["rlamda"]
         for im in range(self.pamset["ldtime"]):
             volc_idx = im % len(fn_volc)
             if not update_annual:
@@ -604,7 +608,9 @@ class UpwellingDiffusionModel(
                 self.set_feedback_gregory(
                     w_aero
                 )  # Update feedback based on new PDO index
-
+                rlambda_eff_mean += (
+                    self.pamset["rlamda"] / self.pamset["ldtime"]
+                )  # Accumulate for intra-annual mean
             if self.pamset["threstemp"] != 0:  # pylint: disable=compare-to-zero
                 self.setup_ebud2(temp1n, temp1s)
 
@@ -750,6 +756,7 @@ class UpwellingDiffusionModel(
             "OHC700": ocean_res["OHC700"],
             "OHCTOT": ocean_res["OHCTOT"],
             "anomalous_radiation": anomalous_radiation,
+            "dynamic_lambda": rlambda_eff_mean,
         }
 
     def _calculate_anomalous_radiation(self, tn_start, ts_start):
