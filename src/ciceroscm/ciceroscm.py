@@ -97,7 +97,11 @@ class CICEROSCM:
         self.cfg = cut_and_check_pamset(
             {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24},
             cfg,
-            {"carbon_cycle_model": "default", "thermal_model": "default", "pdo_index_data": None},
+            {
+                "carbon_cycle_model": "default",
+                "thermal_model": "default",
+                "pdo_index_data": None,
+            },
         )
         cfg.update(self.cfg)
 

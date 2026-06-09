@@ -186,7 +186,6 @@ class UpwellingDiffusionModel(
         if params is not None and "pdo_index_data" in params:
             self.pdo_index_data = params["pdo_index_data"]
         self.pdo_index = 0.0  # Initialize PDO index; will be updated in energy_budget if data is provided
-
         # Setting up dz height difference between ocean layers
         self.dz = np.ones(self.pamset["lm"]) * 100.0
         self.dz[0] = self.pamset["mixed"]

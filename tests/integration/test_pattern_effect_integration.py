@@ -111,14 +111,17 @@ def test_positive_pdo_modulation_strengthens_feedback(test_data_dir):
 def test_negative_pdo_modulation_weakens_feedback(test_data_dir):
     pdo = np.abs(load_pdo_data_padded(test_data_dir, 1750, 2100))
 
-    cscm_base = run_cscm(build_cscm(test_data_dir), pdo_index_data=pdo)
+    cscm = build_cscm(test_data_dir)
+
+    cscm_base = run_cscm(cscm)
+    feedback_base = feedback(cscm_base)
+    cscm.cfg["pdo_index_data"] = pdo
     cscm_neg = run_cscm(
-        build_cscm(test_data_dir),
-        pdo_index_data=pdo,
+        cscm,
         delta_lambda_pdo=-1.0,
     )
 
-    assert feedback(cscm_neg) < feedback(cscm_base) - 0.05
+    assert feedback(cscm_neg) < feedback_base - 0.05
 
 
 def test_positive_pdo_efficacy_scale_changes_ocean_heat_uptake(test_data_dir):
@@ -130,6 +133,5 @@ def test_positive_pdo_efficacy_scale_changes_ocean_heat_uptake(test_data_dir):
         pdo_index_data=pdo,
         pdo_efficacy_scale=0.5,
     )
-    print(pdo)
     assert cscm_eff.results["OHCTOT"][-100] < cscm_base.results["OHCTOT"][-100]
     assert cscm_eff.results["dT_glob"][-100] < cscm_base.results["dT_glob"][-100]
