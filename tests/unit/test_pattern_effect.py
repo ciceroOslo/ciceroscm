@@ -170,7 +170,8 @@ def test_udm_changed_feedback_changes_energy_budget_output():
 def test_udm_energy_budget_updates_feedback_from_monthly_pdo_index():
     pamset = _udm_pamset(lambda_pamset=0.5)
     pamset["delta_lambda_pdo"] = 0.75
-    pamset["pdo_index_data"] = np.array([[0.8] + [0.0] * 11])
+    pamset["pdo_index_data"] = np.array([[0.8] * 12])
+    print(pamset["pdo_index_data"])
     udm = UpwellingDiffusionModel(pamset)
 
     udm.energy_budget(1.0, 1.0, np.zeros(12), np.zeros(12))
@@ -182,7 +183,8 @@ def test_udm_energy_budget_updates_feedback_from_monthly_pdo_index():
 def test_udm_energy_budget_updates_pdo_index_for_efficacy_only_runs():
     pamset = _udm_pamset(lambda_pamset=0.5)
     pamset["pdo_efficacy_scale"] = 0.4
-    pamset["pdo_index_data"] = np.array([[0.6] + [0.0] * 11])
+    pamset["pdo_index_data"] = np.array([[0.6] * 12])
+    print(pamset["pdo_index_data"])
     udm = UpwellingDiffusionModel(pamset)
 
     udm.energy_budget(1.0, 1.0, np.zeros(12), np.zeros(12))

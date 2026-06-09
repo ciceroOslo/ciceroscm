@@ -71,7 +71,7 @@ class AbstractThermalModel(ABC):
     # update the state?
     # Also now we send four specific forcings, maybe it should be a dict?
     @abstractmethod
-    def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc):
+    def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc, w_aero=0.0):  # pylint: too-many-arguments, too-many-positional-arguments 
         """
         Calculate the energy balance
 
@@ -85,6 +85,10 @@ class AbstractThermalModel(ABC):
             Northern hemispheric volcanic forcing (W/m^2)
         fs_volc : float
             Northern hemispheric volcanic forcing (W/m^2)
+        w_aero : float, optional
+            Aerosol pattern weight (unitless), typically in [0, 1].
+            Multiplied by ``pamset["delta_lambda_aero"]`` (Gregory units,
+            W m^-2 K^-1) and added to the model's baseline feedback.
 
         Returns
         -------

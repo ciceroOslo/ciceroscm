@@ -1,9 +1,9 @@
 import os
 
 import numpy as np
+from helpers import _DEFAULT_PAMSET_EMICONC, _DEFAULT_PAMSET_UDM, load_pdo_data_padded
 
 from ciceroscm import CICEROSCM
-from helpers import _DEFAULT_PAMSET_EMICONC, _DEFAULT_PAMSET_UDM, load_pdo_data_padded
 
 
 def test_feedback_variable_passing(test_data_dir, tmp_path):
