@@ -33,7 +33,7 @@ class _DummyNoCapability(AbstractThermalModel):
     thermal_model_required_pamset = {}
     output_dict_default = {}
 
-    def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc):
+    def energy_budget(self, forc_list):
         return {}
 
 
@@ -137,9 +137,9 @@ def test_udm_setting_same_feedback_is_noop_in_energy_budget():
     udm_b = UpwellingDiffusionModel(_udm_pamset())
 
     volc = np.zeros(12)
-    out_a = udm_a.energy_budget(1.0, 1.0, volc, volc)
+    out_a = udm_a.energy_budget([1.0, 1.0, volc, volc])
     udm_b.set_feedback_gregory(udm_b.get_feedback_gregory())
-    out_b = udm_b.energy_budget(1.0, 1.0, volc, volc)
+    out_b = udm_b.energy_budget([1.0, 1.0, volc, volc])
 
     assert out_a["dtemp"] == pytest.approx(out_b["dtemp"])
 
@@ -159,8 +159,8 @@ def test_udm_changed_feedback_changes_energy_budget_output():
     # Run a few years to let the response build up.
     dt_strong = dt_weak = 0.0
     for _ in range(10):
-        out_s = udm_strong.energy_budget(2.0, 2.0, volc, volc, w_aero)
-        out_w = udm_weak.energy_budget(2.0, 2.0, volc, volc, w_aero)
+        out_s = udm_strong.energy_budget([2.0, 2.0, volc, volc], w_aero)
+        out_w = udm_weak.energy_budget([2.0, 2.0, volc, volc], w_aero)
         dt_strong = out_s["dtemp"]
         dt_weak = out_w["dtemp"]
 
@@ -174,7 +174,7 @@ def test_udm_energy_budget_updates_feedback_from_monthly_pdo_index():
     print(pamset["pdo_index_data"])
     udm = UpwellingDiffusionModel(pamset)
 
-    udm.energy_budget(1.0, 1.0, np.zeros(12), np.zeros(12))
+    udm.energy_budget([1.0, 1.0, np.zeros(12), np.zeros(12)])
 
     assert udm.pdo_index == pytest.approx(0.8)
     assert udm.get_feedback_gregory() == pytest.approx(1.0 / 0.5 + 0.75 * 0.8)
@@ -187,7 +187,7 @@ def test_udm_energy_budget_updates_pdo_index_for_efficacy_only_runs():
     print(pamset["pdo_index_data"])
     udm = UpwellingDiffusionModel(pamset)
 
-    udm.energy_budget(1.0, 1.0, np.zeros(12), np.zeros(12))
+    udm.energy_budget([1.0, 1.0, np.zeros(12), np.zeros(12)])
 
     assert udm.pdo_index == pytest.approx(0.6)
 
@@ -241,8 +241,8 @@ def test_two_layer_changed_feedback_changes_energy_budget_output():
 
     volc = np.zeros(12)
     for _ in range(10):
-        out_s = model_strong.energy_budget(2.0, 2.0, volc, volc, w_aero)
-        out_w = model_weak.energy_budget(2.0, 2.0, volc, volc, w_aero)
+        out_s = model_strong.energy_budget([2.0, 2.0, volc, volc], w_aero)
+        out_w = model_weak.energy_budget([2.0, 2.0, volc, volc], w_aero)
     assert out_s["dtemp"] < out_w["dtemp"]
 
 

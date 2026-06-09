@@ -289,11 +289,14 @@ class CICEROSCM:
                 fn, fs, forc, w_aero = self.forc_set(yr)
 
             values = udm.energy_budget(
-                fn,
-                fs,
-                self._volc_n_arr[yr - self.cfg["nystart"]],
-                self._volc_s_arr[yr - self.cfg["nystart"]],
+                [
+                    fn,
+                    fs,
+                    self._volc_n_arr[yr - self.cfg["nystart"]],
+                    self._volc_s_arr[yr - self.cfg["nystart"]],
+                ],
                 w_aero,
+                yr - self.cfg["nystart"],
             )
             self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 

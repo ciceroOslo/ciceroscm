@@ -204,7 +204,6 @@ class UpwellingDiffusionModel(
             "fs": 0.0,
             "dtemp": 0.0,
         }
-        self.current_year = -1
         self.dtempprev = 0.0
 
     # ------------------------------------------------------------------
@@ -230,12 +229,15 @@ class UpwellingDiffusionModel(
         if self.pamset["delta_lambda_aero"] == 0.0 and (
             self.pdo_index == 0.0 or self.pamset["delta_lambda_pdo"] == 0.0
         ):
-            return  # No change to apply
-        lambda_eff = (
-            1.0 / self.pamset["lambda"]
-            + w_aero * self.pamset["delta_lambda_aero"]
-            + self.pamset["delta_lambda_pdo"] * self.pdo_index
-        )
+            lambda_eff = 1.0 / self.pamset["lambda"]  # No change to apply
+            if self.pamset["pdo_efficacy_scale"] == 0.0 or self.pdo_index == 0.0:
+                return
+        else:
+            lambda_eff = (
+                1.0 / self.pamset["lambda"]
+                + w_aero * self.pamset["delta_lambda_aero"]
+                + self.pamset["delta_lambda_pdo"] * self.pdo_index
+            )
         self.pamset["rlamda"] = lambda_eff
         self.pamset["fnx"] = (
             lambda_eff
@@ -522,23 +524,28 @@ class UpwellingDiffusionModel(
         self.setup_ebud2(0, 0)
 
     def energy_budget(
-        self, forc_nh, forc_sh, fn_volc, fs_volc, w_aero=0
-    ):  # pylint: disable=too-many-locals, too-many-statements, too-many-positional-arguments, too-many-arguments
+        self, forc_list, w_aero=0, year_index=0
+    ):  # pylint: disable=too-many-locals, too-many-statements
         """
         Do energy budget calculation for single year
 
         Parameters
         ----------
-        forc_nh : float
-               Northern hemispheric forcing
-        forc_sh : float
-               Southern hemispheric forcing
-        fn_volc : float
-               Northern hemispheric volcanic forcing
-        fs_volc : float
-               Northern hemispheric volcanic forcing
-        w_aero : float
-               Aerosol index for pattern-mediated feedback;
+        forc_list : list of float
+            A list of forcings for the current year. order should be
+            [forc_nh, forc_sh, fn_volc, fs_volc]
+            forc_nh : float Northern hemispheric forcing (W/m^2)
+            forc_sh : float Southern hemispheric forcing (W/m^2)
+            fn_volc : float Northern hemispheric volcanic forcing (W/m^2)
+            fs_volc : float Northern hemispheric volcanic forcing (W/m^2)
+        w_aero : float, optional
+            Aerosol pattern weight (unitless), typically in [0, 1].
+            Multiplied by ``pamset["delta_lambda_aero"]`` (Gregory units,
+            W m^-2 K^-1) and added to the model's baseline feedback.
+        year_index : int, optional
+            The index of the current year in the simulation. This is used to
+            access the correct year of the pdo_index_data if needed. The default is 0.
+
 
         Returns
         -------
@@ -559,6 +566,7 @@ class UpwellingDiffusionModel(
             Ocean heat content change down to 700 m OHC700,
             Ocean heat content change total OHCTOT
         """
+        forc_nh, forc_sh, fn_volc, fs_volc = forc_list
         # --- At the start of the year, store the initial temperature profiles ---
         tn_start = self.tn.copy()
         ts_start = self.ts.copy()
@@ -589,12 +597,11 @@ class UpwellingDiffusionModel(
             self.set_feedback_gregory(
                 w_aero
             )  # Ensure feedback is set for the first year if pattern-mediated feedback is active
-        self.current_year += 1
         for im in range(self.pamset["ldtime"]):
             volc_idx = im % len(fn_volc)
             if not update_annual:
                 # Update the feedback at the start of the year if it's tied to the PDO index.
-                self.pdo_index = self.pdo_index_data[self.current_year, im]
+                self.pdo_index = self.pdo_index_data[year_index, im]
                 self.set_feedback_gregory(
                     w_aero
                 )  # Update feedback based on new PDO index

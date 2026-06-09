@@ -87,7 +87,7 @@ class TestTwoLayerOceanModel:
         model = TwoLayerOceanModel()
 
         # Zero forcing should result in zero temperature changes
-        result = model.energy_budget(0.0, 0.0, [0.0], [0.0])
+        result = model.energy_budget([0.0, 0.0, [0.0], [0.0]])
 
         assert result["dtemp_fast"] == 0.0
         assert result["dtemp_slow"] == 0.0
@@ -99,7 +99,7 @@ class TestTwoLayerOceanModel:
         model = TwoLayerOceanModel()
 
         # Apply positive forcing
-        result = model.energy_budget(1.0, 1.0, [0.0], [0.0])
+        result = model.energy_budget([1.0, 1.0, [0.0], [0.0]])
 
         # With positive forcing, fast layer should warm up
         assert result["dtemp_fast"] > 0.0
@@ -114,7 +114,7 @@ class TestTwoLayerOceanModel:
         model = TwoLayerOceanModel()
 
         # Apply negative forcing
-        result = model.energy_budget(-1.0, -1.0, [0.0], [0.0])
+        result = model.energy_budget([-1.0, -1.0, [0.0], [0.0]])
 
         # With negative forcing, fast layer should cool
         assert result["dtemp_fast"] < 0.0
@@ -131,7 +131,7 @@ class TestTwoLayerOceanModel:
         fn_volc = [-0.5, -0.3, -0.1]
         fs_volc = [-0.4, -0.2, 0.0]
 
-        model.energy_budget(1.0, 1.0, fn_volc, fs_volc)
+        model.energy_budget([1.0, 1.0, fn_volc, fs_volc])
 
         # The total forcing should be 1.0 + np.mean(fn_volc + fs_volc)
         expected_volc_forcing = np.mean(np.array(fn_volc) + np.array(fs_volc))
@@ -145,12 +145,12 @@ class TestTwoLayerOceanModel:
         model = TwoLayerOceanModel()
 
         # First step
-        result1 = model.energy_budget(1.0, 1.0, [0.0], [0.0])
+        result1 = model.energy_budget([1.0, 1.0, [0.0], [0.0]])
         temp_fast_1 = result1["dtemp_fast"]
         temp_slow_1 = result1["dtemp_slow"]
 
         # Second step with same forcing
-        result2 = model.energy_budget(1.0, 1.0, [0.0], [0.0])
+        result2 = model.energy_budget([1.0, 1.0, [0.0], [0.0]])
         temp_fast_2 = result2["dtemp_fast"]
         temp_slow_2 = result2["dtemp_slow"]
 
@@ -164,7 +164,7 @@ class TestTwoLayerOceanModel:
 
         # Warm up the fast layer first
         for _ in range(10):
-            model.energy_budget(1.0, 1.0, [0.0], [0.0])
+            model.energy_budget([1.0, 1.0, [0.0], [0.0]])
 
         # Now the fast layer should be significantly warmer than slow layer
         assert model.temp_fast > model.temp_slow
@@ -173,7 +173,7 @@ class TestTwoLayerOceanModel:
         initial_fast = model.temp_fast
         initial_slow = model.temp_slow
 
-        model.energy_budget(0.0, 0.0, [0.0], [0.0])
+        model.energy_budget([0.0, 0.0, [0.0], [0.0]])
 
         # Fast layer should cool due to heat transfer to slow layer
         # Slow layer should warm due to heat from fast layer
@@ -184,7 +184,7 @@ class TestTwoLayerOceanModel:
         """Test that RIB (Radiative Imbalance) is calculated correctly"""
         model = TwoLayerOceanModel()
 
-        result = model.energy_budget(2.0, 2.0, [0.0], [0.0])
+        result = model.energy_budget([2.0, 2.0, [0.0], [0.0]])
 
         # RIB should be calculated as:
         # forc - lambda * temp_fast - (ocean_efficacy - 1) * k * (temp_fast - temp_slow)
@@ -201,7 +201,7 @@ class TestTwoLayerOceanModel:
     def test_energy_budget_return_structure(self):
         """Test that energy_budget returns the expected dictionary structure"""
         model = TwoLayerOceanModel()
-        result = model.energy_budget(1.0, 1.0, [0.0], [0.0])
+        result = model.energy_budget([1.0, 1.0, [0.0], [0.0]])
 
         # Check all expected keys are present for interface compatibility
         expected_keys = [
@@ -246,8 +246,8 @@ class TestTwoLayerOceanModel:
 
         # Apply same forcing to both
         for _ in range(5):
-            model1.energy_budget(1.0, 1.0, [0.0], [0.0])
-            model2.energy_budget(1.0, 1.0, [0.0], [0.0])
+            model1.energy_budget([1.0, 1.0, [0.0], [0.0]])
+            model2.energy_budget([1.0, 1.0, [0.0], [0.0]])
 
         # With lower efficacy, the coupling between layers is different
         # Let's just verify that different efficacy values produce different results
@@ -255,8 +255,8 @@ class TestTwoLayerOceanModel:
         assert model2.temp_slow != model1.temp_slow
 
         # The efficacy should affect the RIB calculation differently
-        result1_final = model1.energy_budget(1.0, 1.0, [0.0], [0.0])
-        result2_final = model2.energy_budget(1.0, 1.0, [0.0], [0.0])
+        result1_final = model1.energy_budget([1.0, 1.0, [0.0], [0.0]])
+        result2_final = model2.energy_budget([1.0, 1.0, [0.0], [0.0]])
         assert result1_final["RIB"] != result2_final["RIB"]
 
     def test_parameter_sensitivity(self):
@@ -267,8 +267,8 @@ class TestTwoLayerOceanModel:
 
         # Apply same forcing multiple times to see the effect
         for _ in range(10):  # More steps to see the cumulative effect
-            model_low_lambda.energy_budget(1.0, 1.0, [0.0], [0.0])
-            model_high_lambda.energy_budget(1.0, 1.0, [0.0], [0.0])
+            model_low_lambda.energy_budget([1.0, 1.0, [0.0], [0.0]])
+            model_high_lambda.energy_budget([1.0, 1.0, [0.0], [0.0]])
 
         # Lower lambda (less climate feedback) should result in more warming after multiple steps
         assert model_low_lambda.temp_fast > model_high_lambda.temp_fast
@@ -295,7 +295,7 @@ class TestTwoLayerOceanModel:
         model = TwoLayerOceanModel()
 
         # Apply forcing to warm up the ocean
-        result = model.energy_budget(2.0, 2.0, [0.0], [0.0])
+        result = model.energy_budget([2.0, 2.0, [0.0], [0.0]])
 
         # Check that OHC values are calculated
         assert result["OHC_MIXED"] > 0  # Should have some heat in mixed layer
@@ -308,7 +308,7 @@ class TestTwoLayerOceanModel:
 
         # Apply more forcing to see heat transfer to deep layer
         for _ in range(5):
-            result = model.energy_budget(1.0, 1.0, [0.0], [0.0])
+            result = model.energy_budget([1.0, 1.0, [0.0], [0.0]])
 
         # Now deep layer should have some heat
         assert result["OHC_DEEP"] > 0
@@ -335,7 +335,7 @@ class TestTwoLayerOceanModelEdgeCases:
         """Test with very small forcing values"""
         model = TwoLayerOceanModel()
 
-        result = model.energy_budget(1e-10, 1e-10, [0.0], [0.0])
+        result = model.energy_budget([1e-10, 1e-10, [0.0], [0.0]])
 
         # Should handle small values without issues
         assert np.isfinite(result["dtemp_fast"])
@@ -345,7 +345,7 @@ class TestTwoLayerOceanModelEdgeCases:
         """Test with very large forcing values"""
         model = TwoLayerOceanModel()
 
-        result = model.energy_budget(100.0, 100.0, [0.0], [0.0])
+        result = model.energy_budget([100.0, 100.0, [0.0], [0.0]])
 
         # Should handle large values without issues
         assert np.isfinite(result["dtemp_fast"])
@@ -361,7 +361,7 @@ class TestTwoLayerOceanModelEdgeCases:
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result = model.energy_budget(1.0, 1.0, [], [])
+            result = model.energy_budget([1.0, 1.0, [], []])
 
             # Should get warnings about mean of empty slice
             assert len(w) > 0
@@ -375,7 +375,7 @@ class TestTwoLayerOceanModelEdgeCases:
         model = TwoLayerOceanModel()
 
         # This should work since np.mean handles different lengths
-        result = model.energy_budget(1.0, 1.0, [0.1, 0.2], [0.3])
+        result = model.energy_budget([1.0, 1.0, [0.1, 0.2], [0.3]])
 
         assert np.isfinite(result["dtemp_fast"])
 
@@ -391,7 +391,7 @@ class TestTwoLayerOceanModelEdgeCases:
         model = TwoLayerOceanModel(extreme_params)
 
         # Should still be able to run without crashing
-        result = model.energy_budget(1.0, 1.0, [0.0], [0.0])
+        result = model.energy_budget([1.0, 1.0, [0.0], [0.0]])
         assert np.isfinite(result["dtemp_fast"])
         assert np.isfinite(result["dtemp_slow"])
 
@@ -399,7 +399,7 @@ class TestTwoLayerOceanModelEdgeCases:
         """Test OHC700 calculation for different layer configurations"""
         # Case 1: Mixed layer deeper than 700m
         model1 = TwoLayerOceanModel({"mixed": 800, "deep": 1200})
-        result1 = model1.energy_budget(2.0, 2.0, [0.0], [0.0])
+        result1 = model1.energy_budget([2.0, 2.0, [0.0], [0.0]])
 
         # OHC700 should be 700/800 of mixed layer OHC (since mixed > 700m)
         expected_ratio = 700 / 800
@@ -410,7 +410,7 @@ class TestTwoLayerOceanModelEdgeCases:
         model2 = TwoLayerOceanModel({"mixed": 50, "deep": 1200})
         # Run multiple steps to get some deep layer heating
         for _ in range(3):
-            result2 = model2.energy_budget(2.0, 2.0, [0.0], [0.0])
+            result2 = model2.energy_budget([2.0, 2.0, [0.0], [0.0]])
 
         # OHC700 should be all mixed + (650/1200) of deep layer
         deep_fraction = (700 - 50) / 1200  # 650/1200
@@ -420,7 +420,7 @@ class TestTwoLayerOceanModelEdgeCases:
         # Case 3: Very shallow layers
         model3 = TwoLayerOceanModel({"mixed": 30, "deep": 500})
         for _ in range(3):
-            result3 = model3.energy_budget(2.0, 2.0, [0.0], [0.0])
+            result3 = model3.energy_budget([2.0, 2.0, [0.0], [0.0]])
 
         # OHC700 should be all mixed + all deep (since 30 + 500 < 700)
         expected_ohc700 = result3["OHC_MIXED"] + result3["OHC_DEEP"]

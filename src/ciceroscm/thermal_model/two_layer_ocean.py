@@ -114,23 +114,27 @@ class TwoLayerOceanModel(
         )
 
     def energy_budget(
-        self, forc_nh, forc_sh, fn_volc, fs_volc, w_aero=0.0
-    ):  # pylint: disable=too-many-locals, too-many-arguments, too-many-positional-arguments
+        self, forc_list, w_aero=0.0, year_index=0
+    ):  # pylint: disable=too-many-locals
         """
-        Calculate temperature response with multiple thermal timescales.
+        Calculate temperature response with multiple thermal timescales for one year.
 
         Parameters
         ----------
-        forc_nh : float
-               Northern hemispheric forcing (W/m^2)
-        forc_sh : float
-               Southern hemispheric forcing (W/m^2)
-        fn_volc : float
-               Northern hemispheric volcanic forcing (W/m^2)
-        fs_volc : float
-               Northern hemispheric volcanic forcing (W/m^2)
-        w_aero : float
-               Aerosol pattern-mediated feedback weight (unitless), typically between 0 and 1.
+        forc_list : list of float
+            A list of forcings for the current year. order should be
+            [forc_nh, forc_sh, fn_volc, fs_volc]
+            forc_nh : float Northern hemispheric forcing (W/m^2)
+            forc_sh : float Southern hemispheric forcing (W/m^2)
+            fn_volc : float Northern hemispheric volcanic forcing (W/m^2)
+            fs_volc : float Northern hemispheric volcanic forcing (W/m^2)
+        w_aero : float, optional
+            Aerosol pattern weight (unitless), typically in [0, 1].
+            Multiplied by ``pamset["delta_lambda_aero"]`` (Gregory units,
+            W m^-2 K^-1) and added to the model's baseline feedback.
+        year_index : int, optional
+            The index of the current year in the simulation. This is used to
+            access the correct year of the pdo_index_data if needed. The default is 0.
 
         Returns
         -------
@@ -146,6 +150,7 @@ class TwoLayerOceanModel(
               hemisphere-specific)
             - OHCTOT/OHC_MIXED/OHC_DEEP/OHC700: Ocean heat content diagnostics
         """
+        forc_nh, forc_sh, fn_volc, fs_volc = forc_list
         self.set_feedback_gregory(
             w_aero
         )  # Update feedback based on current aerosol forcing

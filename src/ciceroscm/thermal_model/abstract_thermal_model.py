@@ -71,29 +71,32 @@ class AbstractThermalModel(ABC):
     # update the state?
     # Also now we send four specific forcings, maybe it should be a dict?
     @abstractmethod
-    def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc, w_aero=0.0):  # pylint: too-many-arguments, too-many-positional-arguments 
+    def energy_budget(self, forc_list, w_aero=0.0, year_index=0):
         """
-        Calculate the energy balance
+        Calculate the energy balance for single year
 
         Parameters
         ----------
-        forc_nh : float
-            Northern hemispheric forcing (W/m^2)
-        forc_sh : float
-            Southern hemispheric forcing (W/m^2)
-        fn_volc : float
-            Northern hemispheric volcanic forcing (W/m^2)
-        fs_volc : float
-            Northern hemispheric volcanic forcing (W/m^2)
+        forc_list : list of float
+            A list of forcings for the current year. order should be
+            [forc_nh, forc_sh, fn_volc, fs_volc]
+            forc_nh : float Northern hemispheric forcing (W/m^2)
+            forc_sh : float Southern hemispheric forcing (W/m^2)
+            fn_volc : float Northern hemispheric volcanic forcing (W/m^2)
+            fs_volc : float Northern hemispheric volcanic forcing (W/m^2)
         w_aero : float, optional
             Aerosol pattern weight (unitless), typically in [0, 1].
             Multiplied by ``pamset["delta_lambda_aero"]`` (Gregory units,
             W m^-2 K^-1) and added to the model's baseline feedback.
+        year_index : int, optional
+            The index of the current year in the simulation. This is used to
+            access the correct year of the pdo_index_data if needed. The default is 0.
 
         Returns
         -------
-        float
-            The energy balance
+        dict
+            The energy balance results for the year. Keys should be variables
+            values the calculated annual value for each of them.
         """
 
     # ------------------------------------------------------------------
