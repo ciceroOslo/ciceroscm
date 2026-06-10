@@ -97,7 +97,11 @@ class CICEROSCM:
         self.cfg = cut_and_check_pamset(
             {"nystart": 1750, "nyend": 2100, "emstart": 1850, "idtm": 24},
             cfg,
-            {"carbon_cycle_model": "default", "thermal_model": "default"},
+            {
+                "carbon_cycle_model": "default",
+                "thermal_model": "default",
+                "pdo_index_data": None,
+            },
         )
         cfg.update(self.cfg)
 
@@ -261,11 +265,14 @@ class CICEROSCM:
         self.initialise_output_arrays()
         # Setting up thermal model with parameters
         # udm = UpwellingDiffusionModel(pamset_udm)
-
+        if "pdo_index_data" in self.cfg and "pdo_index_data" not in pamset_udm:
+            if pamset_udm is None:
+                pamset_udm = {}
+            pamset_udm["pdo_index_data"] = self.cfg["pdo_index_data"]
         udm = self.thermal_model_class(pamset_udm)
 
         # Pattern-mediated feedback: each thermal model owns the
-        # lambda_eff = lambda_0 + delta_lambda_aero * w_aero formula
+        # lambda_eff = lambda_0 + delta_lambda_aero * w_aero formula + delta_lambda_pdo
         # internally; the driver only forwards w_aero each year
 
         values = None
@@ -288,13 +295,15 @@ class CICEROSCM:
             else:
                 fn, fs, forc, w_aero = self.forc_set(yr)
 
-            udm.set_feedback_gregory(w_aero)
-
             values = udm.energy_budget(
-                fn,
-                fs,
-                self._volc_n_arr[yr - self.cfg["nystart"]],
-                self._volc_s_arr[yr - self.cfg["nystart"]],
+                [
+                    fn,
+                    fs,
+                    self._volc_n_arr[yr - self.cfg["nystart"]],
+                    self._volc_s_arr[yr - self.cfg["nystart"]],
+                ],
+                w_aero,
+                yr - self.cfg["nystart"],
             )
             self.add_year_data_to_output(values, forc, yr - self.cfg["nystart"])
 

@@ -146,6 +146,8 @@ class UpwellingDiffusionModel(
         # Pattern-mediated feedback sensitivity. lambda_eff(t)
         # = lambda_0 + delta_lambda_aero * w_aero(t). Default 0.0 = off.
         "delta_lambda_aero": 0.0,
+        "delta_lambda_pdo": 0.0,  # Additional constant feedback shift for PDO pattern
+        "pdo_efficacy_scale": 0.0,  # Additional efficacy scaling factor tied to PDO index
     }
 
     output_dict_default = {
@@ -163,6 +165,8 @@ class UpwellingDiffusionModel(
         "dT_SHsea": "dtempsh_sea",
         "OHC700": "OHC700",
         "OHCTOT": "OHCTOT",
+        "anomalous_radiation": "anomalous_radiation",
+        "dynamic_lambda": "dynamic_lambda",
     }
 
     def __init__(self, params=None):
@@ -180,11 +184,16 @@ class UpwellingDiffusionModel(
         super().__init__(params)
         self.pamset = check_pamset(self.pamset)
 
+        self.pdo_index_data = None
+        if params is not None and "pdo_index_data" in params:
+            self.pdo_index_data = params["pdo_index_data"]
+        self.pdo_index = 0.0  # Initialize PDO index; will be updated in energy_budget if data is provided
         # Setting up dz height difference between ocean layers
         self.dz = np.ones(self.pamset["lm"]) * 100.0
         self.dz[0] = self.pamset["mixed"]
         self.varrying = {}
         self._precompute_coeff_constants()
+
         self.setup_ebud()
 
         # Intialising temperature values
@@ -196,7 +205,6 @@ class UpwellingDiffusionModel(
             "fs": 0.0,
             "dtemp": 0.0,
         }
-
         self.dtempprev = 0.0
 
     # ------------------------------------------------------------------
@@ -219,11 +227,18 @@ class UpwellingDiffusionModel(
         consistent with the new feedback before the next
         ``energy_budget`` call.
         """
-        if self.pamset["delta_lambda_aero"] == 0.0:
-            return  # No change to apply
-        lambda_eff = (
-            1.0 / self.pamset["lambda"] + w_aero * self.pamset["delta_lambda_aero"]
-        )
+        if self.pamset["delta_lambda_aero"] == 0.0 and (
+            self.pdo_index == 0.0 or self.pamset["delta_lambda_pdo"] == 0.0
+        ):
+            lambda_eff = 1.0 / self.pamset["lambda"]  # No change to apply
+            if self.pamset["pdo_efficacy_scale"] == 0.0 or self.pdo_index == 0.0:
+                return
+        else:
+            lambda_eff = (
+                1.0 / self.pamset["lambda"]
+                + w_aero * self.pamset["delta_lambda_aero"]
+                + self.pamset["delta_lambda_pdo"] * self.pdo_index
+            )
         self.pamset["rlamda"] = lambda_eff
         self.pamset["fnx"] = (
             lambda_eff
@@ -367,8 +382,10 @@ class UpwellingDiffusionModel(
                Southern hemisphere surface temperature
         """
         ocean_efficacy = self.pamset.get("ocean_efficacy", 1.0)
-
-        # Northern hemisphere:
+        if self.pdo_index_data is not None:
+            ocean_efficacy = (
+                ocean_efficacy + self.pamset["pdo_efficacy_scale"] * self.pdo_index
+            )
         if self.pamset["threstemp"] == 0:  # pylint: disable=compare-to-zero
             wcfac = self.pamset["W"] / (SEC_DAY * DAY_YEAR) * self.pamset["dt"]
         else:
@@ -508,21 +525,28 @@ class UpwellingDiffusionModel(
         self.setup_ebud2(0, 0)
 
     def energy_budget(
-        self, forc_nh, forc_sh, fn_volc, fs_volc
+        self, forc_list, w_aero=0, year_index=0
     ):  # pylint: disable=too-many-locals, too-many-statements
         """
         Do energy budget calculation for single year
 
         Parameters
         ----------
-        forc_nh : float
-               Northern hemispheric forcing
-        forc_sh : float
-               Southern hemispheric forcing
-        fn_volc : float
-               Northern hemispheric volcanic forcing
-        fs_volc : float
-               Northern hemispheric volcanic forcing
+        forc_list : list of float
+            A list of forcings for the current year. order should be
+            [forc_nh, forc_sh, fn_volc, fs_volc]
+            forc_nh : float Northern hemispheric forcing (W/m^2)
+            forc_sh : float Southern hemispheric forcing (W/m^2)
+            fn_volc : float Northern hemispheric volcanic forcing (W/m^2)
+            fs_volc : float Northern hemispheric volcanic forcing (W/m^2)
+        w_aero : float, optional
+            Aerosol pattern weight (unitless), typically in [0, 1].
+            Multiplied by ``pamset["delta_lambda_aero"]`` (Gregory units,
+            W m^-2 K^-1) and added to the model's baseline feedback.
+        year_index : int, optional
+            The index of the current year in the simulation. This is used to
+            access the correct year of the pdo_index_data if needed. The default is 0.
+
 
         Returns
         -------
@@ -543,6 +567,7 @@ class UpwellingDiffusionModel(
             Ocean heat content change down to 700 m OHC700,
             Ocean heat content change total OHCTOT
         """
+        forc_nh, forc_sh, fn_volc, fs_volc = forc_list
         # --- At the start of the year, store the initial temperature profiles ---
         tn_start = self.tn.copy()
         ts_start = self.ts.copy()
@@ -561,8 +586,31 @@ class UpwellingDiffusionModel(
         dtyear = 1.0 / self.pamset["ldtime"]
         dn = np.zeros(lm)
         ds = np.zeros(lm)
+
+        update_annual = not (
+            self.pdo_index_data is not None
+            and (
+                self.pamset["delta_lambda_pdo"] != 0.0
+                or self.pamset["pdo_efficacy_scale"] != 0.0
+            )
+        )
+        rlambda_eff_mean = 0
+        if update_annual:
+            self.set_feedback_gregory(
+                w_aero
+            )  # Ensure feedback is set for the first year if pattern-mediated feedback is active
+            rlambda_eff_mean = self.pamset["rlamda"]
         for im in range(self.pamset["ldtime"]):
             volc_idx = im % len(fn_volc)
+            if not update_annual:
+                # Update the feedback at the start of the year if it's tied to the PDO index.
+                self.pdo_index = self.pdo_index_data[year_index, im]
+                self.set_feedback_gregory(
+                    w_aero
+                )  # Update feedback based on new PDO index
+                rlambda_eff_mean += (
+                    self.pamset["rlamda"] / self.pamset["ldtime"]
+                )  # Accumulate for intra-annual mean
             if self.pamset["threstemp"] != 0:  # pylint: disable=compare-to-zero
                 self.setup_ebud2(temp1n, temp1s)
 
@@ -708,6 +756,7 @@ class UpwellingDiffusionModel(
             "OHC700": ocean_res["OHC700"],
             "OHCTOT": ocean_res["OHCTOT"],
             "anomalous_radiation": anomalous_radiation,
+            "dynamic_lambda": rlambda_eff_mean,
         }
 
     def _calculate_anomalous_radiation(self, tn_start, ts_start):
