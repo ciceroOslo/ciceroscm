@@ -478,6 +478,9 @@ class ConcentrationsEmissionsHandler:
         Uses the precomputed halocarbon concentrations, fractional release
         factors, and the same 1900 bromine reference used in the legacy
         implementation.
+        This uses the formulation of EESC from Newman et al. (2007) and 
+        the fractional release factors are from Engel et al. (2018) and
+        Papanastasiou et al. (2018)
         """
         yr0 = int(self.years[0])
         if (
