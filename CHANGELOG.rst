@@ -19,7 +19,7 @@ The changes listed in this file are categorised as follows:
 
 ### Added
 - Parallelisation wrapper `cscmparwrapper.py` caps max number of workers if the number exceeds the number of configurations times scenarios to do.
-
+- (`#224 https://github.com/ciceroOslo/ciceroscm/pull/224`_) Added equivalent effective stratospheric chlorine (EESC) calculation, feeding into methane lifetime and stratospheric ozone forcing.
 
 [Version 2.1.2]
 ---------------------------

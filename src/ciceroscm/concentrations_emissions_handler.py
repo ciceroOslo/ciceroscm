@@ -12,6 +12,7 @@ import pandas as pd
 from ._utils import cut_and_check_pamset, write_results_tsv
 from .carbon_cycle.common_carbon_cycle_functions import calculate_airborne_fraction
 from .component_factory_functions import create_carbon_cycle_model
+from .constants import EESC_FRF, EESC_WEIGHTS
 from .make_plots import plot_output2
 from .perturbations import (
     ForcingPerturbation,
@@ -61,6 +62,8 @@ def check_pamset(pamset):
         "nystart": 1750,
         "nyend": 2100,
         "emstart": 1850,
+        "qstrato3": -14.3e-5,
+        "qch4_eesc": 5.3e-5,
     }
 
     # pamset = check_numeric_pamset(required, pamset, )
@@ -262,6 +265,7 @@ class ConcentrationsEmissionsHandler:
             self._precalculate_concentrations_vanilla_gases(df_gases_vanilla)
         )
         self.precalc_dict["precalc_erf"] = self._precalculate_erf_vanilla_gases()
+        self.precalc_dict["precalc_eesc"] = self._precalculate_eesc()
 
         self._add_precalculated_strat_o3()
 
@@ -354,21 +358,16 @@ class ConcentrationsEmissionsHandler:
         return pd.concat([conc_in_vanilla, conc_rows_df])
 
     def _add_precalculated_strat_o3(self):
-        sumcl, sumbr = np.zeros(len(self.years)), np.zeros(len(self.years))
-        sumcl[3:], sumbr[3:] = self.calculate_strat_quantities(
-            self.years[:-3], self.precalc_dict["precalc_conc"]
-        )
         q = (
-            -(
-                # self.pamset["qo3"]
-                0.05
-                / 0.17377
-                * (0.000552 * (sumcl) + 3.048 * sumbr)
-            )
-            / 1000.0
+            self.pamset["qstrato3"]
+            * self.precalc_dict["precalc_eesc"]
             * self.df_gas["SARF_TO_ERF"]["STRAT_O3"]
         )
         self.precalc_dict["precalc_erf"]["STRAT_O3"] = q
+
+    def _precalculate_eesc(self):
+        eesc = np.array([self.calc_eesc(yr) for yr in self.years])
+        return pd.Series(eesc, index=self.years, name="eesc")
 
     def reset_with_new_pams(self, pamset, pamset_carbon=None, preexisting=True):
         """
@@ -394,6 +393,7 @@ class ConcentrationsEmissionsHandler:
             self.pamset = check_pamset_consistency(self.pamset, new_pamset)
 
         self.avoid_regional_double_counting()
+        self._add_precalculated_strat_o3()
         self.carbon_cycle.reset_co2_hold(pamset_carbon)
 
         years_tot = len(self.years)
@@ -470,6 +470,57 @@ class ConcentrationsEmissionsHandler:
         for comp, mult in self.pamset["br_dict"].items():
             sumbr = sumbr + mult * (conc[comp][yr] - conc[comp][yr0])
         return sumcl, sumbr
+
+    def calculate_eesc_quantities(self, yr):
+        """
+        Calculate chlorine and bromine EESC source quantities.
+
+        Uses the precomputed halocarbon concentrations, fractional release
+        factors, and the same 1900 bromine reference used in the legacy
+        implementation.
+        This uses the formulation of EESC from Newman et al. (2007) and 
+        the fractional release factors are from Engel et al. (2018) and
+        Papanastasiou et al. (2018)
+        """
+        yr0 = int(self.years[0])
+        if (
+            yr <= max(yr0 + 3, 1900)
+            or yr not in self.precalc_dict["precalc_conc"].index
+        ):
+            return 0.0, 0.0
+
+        conc = self.precalc_dict["precalc_conc"]
+        sumcl = 0.0
+        sumbr = 0.0
+        for comp, mult in self.pamset["cl_dict"].items():
+            if comp in EESC_FRF and comp in conc:
+                sumcl += EESC_FRF[comp] * (conc[comp][yr] - conc[comp][yr0]) * mult
+
+        br_ref_yr = 1900 if 1900 in conc.index else yr0
+        for comp, mult in self.pamset["br_dict"].items():
+            if comp in EESC_FRF and comp in conc:
+                sumbr += (
+                    EESC_FRF[comp] * (conc[comp][yr] - conc[comp][br_ref_yr]) * mult
+                )
+        return sumcl, sumbr
+
+    def calc_eesc(self, yr):
+        """
+        Calculate equivalent effective stratospheric chlorine for a year.
+        """
+        if (
+            "precalc_eesc" in self.precalc_dict
+            and yr in self.precalc_dict["precalc_eesc"].index
+        ):
+            return float(self.precalc_dict["precalc_eesc"][yr])
+
+        sumcl = 0.0
+        sumbr = 0.0
+        for iyrm, weight in enumerate(EESC_WEIGHTS):
+            isumcl, isumbr = self.calculate_eesc_quantities(yr - (iyrm + 1))
+            sumcl += isumcl * weight
+            sumbr += isumbr * weight
+        return sumcl + sumbr * 60.0
 
     def calculate_forc_three_main(self, yr):  # pylint: disable=too-many-locals
         """
@@ -875,6 +926,7 @@ class ConcentrationsEmissionsHandler:
                     self._emis_arr["NMVOC"][yr_idx]
                     - self._emis_arr["NMVOC"][yr_2000_idx]
                 )
+                + self.pamset["qch4_eesc"] * self.calc_eesc(yr)
             )
             q = q * (dln_oh + 1)
 
