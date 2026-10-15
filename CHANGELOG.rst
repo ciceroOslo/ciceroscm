@@ -30,6 +30,13 @@ The changes listed in this file are categorised as follows:
 ### Changed
 - The thermal-model ``energy_budget`` interface now accepts a forcing list, aerosol pattern weight, and simulation-year index so aerosol- and PDO-driven feedbacks are updated within each model timestep.
 
+### Fixed
+- PDO feedback and efficacy now reset when the PDO index returns to zero, instead of keeping the last non-zero month's value.
+- `_run` no longer crashes when `pdo_index_data` is given in the config but `pamset_udm` is not, and no longer writes the PDO data into the caller's `pamset_udm`.
+- `pdo_index_data` with the wrong shape now raises a `ValueError` at setup.
+- User-supplied multi-column `rf_sun_data` / `rf_luc_data` DataFrames use the first column again.
+- "Dynamic Feedback Lambda" output now has unit `W/m^2/K`.
+
 
 [Version 2.1.2]
 ---------------------------

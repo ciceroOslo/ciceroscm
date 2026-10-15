@@ -11,6 +11,7 @@ Verifies that:
 """
 
 import numpy as np
+import pytest
 from helpers import build_cscm, load_pdo_data_padded, run_cscm
 
 
@@ -135,3 +136,36 @@ def test_positive_pdo_efficacy_scale_changes_ocean_heat_uptake(test_data_dir):
     )
     assert cscm_eff.results["OHCTOT"][-100] < cscm_base.results["OHCTOT"][-100]
     assert cscm_eff.results["dT_glob"][-100] < cscm_base.results["dT_glob"][-100]
+
+
+def test_pdo_in_cfg_runs_without_pamset_udm(test_data_dir):
+    pdo = load_pdo_data_padded(test_data_dir, 1750, 2100)
+    cscm = build_cscm(test_data_dir, pdo_index_data=pdo)
+    cscm._run({"results_as_dict": True})
+    assert np.isfinite(cscm.results["dT_glob"]).all()
+
+
+def test_pdo_feedback_resets_when_index_returns_to_zero(test_data_dir):
+    # PDO data is zero-padded after the observed record, so the feedback
+    # must go back to 1 / lambda rather than keep the last non-zero month
+    pdo = load_pdo_data_padded(test_data_dir, 1750, 2100)
+    cscm = run_cscm(build_cscm(test_data_dir), pdo_index_data=pdo, delta_lambda_pdo=0.5)
+    lambda_2100 = np.asarray(cscm.results["dynamic_lambda"])[-1]
+    np.testing.assert_allclose(lambda_2100, 1.0 / 0.54)
+
+
+def test_pdo_from_cfg_does_not_leak_into_caller_pamset_udm(test_data_dir):
+    pdo = load_pdo_data_padded(test_data_dir, 1750, 2100)
+    pamset_udm = {"lambda": 0.54, "delta_lambda_pdo": 0.5}
+    build_cscm(test_data_dir, pdo_index_data=pdo)._run(
+        {"results_as_dict": True}, pamset_udm=pamset_udm
+    )
+    assert "pdo_index_data" not in pamset_udm
+
+
+def test_pdo_data_with_wrong_shape_raises(test_data_dir):
+    pdo = load_pdo_data_padded(test_data_dir, 1750, 2100)
+    with pytest.raises(ValueError, match="pdo_index_data"):
+        build_cscm(test_data_dir, pdo_index_data=pdo[:100])
+    with pytest.raises(ValueError, match="pdo_index_data"):
+        run_cscm(build_cscm(test_data_dir), pdo_index_data=pdo[:, :6])

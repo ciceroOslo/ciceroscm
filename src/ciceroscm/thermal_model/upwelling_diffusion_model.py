@@ -187,7 +187,16 @@ class UpwellingDiffusionModel(
         self.pdo_index_data = None
         if params is not None and "pdo_index_data" in params:
             self.pdo_index_data = params["pdo_index_data"]
+        if self.pdo_index_data is not None and (
+            np.ndim(self.pdo_index_data) != 2
+            or np.shape(self.pdo_index_data)[1] != self.pamset["ldtime"]
+        ):
+            raise ValueError(
+                f"pdo_index_data must have {self.pamset['ldtime']} columns "
+                f"(one per ldtime step), got shape {np.shape(self.pdo_index_data)}"
+            )
         self.pdo_index = 0.0  # Initialize PDO index; will be updated in energy_budget if data is provided
+        self._applied_feedback_state = (self.pamset["rlamda"], 0.0)
         # Setting up dz height difference between ocean layers
         self.dz = np.ones(self.pamset["lm"]) * 100.0
         self.dz[0] = self.pamset["mixed"]
@@ -227,18 +236,17 @@ class UpwellingDiffusionModel(
         consistent with the new feedback before the next
         ``energy_budget`` call.
         """
-        if self.pamset["delta_lambda_aero"] == 0.0 and (
-            self.pdo_index == 0.0 or self.pamset["delta_lambda_pdo"] == 0.0
-        ):
-            lambda_eff = 1.0 / self.pamset["lambda"]  # No change to apply
-            if self.pamset["pdo_efficacy_scale"] == 0.0 or self.pdo_index == 0.0:
-                return
-        else:
-            lambda_eff = (
-                1.0 / self.pamset["lambda"]
-                + w_aero * self.pamset["delta_lambda_aero"]
-                + self.pamset["delta_lambda_pdo"] * self.pdo_index
-            )
+        lambda_eff = (
+            1.0 / self.pamset["lambda"]
+            + w_aero * self.pamset["delta_lambda_aero"]
+            + self.pamset["delta_lambda_pdo"] * self.pdo_index
+        )
+        efficacy_pdo = self.pamset["pdo_efficacy_scale"] * self.pdo_index
+        # Only rebuild the solver coefficients if something actually changed,
+        # so that returning to a zero PDO index also resets the feedback
+        if (lambda_eff, efficacy_pdo) == self._applied_feedback_state:
+            return
+        self._applied_feedback_state = (lambda_eff, efficacy_pdo)
         self.pamset["rlamda"] = lambda_eff
         self.pamset["fnx"] = (
             lambda_eff

@@ -103,6 +103,18 @@ class CICEROSCM:
                 "pdo_index_data": None,
             },
         )
+        if self.cfg.get("pdo_index_data") is not None:
+            self.cfg["pdo_index_data"] = np.asarray(self.cfg["pdo_index_data"])
+            nyears = self.cfg["nyend"] - self.cfg["nystart"] + 1
+            if (
+                self.cfg["pdo_index_data"].ndim != 2
+                or self.cfg["pdo_index_data"].shape[0] < nyears
+            ):
+                raise ValueError(
+                    "pdo_index_data must be a 2D array (years x months) with "
+                    f"one row per year from nystart to nyend ({nyears} rows), "
+                    f"got shape {self.cfg['pdo_index_data'].shape}"
+                )
         cfg.update(self.cfg)
 
         input_handler = InputHandler(cfg)
@@ -265,10 +277,14 @@ class CICEROSCM:
         self.initialise_output_arrays()
         # Setting up thermal model with parameters
         # udm = UpwellingDiffusionModel(pamset_udm)
-        if "pdo_index_data" in self.cfg and "pdo_index_data" not in pamset_udm:
-            if pamset_udm is None:
-                pamset_udm = {}
-            pamset_udm["pdo_index_data"] = self.cfg["pdo_index_data"]
+        if self.cfg.get("pdo_index_data") is not None and (
+            pamset_udm is None or "pdo_index_data" not in pamset_udm
+        ):
+            # Copy rather than mutate, so the caller's dict can be reused
+            pamset_udm = {
+                **(pamset_udm or {}),
+                "pdo_index_data": self.cfg["pdo_index_data"],
+            }
         udm = self.thermal_model_class(pamset_udm)
 
         # Pattern-mediated feedback: each thermal model owns the
