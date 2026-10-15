@@ -32,7 +32,7 @@ jobs:
         black --version
         black --check src tests --exclude ciceroscm/_version.py --target-version py312
         isort --version
-        isort --check-only --quiet --recursive src tests
+        isort --check-only --quiet src tests
         pydocstyle --version
         pydocstyle src
         bandit --version
