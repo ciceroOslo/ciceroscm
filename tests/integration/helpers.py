@@ -9,6 +9,8 @@ CICEROSCM and call _run directly.
 
 import os
 
+import numpy as np
+
 from ciceroscm import CICEROSCM
 
 _DEFAULT_PAMSET_UDM = {
@@ -39,7 +41,27 @@ _DEFAULT_PAMSET_EMICONC = {
 }
 
 
-def build_cscm(test_data_dir):
+def load_pdo_data_padded(test_data_dir, nystart, nyend):
+    """Load monthly PDO data and pad missing years/months with zeros."""
+    raw = np.genfromtxt(
+        os.path.join(test_data_dir, "pdo_ts_noaa.dat"),
+        names=True,
+        dtype=float,
+        encoding="utf-8",
+    )
+    years = raw["Year"].astype(int)
+    month_names = raw.dtype.names[1:]
+    monthly = np.column_stack([raw[name] for name in month_names])
+    monthly = np.where(np.isclose(monthly, 99.99), 0.0, monthly)
+
+    padded = np.zeros((nyend - nystart + 1, 12), dtype=float)
+    for year, row in zip(years, monthly):
+        if nystart <= year <= nyend:
+            padded[year - nystart] = row
+    return padded
+
+
+def build_cscm(test_data_dir, **extra_cfg):
     """Return an uninitialised CICEROSCM configured for the SSP2-4.5 test dataset."""
     return CICEROSCM(
         {
@@ -51,6 +73,7 @@ def build_cscm(test_data_dir):
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+            **extra_cfg,
         }
     )
 

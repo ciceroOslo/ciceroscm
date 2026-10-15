@@ -34,6 +34,8 @@ prior_flat = {
     # Andrews et al. (2022) v5 satellite-era windows, with ~20% padding. See
     # notebooks/CSCM_pattern_effect_observational_constraint.ipynb.
     "delta_lambda_aero": [-0.7, 3.4],
+    "delta_lambda_pdo": [-0.5, 0.5],
+    "pdo_efficacy_scale": [0.0, 0.5],
     "qbmb": [0, 2],
     "qo3": [0.4, 0.6],
     "qdirso2": [-0.006, -0.001],
@@ -80,6 +82,8 @@ ordering_standard_forc = [
     "mixed",
     "ocean_efficacy",
     "delta_lambda_aero",
+    "delta_lambda_pdo",
+    "pdo_efficacy_scale",
     "threstemp",
     "lm",
     "ldtime",

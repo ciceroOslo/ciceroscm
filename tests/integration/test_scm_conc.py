@@ -191,6 +191,8 @@ def test_ciceroscm_short_run(tmpdir, test_data_dir):
         "Volcanic_forcing_NH",
         "Volcanic_forcing_SH",
         "carbon cycle",
+        "anomalous_radiation",
+        "dynamic_lambda",
     ]
     for key in expected_keys:
         assert key in cscm.results

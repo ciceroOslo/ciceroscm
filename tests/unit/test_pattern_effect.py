@@ -33,7 +33,7 @@ class _DummyNoCapability(AbstractThermalModel):
     thermal_model_required_pamset = {}
     output_dict_default = {}
 
-    def energy_budget(self, forc_nh, forc_sh, fn_volc, fs_volc):
+    def energy_budget(self, forc_list):
         return {}
 
 
@@ -108,15 +108,38 @@ def test_udm_set_feedback_gregory_refreshes_derived_quantities():
     assert udm.gams == pytest.approx(expected_gams)
 
 
+def test_udm_set_feedback_gregory_includes_pdo_index_term():
+    pamset = _udm_pamset(lambda_pamset=0.5)
+    pamset["delta_lambda_aero"] = 1.0
+    pamset["delta_lambda_pdo"] = 0.4
+    udm = UpwellingDiffusionModel(pamset)
+    udm.pdo_index = 1.25
+
+    udm.set_feedback_gregory(0.5)
+
+    expected_lambda_eff = 1.0 / 0.5 + 0.5 * 1.0 + 0.4 * 1.25
+    assert udm.get_feedback_gregory() == pytest.approx(expected_lambda_eff)
+    assert udm.pamset["fnx"] == pytest.approx(
+        expected_lambda_eff
+        + udm.pamset["foan"] * udm.pamset["rlamdo"]
+        + udm.pamset["ebbeta"]
+    )
+    assert udm.pamset["fsx"] == pytest.approx(
+        expected_lambda_eff
+        + udm.pamset["foas"] * udm.pamset["rlamdo"]
+        + udm.pamset["ebbeta"]
+    )
+
+
 def test_udm_setting_same_feedback_is_noop_in_energy_budget():
     """A no-op set_feedback_gregory call must not perturb subsequent state."""
     udm_a = UpwellingDiffusionModel(_udm_pamset())
     udm_b = UpwellingDiffusionModel(_udm_pamset())
 
     volc = np.zeros(12)
-    out_a = udm_a.energy_budget(1.0, 1.0, volc, volc)
+    out_a = udm_a.energy_budget([1.0, 1.0, volc, volc])
     udm_b.set_feedback_gregory(udm_b.get_feedback_gregory())
-    out_b = udm_b.energy_budget(1.0, 1.0, volc, volc)
+    out_b = udm_b.energy_budget([1.0, 1.0, volc, volc])
 
     assert out_a["dtemp"] == pytest.approx(out_b["dtemp"])
 
@@ -130,19 +153,67 @@ def test_udm_changed_feedback_changes_energy_budget_output():
     udm_strong = UpwellingDiffusionModel(pamset_strong)
     udm_weak = UpwellingDiffusionModel(pamset_weak)
 
-    udm_strong.set_feedback_gregory(1 / 3.0)  # stronger damping
-    udm_weak.set_feedback_gregory(1 / 3.0)  # weaker damping
+    w_aero = 1 / 3.0
 
     volc = np.zeros(12)
     # Run a few years to let the response build up.
     dt_strong = dt_weak = 0.0
     for _ in range(10):
-        out_s = udm_strong.energy_budget(2.0, 2.0, volc, volc)
-        out_w = udm_weak.energy_budget(2.0, 2.0, volc, volc)
+        out_s = udm_strong.energy_budget([2.0, 2.0, volc, volc], w_aero)
+        out_w = udm_weak.energy_budget([2.0, 2.0, volc, volc], w_aero)
         dt_strong = out_s["dtemp"]
         dt_weak = out_w["dtemp"]
 
     assert dt_strong < dt_weak
+
+
+def test_udm_energy_budget_updates_feedback_from_monthly_pdo_index():
+    pamset = _udm_pamset(lambda_pamset=0.5)
+    pamset["delta_lambda_pdo"] = 0.75
+    pamset["pdo_index_data"] = np.array([[0.8] * 12])
+    print(pamset["pdo_index_data"])
+    udm = UpwellingDiffusionModel(pamset)
+
+    udm.energy_budget([1.0, 1.0, np.zeros(12), np.zeros(12)])
+
+    assert udm.pdo_index == pytest.approx(0.8)
+    assert udm.get_feedback_gregory() == pytest.approx(1.0 / 0.5 + 0.75 * 0.8)
+
+
+def test_udm_energy_budget_updates_pdo_index_for_efficacy_only_runs():
+    pamset = _udm_pamset(lambda_pamset=0.5)
+    pamset["pdo_efficacy_scale"] = 0.4
+    pamset["pdo_index_data"] = np.array([[0.6] * 12])
+    print(pamset["pdo_index_data"])
+    udm = UpwellingDiffusionModel(pamset)
+
+    udm.energy_budget([1.0, 1.0, np.zeros(12), np.zeros(12)])
+
+    assert udm.pdo_index == pytest.approx(0.6)
+
+
+def test_udm_pdo_efficacy_scale_updates_solver_coefficients():
+    pamset = _udm_pamset(ocean_efficacy=1.0)
+    pamset["pdo_efficacy_scale"] = 0.5
+    pamset["pdo_index_data"] = np.zeros((1, 12))
+    udm = UpwellingDiffusionModel(pamset)
+    udm.pdo_index = 1.5
+
+    udm.setup_ebud2(0.0, 0.0)
+
+    wcfac = udm.pamset["W"] / 365.0 / 24.0 / 60.0 / 60.0 * udm.pamset["dt"]
+    _, b_phys_n, c_phys_n = udm.coeff(wcfac, udm.get_gam_and_fro_factor_ns(True))
+    _, b_phys_s, c_phys_s = udm.coeff(wcfac, udm.get_gam_and_fro_factor_ns(False))
+    expected_efficacy = 1.0 + pamset["pdo_efficacy_scale"] * udm.pdo_index
+
+    assert udm.varrying["ccoeffn"][1] == pytest.approx(c_phys_n[1] * expected_efficacy)
+    assert udm.varrying["bcoeffn"][0] == pytest.approx(
+        b_phys_n[0] + c_phys_n[1] - c_phys_n[1] * expected_efficacy
+    )
+    assert udm.varrying["ccoeffs"][1] == pytest.approx(c_phys_s[1] * expected_efficacy)
+    assert udm.varrying["bcoeffs"][0] == pytest.approx(
+        b_phys_s[0] + c_phys_s[1] - c_phys_s[1] * expected_efficacy
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -166,13 +237,12 @@ def test_two_layer_changed_feedback_changes_energy_budget_output():
     model_strong = TwoLayerOceanModel(pamset={"delta_lambda_aero": 1.5})
     model_weak = TwoLayerOceanModel(pamset={"delta_lambda_aero": 1.0})
 
-    model_strong.set_feedback_gregory(1 / 0.25)  # stronger damping
-    model_weak.set_feedback_gregory(1 / 0.25)  # weaker damping
+    w_aero = 1 / 0.25
 
     volc = np.zeros(12)
     for _ in range(10):
-        out_s = model_strong.energy_budget(2.0, 2.0, volc, volc)
-        out_w = model_weak.energy_budget(2.0, 2.0, volc, volc)
+        out_s = model_strong.energy_budget([2.0, 2.0, volc, volc], w_aero)
+        out_w = model_weak.energy_budget([2.0, 2.0, volc, volc], w_aero)
     assert out_s["dtemp"] < out_w["dtemp"]
 
 
@@ -200,3 +270,20 @@ def test_delta_lambda_aero_passes_through_pamset_filter(model_cls):
     else:
         model = model_cls({"delta_lambda_aero": 1.5})
     assert model.pamset["delta_lambda_aero"] == 1.5
+
+
+def test_udm_pdo_pattern_parameters_default_to_zero():
+    model = UpwellingDiffusionModel(_udm_pamset())
+
+    assert model.pamset["delta_lambda_pdo"] == 0.0
+    assert model.pamset["pdo_efficacy_scale"] == 0.0
+
+
+def test_udm_pdo_pattern_parameters_pass_through_pamset_filter():
+    pam = _udm_pamset()
+    pam["delta_lambda_pdo"] = 1.5
+    pam["pdo_efficacy_scale"] = -0.25
+    model = UpwellingDiffusionModel(pam)
+
+    assert model.pamset["delta_lambda_pdo"] == 1.5
+    assert model.pamset["pdo_efficacy_scale"] == -0.25

@@ -38,6 +38,8 @@ openscm_to_cscm_dict = {
     "Heat Content|Ocean": "OHCTOT",
     "Heat Content|Ocean|0-700m": "OHC700",
     "Anomalous Radiation": "anomalous_radiation",
+    "Dynamic Feedback Lambda": "dynamic_lambda",
+    "PDO Index": "pdo_index",
     # concentrations
     "Atmospheric Concentrations|CO2": "CO2",
     "Atmospheric Concentrations|CH4": "CH4",
@@ -282,6 +284,7 @@ class CSCMREADER:
             "dT_glob_sea",
             "RIB_glob",
             "anomalous_radiation",
+            "dynamic_lambda",
         )
         self.ohc_list = ["OHCTOT", "OHC700"]
         self.indices = np.arange(nystart, nyend + 1)
@@ -341,6 +344,8 @@ class CSCMREADER:
             if self.variable_dict[variable] == "RIB_glob":
                 timeseries = timeseries * OCEAN_AREA * SEC_DAY * DAY_YEAR / 1e21
                 unit = "ZJ / yr"
+            elif self.variable_dict[variable] == "dynamic_lambda":
+                unit = "W/m^2/K"
             else:
                 unit = "K"
 
