@@ -19,6 +19,12 @@ The changes listed in this file are categorised as follows:
 
 ### Added
 - Parallelisation wrapper `cscmparwrapper.py` caps max number of workers if the number exceeds the number of configurations times scenarios to do.
+- Support for Pacific Decadal Oscillation (PDO) pattern effects in the upwelling-diffusion thermal model. Monthly ``pdo_index_data`` can modulate the climate feedback through ``delta_lambda_pdo`` and ocean heat uptake through ``pdo_efficacy_scale``; both default to ``0.0`` to preserve existing behaviour.
+- ``delta_lambda_pdo`` and ``pdo_efficacy_scale`` parameters in standard forcing configuration distributions.
+- ``dynamic_lambda`` and ``anomalous_radiation`` thermal-model diagnostics, with ``Dynamic Feedback Lambda`` available in reformatted results.
+
+### Changed
+- The thermal-model ``energy_budget`` interface now accepts a forcing list, aerosol pattern weight, and simulation-year index so aerosol- and PDO-driven feedbacks are updated within each model timestep.
 
 
 [Version 2.1.2]

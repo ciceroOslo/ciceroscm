@@ -3,7 +3,7 @@ Energy budget upwelling diffusion model
 """
 
 import logging
-import sys
+
 import numpy as np
 from scipy.linalg.lapack import get_lapack_funcs
 

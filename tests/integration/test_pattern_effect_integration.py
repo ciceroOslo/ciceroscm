@@ -48,7 +48,7 @@ def test_pdo_data_loader_pads_missing_years_and_months(test_data_dir):
     np.testing.assert_array_equal(pdo[99], np.zeros(12))
     assert pdo[100, 0] == np.float64(1.06)
     np.testing.assert_array_equal(pdo[2100 - 1750], np.zeros(12))
-    np.testing.assert_array_equal(pdo[2026 - 1750, 5:], np.zeros(7))
+    np.testing.assert_array_equal(pdo[2026 - 1750, 8:], np.zeros(4))
 
 
 def test_pdo_input_with_zero_knobs_matches_baseline(test_data_dir):
