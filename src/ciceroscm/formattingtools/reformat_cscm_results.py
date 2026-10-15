@@ -345,7 +345,7 @@ class CSCMREADER:
                 timeseries = timeseries * OCEAN_AREA * SEC_DAY * DAY_YEAR / 1e21
                 unit = "ZJ / yr"
             elif self.variable_dict[variable] == "dynamic_lambda":
-                unit = "unitless"
+                unit = "W/m^2/K"
             else:
                 unit = "K"
 

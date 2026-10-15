@@ -500,7 +500,8 @@ class InputHandler:
             # data so downstream .mean(axis=1) still works).
             if what in ("rf_sun", "rf_luc"):
                 if isinstance(data, pd.DataFrame):
-                    data = data.to_numpy()
+                    # Only the first column holds the series, as before
+                    data = data.iloc[:, 0]
                 data = np.asarray(data).reshape(-1)
             elif what in ("rf_volc_n", "rf_volc_s"):
                 if isinstance(data, pd.DataFrame):

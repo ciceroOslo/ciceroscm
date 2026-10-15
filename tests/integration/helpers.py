@@ -61,7 +61,7 @@ def load_pdo_data_padded(test_data_dir, nystart, nyend):
     return padded
 
 
-def build_cscm(test_data_dir):
+def build_cscm(test_data_dir, **extra_cfg):
     """Return an uninitialised CICEROSCM configured for the SSP2-4.5 test dataset."""
     return CICEROSCM(
         {
@@ -73,6 +73,7 @@ def build_cscm(test_data_dir):
             "emissions_file": os.path.join(test_data_dir, "ssp245_em_RCMIP.txt"),
             "nat_ch4_file": os.path.join(test_data_dir, "natemis_ch4.txt"),
             "nat_n2o_file": os.path.join(test_data_dir, "natemis_n2o.txt"),
+            **extra_cfg,
         }
     )
 
