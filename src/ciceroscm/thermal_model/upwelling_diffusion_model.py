@@ -3,7 +3,7 @@ Energy budget upwelling diffusion model
 """
 
 import logging
-
+import sys
 import numpy as np
 from scipy.linalg.lapack import get_lapack_funcs
 
@@ -757,6 +757,7 @@ class UpwellingDiffusionModel(
             "OHCTOT": ocean_res["OHCTOT"],
             "anomalous_radiation": anomalous_radiation,
             "dynamic_lambda": rlambda_eff_mean,
+            "pdo_index": self.pdo_index,
         }
 
     def _calculate_anomalous_radiation(self, tn_start, ts_start):

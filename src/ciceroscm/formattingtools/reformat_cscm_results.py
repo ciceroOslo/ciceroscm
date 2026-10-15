@@ -39,6 +39,7 @@ openscm_to_cscm_dict = {
     "Heat Content|Ocean|0-700m": "OHC700",
     "Anomalous Radiation": "anomalous_radiation",
     "Dynamic Feedback Lambda": "dynamic_lambda",
+    "PDO Index": "pdo_index",
     # concentrations
     "Atmospheric Concentrations|CO2": "CO2",
     "Atmospheric Concentrations|CH4": "CH4",
