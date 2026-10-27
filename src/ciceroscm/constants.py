@@ -17,6 +17,7 @@ WATER_DENSITY = 1000  # kg/m^3 - Density of seawater
 WATER_HEAT_CAPACITY = 4184  # J/kg/K - Specific heat capacity of seawater
 
 # Earth surface areas
+EARTH_AREA = 5.1e14  # m^2 - Total surface area of the Earth
 OCEAN_AREA = 3.61e14  # m^2 - Global ocean surface area
 
 # Derived constants
