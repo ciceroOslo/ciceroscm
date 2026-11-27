@@ -29,6 +29,7 @@ dependencies = [
     "python-dotenv",
     "tqdm",
     "matplotlib>=3.4",
+    "numba",
     "scipy",
     "numpy>=1.23",
     "pandas",

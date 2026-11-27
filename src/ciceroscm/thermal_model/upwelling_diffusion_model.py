@@ -9,6 +9,7 @@ from scipy.linalg.lapack import get_lapack_funcs
 
 # TODO Go over and move additional constants to ciceroscm/constants.py
 from ..constants import DAY_YEAR, SEC_DAY, WATER_DENSITY, WATER_HEAT_CAPACITY
+from ._udm_kernel import OUT_KEYS, run_years
 from .abstract_thermal_model import AbstractThermalModel
 
 LOGGER = logging.getLogger(__name__)
@@ -215,6 +216,7 @@ class UpwellingDiffusionModel(
             "dtemp": 0.0,
         }
         self.dtempprev = 0.0
+        self._kernel = self._kernel_args()
 
     # ------------------------------------------------------------------
     # Pattern-mediated feedback capability.
@@ -576,197 +578,154 @@ class UpwellingDiffusionModel(
             Ocean heat content change total OHCTOT
         """
         forc_nh, forc_sh, fn_volc, fs_volc = forc_list
-        # --- At the start of the year, store the initial temperature profiles ---
-        tn_start = self.tn.copy()
-        ts_start = self.ts.copy()
-        temp1n = 0.0
-        temp1s = 0.0
+        res = self.run_years(
+            np.array([[forc_nh, forc_sh]], dtype=float),
+            np.asarray(fn_volc, dtype=float).reshape(1, -1),
+            np.asarray(fs_volc, dtype=float).reshape(1, -1),
+            [w_aero],
+            year_index,
+        )
+        res = {key: value[0] for key, value in res.items()}
+        res["tn"], res["ts"] = self.tn, self.ts
+        return res
 
-        tempn = 0.0
-        temps = 0.0
-        tempn_air = 0.0
-        temps_air = 0.0
-        tempn_sea = 0.0
-        temps_sea = 0.0
-        lm = self.pamset["lm"]
-        templ = np.zeros(lm)
+    def _feedback_steps(self, w_aero, year_index):
+        """
+        Feedback and ocean efficacy at each step of one year
 
-        dtyear = 1.0 / self.pamset["ldtime"]
-        dn = np.zeros(lm)
-        ds = np.zeros(lm)
+        Follows ``set_feedback_gregory``: once a year, or every step when
+        the feedback or efficacy follow the PDO index.
+        """
+        ldtime = self.pamset["ldtime"]
+        if self.pdo_index_data is not None and (
+            self.pamset["delta_lambda_pdo"] != 0.0
+            or self.pamset["pdo_efficacy_scale"] != 0.0
+        ):
+            pdo = np.asarray(self.pdo_index_data[year_index], dtype=float)
+            rlamda = (
+                1.0 / self.pamset["lambda"]
+                + w_aero * self.pamset["delta_lambda_aero"]
+                + self.pamset["delta_lambda_pdo"] * pdo
+            )
+            efficacy = (
+                self.pamset.get("ocean_efficacy", 1.0)
+                + self.pamset["pdo_efficacy_scale"] * pdo
+            )
+            self.pdo_index = pdo[-1]
+            self.set_feedback_gregory(w_aero)
+            mean = 0
+            for value in rlamda:
+                mean += value / ldtime
+            return rlamda, efficacy, mean
+        self.set_feedback_gregory(w_aero)
+        efficacy = self.pamset.get("ocean_efficacy", 1.0)
+        if self.pdo_index_data is not None:
+            efficacy = efficacy + self.pamset["pdo_efficacy_scale"] * self.pdo_index
+        rlamda = self.pamset["rlamda"]
+        return np.full(ldtime, rlamda), np.full(ldtime, efficacy), rlamda
 
-        update_annual = not (
-            self.pdo_index_data is not None
-            and (
-                self.pamset["delta_lambda_pdo"] != 0.0
-                or self.pamset["pdo_efficacy_scale"] != 0.0
+    def _kernel_args(self):
+        """Run-constant parameters and geometry for ``run_years``."""
+        pam = self.pamset
+        dz0 = self.dz[0]
+        pam_tuple = tuple(
+            float(v)
+            for v in (
+                pam["W"],
+                pam["cpi"],
+                pam["beto"],
+                pam["threstemp"],
+                pam["rlamdo"],
+                pam["foan"],
+                pam["foas"],
+                pam["ebbeta"],
+                pam["dt"],
+                pam["c1"],
+                pam["fnso"],
+                SEC_DAY * DAY_YEAR,
+                pam.get("ocean_efficacy", 1.0),
+                WATER_HEAT_CAPACITY * WATER_DENSITY,
+                1030.0 * 3.997e-19 * 2.55e14,  # as in ocean_temperature
+                (1 + dz0 // 100.0) - dz0 / 100.0,
+                int(7 - dz0 // 100.0),
             )
         )
-        rlambda_eff_mean = 0
-        if update_annual:
-            self.set_feedback_gregory(
-                w_aero
-            )  # Ensure feedback is set for the first year if pattern-mediated feedback is active
-            rlambda_eff_mean = self.pamset["rlamda"]
-        for im in range(self.pamset["ldtime"]):
-            volc_idx = im % len(fn_volc)
-            if not update_annual:
-                # Update the feedback at the start of the year if it's tied to the PDO index.
-                self.pdo_index = self.pdo_index_data[year_index, im]
-                self.set_feedback_gregory(
-                    w_aero
-                )  # Update feedback based on new PDO index
-                rlambda_eff_mean += (
-                    self.pamset["rlamda"] / self.pamset["ldtime"]
-                )  # Accumulate for intra-annual mean
-            if self.pamset["threstemp"] != 0:  # pylint: disable=compare-to-zero
-                self.setup_ebud2(temp1n, temp1s)
-
-            dqn = (
-                (im + 1) * forc_nh * dtyear
-                + (1 - (im + 1) * dtyear) * self.prev_values["fn"]
-                + fn_volc[volc_idx]
-            )
-            dqs = (
-                (im + 1) * forc_sh * dtyear
-                + (1 - (im + 1) * dtyear) * self.prev_values["fs"]
-                + fs_volc[volc_idx]
-            )
-            dn[0] = (
-                self.varrying["dtrm1n"] * self.tn[0]
-                + self.varrying["dtrm2n"] * self.ts[0]
-                + self.varrying["dtrm3n"] * dqn
-                + self.varrying["dtrm4n"] * dqs
-            )
-            ds[0] = (
-                self.varrying["dtrm1s"] * self.ts[0]
-                + self.varrying["dtrm2s"] * self.tn[0]
-                + self.varrying["dtrm3s"] * dqs
-                + self.varrying["dtrm4s"] * dqn
-            )
-            dn[1 : lm - 1] = self.tn[1 : lm - 1] + self._eb_deep_fac_n * (
-                self.ts[1 : lm - 1] - self.tn[1 : lm - 1]
-            )
-            ds[1 : lm - 1] = self.ts[1 : lm - 1] + self._eb_deep_fac_s * (
-                self.tn[1 : lm - 1] - self.ts[1 : lm - 1]
-            )
-
-            dn[lm - 1] = (
-                self.varrying["dtmnl1"] * self.tn[lm - 1]
-                + self.varrying["dtmnl2"] * self.tn[0]
-                + self.varrying["dtmnl3"] * self.ts[lm - 1]
-            )
-            ds[lm - 1] = (
-                self.varrying["dtmsl1"] * self.ts[lm - 1]
-                + self.varrying["dtmsl2"] * self.ts[0]
-                + self.varrying["dtmsl3"] * self.tn[lm - 1]
-            )
-
-            # Where are these being initialised? Ok, I think
-            self.tn = _band(
-                self.varrying["acoeffn"],
-                self.varrying["bcoeffn"],
-                self.varrying["ccoeffn"],
-                dn,
-            )
-            # Replace _band with _solve_tridiagonal
-            self.ts = _band(
-                self.varrying["acoeffs"],
-                self.varrying["bcoeffs"],
-                self.varrying["ccoeffs"],
-                ds,
-            )
-            # print("self.aceoffn: %s self.varrying["bcoeffn"]: %s self.ccoeffn %s"%(self.varrying["acoeffn"], self.varrying["bcoeffn"], self.varrying["ccoeffn"]))
-            # print("self.aceoffs: %s self.bcoeffs: %s self.ccoeffs %s"%(self.varrying["acoeffs"], self.bcoeffs, self.ccoeffs))
-            temp1n = self.tn[0]
-            temp1s = self.ts[0]
-            # print("temp1n: %.5e temp1s %.5e"%(temp1n, temp1s))
-            templ = (
-                templ + 0.5 * (self.tn + self.ts) / self.pamset["ldtime"]  # 12.0
-            )  # used to be 12, now ldtime
-
-            tempan = (
-                dqn
-                + self.pamset["foan"] * self.pamset["rlamdo"] * temp1n
-                + self.pamset["ebbeta"]
-                * (dqs + self.pamset["foas"] * self.pamset["rlamdo"] * temp1s)
-                / self.pamset["fsx"]
-            )
-            tempan = tempan / (
-                self.pamset["fnx"] - self.pamset["ebbeta"] ** 2 / self.pamset["fsx"]
-            )
-            tempas = (
-                dqs
-                + self.pamset["foas"] * self.pamset["rlamdo"] * temp1s
-                + self.pamset["ebbeta"]
-                * (dqn + self.pamset["foan"] * self.pamset["rlamdo"] * temp1n)
-                / self.pamset["fnx"]
-            )
-            tempas = tempas / (
-                self.pamset["fsx"] - self.pamset["ebbeta"] ** 2 / self.pamset["fnx"]
-            )
-            tmpn = self.pamset["foan"] * temp1n + (1.0 - self.pamset["foan"]) * tempan
-            tmps = self.pamset["foas"] * temp1s + (1.0 - self.pamset["foas"]) * tempas
-
-            # x1=1638.+float(years_since_start)+float(im-1)/12.
-
-            tempn = tempn + tmpn / self.pamset["ldtime"]  # Previously 12.0
-            temps = temps + tmps / self.pamset["ldtime"]  # Previously 12.0
-
-            tempn_air = tempn_air + tempan / self.pamset["ldtime"]  # Previously 12.0
-            temps_air = temps_air + tempas / self.pamset["ldtime"]  # Previously12.0
-
-            tempn_sea = tempn_sea + temp1n / self.pamset["ldtime"]  # Previously 12.0
-            temps_sea = temps_sea + temp1s / self.pamset["ldtime"]  # Previously 12
-
-        dtemp = (tempn + temps) / 2.0  # Global temp chg)
-
-        # Updating previous values for next year
-        self.prev_values["fn"] = forc_nh
-        self.prev_values["fs"] = forc_sh
-        self.prev_values["dtemp"] = dtemp
-
-        # Getting Ocean temperature:
-        ocean_res = self.ocean_temperature()
-
-        # Getting anomalous radiation
-        anomalous_radiation = self._calculate_anomalous_radiation(tn_start, ts_start)
-
-        ribn = (
-            forc_nh
-            + np.mean(fn_volc)
-            - self.pamset["rlamda"] * tempn
-            - anomalous_radiation
+        coeffs = (
+            float(self._coeff_c1),
+            float(self._coeff_a0),
+            float(self._coeff_inv_dz0),
+            float(self._coeff_inv_dz1),
+            float(self._coeff_inv_dz_last),
+            self._coeff_a_mid,
+            self._coeff_c2,
+            self._coeff_inv_dz_mid,
         )
-        ribs = (
-            forc_sh
-            + np.mean(fs_volc)
-            - self.pamset["rlamda"] * temps
-            - anomalous_radiation
-        )
+        geom = (self.dz, self._eb_deep_fac_n, self._eb_deep_fac_s, coeffs)
+        return pam_tuple, geom
 
-        # Returning results_dict
-        return {
-            "dtemp": dtemp,
-            "dtempnh": tempn,
-            "dtempsh": temps,
-            "tn": self.tn,
-            "ts": self.ts,
-            "dtemp_air": (tempn_air + temps_air) / 2.0,
-            "dtempnh_air": tempn_air,
-            "dtempsh_air": temps_air,
-            "dtemp_sea": (tempn_sea + temps_sea) / 2.0,
-            "dtempnh_sea": tempn_sea,
-            "dtempsh_sea": temps_sea,
-            "RIBN": ribn,
-            "RIBS": ribs,
-            "RIB": (ribn + ribs) / 2.0,
-            "OHC700": ocean_res["OHC700"],
-            "OHCTOT": ocean_res["OHCTOT"],
-            "anomalous_radiation": anomalous_radiation,
-            "dynamic_lambda": rlambda_eff_mean,
-            "pdo_index": self.pdo_index,
-        }
+    def run_years(  # pylint: disable=too-many-arguments,too-many-locals
+        self, forc, fn_volc, fs_volc, w_aero=None, year_index=0
+    ):
+        """
+        Energy budget for several consecutive years
+
+        Equivalent to calling ``energy_budget`` once per year, but the
+        ocean is stepped by one call to the compiled kernel.
+
+        Parameters
+        ----------
+        forc : np.ndarray
+            Northern and southern hemispheric forcing (W/m^2), shape
+            (years, 2)
+        fn_volc, fs_volc : np.ndarray
+            Northern and southern volcanic forcing (W/m^2), shape
+            (years, steps per year or fewer)
+        w_aero : sequence of float, optional
+            Aerosol pattern weight for each year, zero if not given
+        year_index : int, optional
+            Index of the first year, for the PDO index data
+
+        Returns
+        -------
+        dict
+            Results as from ``energy_budget`` (except the ocean
+            temperature profiles), each an array over the years
+        """
+        nyears = len(forc)
+        w_aero = np.zeros(nyears) if w_aero is None else w_aero
+        rlamda = np.empty((nyears, self.pamset["ldtime"]))
+        efficacy = np.empty_like(rlamda)
+        dynamic_lambda, pdo_index = np.empty(nyears), np.empty(nyears)
+        out = np.empty((nyears, len(OUT_KEYS)))
+        prev = np.array([self.prev_values["fn"], self.prev_values["fs"]])
+        # new arrays, so profiles returned for earlier years stay unchanged
+        self.tn, self.ts = self.tn.copy(), self.ts.copy()
+        for i in range(nyears):
+            rlamda[i], efficacy[i], dynamic_lambda[i] = self._feedback_steps(
+                w_aero[i], year_index + i
+            )
+            pdo_index[i] = self.pdo_index
+        run_years(
+            (self.tn, self.ts, prev),
+            forc,
+            fn_volc,
+            fs_volc,
+            rlamda,
+            efficacy,
+            *self._kernel,
+            out,
+        )
+        res = dict(zip(OUT_KEYS, out.T))
+        for key in ("dtemp", "dtemp_air", "dtemp_sea"):
+            res[key] = (
+                res[key[:5] + "nh" + key[5:]] + res[key[:5] + "sh" + key[5:]]
+            ) / 2.0
+        res["RIB"] = (res["RIBN"] + res["RIBS"]) / 2.0
+        res["dynamic_lambda"] = dynamic_lambda
+        res["pdo_index"] = pdo_index
+        self.prev_values["fn"], self.prev_values["fs"] = prev
+        self.prev_values["dtemp"] = res["dtemp"][-1]
+        return res
 
     def _calculate_anomalous_radiation(self, tn_start, ts_start):
         """

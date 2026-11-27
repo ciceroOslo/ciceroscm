@@ -80,8 +80,14 @@ jobs:
         pip install --upgrade pip wheel
         pip install -e .[tests,models]
     - name: Test with pytest
+      # coverage cannot trace numba-compiled code, so measure it uncompiled
+      env:
+        NUMBA_DISABLE_JIT: 1
       run: |
         pytest tests -r a --cov=ciceroscm --cov-report='' --cov-fail-under=$MIN_COVERAGE
+    - name: Test compiled thermal model
+      run: |
+        pytest tests/unit/test_udm_kernel.py tests/unit/test_upwellingDownwellingModel.py -r a --no-cov
 
   test-notebooks:
     runs-on: ubuntu-latest
