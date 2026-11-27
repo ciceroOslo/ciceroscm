@@ -17,6 +17,12 @@ The changes listed in this file are categorised as follows:
 [Unreleased]
 ---------------------------
 
+### Changed
+- The upwelling-diffusion energy budget runs in a numba-compiled kernel, about 13 times faster per year with bit-identical results. ``numba`` is a new dependency.
+
+### Added
+- ``UpwellingDiffusionModel.run_years`` steps the thermal model through several years in one call, about 25 times faster than calling ``energy_budget`` before this change.
+
 
 [Version 2.1.3]
 ---------------------------
