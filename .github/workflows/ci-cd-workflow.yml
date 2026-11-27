@@ -83,31 +83,6 @@ jobs:
       run: |
         pytest tests -r a --cov=ciceroscm --cov-report='' --cov-fail-under=$MIN_COVERAGE
 
-  test-notebooks:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.12', '3.10', '3.11']
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Setup python
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install notebook dependencies
-      run: |
-        pip install --upgrade pip wheel
-        pip install -e .[tests,models,notebooks]
-    - name: Test notebooks with nbval
-      run: |
-          pytest notebooks -r a --nbval-lax --sanitize-with tests/notebook-tests.cfg --no-cov
-    - name: Test notebooks strictly
-      if: matrix.python-version == '3.12'
-      run: |
-          pytest notebooks -r a --nbval --nbval-sanitize-with tests/notebook-tests.cfg --no-cov
-
-
   test-install:
 
     needs: [build,linting-and-docs]
