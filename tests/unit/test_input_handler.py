@@ -96,6 +96,15 @@ def test_read_volc_sun(test_data_dir):
     assert arr_luc.shape == (351,)
 
 
+def test_single_volc_series_used_for_both_hemispheres(test_data_dir):
+    volc = np.full((351, 12), -0.5)
+    ih = input_handler.InputHandler(
+        {"sunvolc": 1, "rf_volc_data": volc, "rf_sun_data": np.zeros(351)}
+    )
+    assert np.array_equal(ih.get_data("rf_volc_n"), volc)
+    assert np.array_equal(ih.get_data("rf_volc_s"), volc)
+
+
 def test_gaspam_compatibility_check(test_data_dir):
     ih = input_handler.InputHandler(
         {

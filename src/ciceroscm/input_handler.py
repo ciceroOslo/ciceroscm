@@ -278,6 +278,9 @@ class InputHandler:
         for key in self.read_methods:
             used[f"{key}_file"] = 0
             used[f"{key}_data"] = 0
+        # single volcanic series used for both hemispheres
+        used["rf_volc_file"] = 0
+        used["rf_volc_data"] = 0
         self.cfg = cut_and_check_pamset(
             {
                 "nystart": 1750,
